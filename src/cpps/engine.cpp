@@ -1,5 +1,5 @@
 #include "../headers/engine.h"
-#include "../cpps/deviceManager.cpp"
+#include "../headers/deviceManager.h"
 
 using namespace Prometheus;
 

@@ -2,7 +2,7 @@
 
 namespace Prometheus{
 
-    void InstanceManager::createInstance(VkInstance instance){
+    void InstanceManager::createInstance(VkInstance& instance){
         //Used for general app config
         VkApplicationInfo appInfo{};
         appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
@@ -24,13 +24,6 @@ namespace Prometheus{
 
         createInfo.enabledExtensionCount = static_cast<uint32_t>(extensionsReq.size());
         createInfo.ppEnabledExtensionNames = extensionsReq.data();
-
-        if (enableValidationLayers) {
-            createInfo.enabledLayerCount = static_cast<uint32_t>(validationLayers.size());
-            createInfo.ppEnabledLayerNames = validationLayers.data();
-        } else {
-            createInfo.enabledLayerCount = 0;
-        }
 
         VkDebugUtilsMessengerCreateInfoEXT debugCreateInfo{};
         if (enableValidationLayers) {
@@ -100,7 +93,7 @@ namespace Prometheus{
 
         std::vector<const char*> extensions(glfwExtensions, glfwExtensions + glfwExtensionCount);
 
-        if (enableValidationLayers) {
+        if (InstanceManager::enableValidationLayers) {
             extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
         }
 

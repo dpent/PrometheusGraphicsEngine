@@ -10,10 +10,10 @@ namespace Prometheus{
     class DeviceManager{
     public:
         //Physical device
-        static void pickPhysicalDevice(VkInstance instance, VkPhysicalDevice physicalDevice);
+        static void pickPhysicalDevice(VkInstance instance, VkPhysicalDevice& physicalDevice);
         static bool rateDeviceSuitability(const VkPhysicalDevice device);
 
         //Logical device
-        static void createLogicalDevice(VkPhysicalDevice physicalDevice, VkDevice device, VkQueue graphicsQueue);
+        static void createLogicalDevice(VkPhysicalDevice& physicalDevice, VkDevice& device, VkQueue& graphicsQueue);
     };
 }

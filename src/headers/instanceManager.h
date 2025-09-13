@@ -19,7 +19,7 @@ namespace Prometheus{
             static const bool enableValidationLayers = true;
         #endif
 
-        static void createInstance(VkInstance instance);
+        static void createInstance(VkInstance& instance);
         static bool checkValidationLayerSupport();
         static std::vector<const char*> getRequiredExtensions();
         static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(

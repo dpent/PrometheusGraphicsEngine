@@ -3,7 +3,7 @@
 using namespace Prometheus;
 
 namespace Prometheus{
-    void DeviceManager::pickPhysicalDevice(VkInstance instance, VkPhysicalDevice physicalDevice){
+    void DeviceManager::pickPhysicalDevice(VkInstance instance, VkPhysicalDevice& physicalDevice){
         uint32_t deviceCount = 0;
         vkEnumeratePhysicalDevices(instance, &deviceCount, nullptr);
 
@@ -61,7 +61,7 @@ namespace Prometheus{
         return score;
     }
 
-    void DeviceManager::createLogicalDevice(VkPhysicalDevice physicalDevice, VkDevice device, VkQueue graphicsQueue){
+    void DeviceManager::createLogicalDevice(VkPhysicalDevice& physicalDevice, VkDevice& device, VkQueue& graphicsQueue){
 
         QueueFamilyIndices indices = findQueueFamilies(physicalDevice);
 
