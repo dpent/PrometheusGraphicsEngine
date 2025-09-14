@@ -1,5 +1,5 @@
 CXX = g++
-CFLAGS = -std=c++23 -O2 -g -Iheaders
+CFLAGS = -std=c++23 -O2 -g -Iheaders -fsanitize=address -fno-omit-frame-pointer
 LDFLAGS = -lglfw -lvulkan -ldl -lpthread -lX11 -lXxf86vm -lXrandr -lXi
 
 CPP_DIR = cpps
@@ -17,7 +17,7 @@ $(BUILD_DIR):
 
 # Generic rule to compile .cpp -> .o in build/
 $(BUILD_DIR)/%.o: $(CPP_DIR)/%.cpp | $(BUILD_DIR)
-	$(CXX) $(CFLAGS) -c $< -o $@
+	$(CXX) $(CFLAGS) -c $< -o $@	
 
 # Rule for main.cpp separately
 $(BUILD_DIR)/main.o: main.cpp | $(BUILD_DIR)

@@ -25,13 +25,21 @@ namespace Prometheus{
         InstanceManager::createInstance(this->instance);
         InstanceManager::setupDebugMessenger(this->instance,this->debugMessenger);
 
-        DeviceManager::pickPhysicalDevice(this->instance,this->physicalDevice);
-        DeviceManager::createLogicalDevice(this->physicalDevice, this->device, this->graphicsQueue);
+        Engine::createSurface();
+
+        DeviceManager::pickPhysicalDevice(this->instance,this->physicalDevice, this->surface);
+        DeviceManager::createLogicalDevice(this->physicalDevice, this->device, this->graphicsQueue,this->presentQueue, this->surface);
     }
 
     void Engine::mainLoop() {
         while (!glfwWindowShouldClose(window)) {
             glfwPollEvents();
+        }
+    }
+
+    void Engine::createSurface(){
+        if (glfwCreateWindowSurface(instance, window, nullptr, &surface) != VK_SUCCESS) {
+            throw std::runtime_error("failed to create window surface!");
         }
     }
 
@@ -41,6 +49,8 @@ namespace Prometheus{
         if (InstanceManager::enableValidationLayers) {
             InstanceManager::DestroyDebugUtilsMessengerEXT(instance, debugMessenger, nullptr);
         }
+
+        vkDestroySurfaceKHR(instance, surface, nullptr);
 
         vkDestroyInstance(instance, nullptr);
 

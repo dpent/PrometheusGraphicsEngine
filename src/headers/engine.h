@@ -22,10 +22,14 @@ namespace Prometheus{
         VkDevice device; //Manages the GPU logically
 
         VkQueue graphicsQueue;
+        VkQueue presentQueue;
+
+        VkSurfaceKHR surface;
 
         void initWindow();
         void initVulkan();
         void mainLoop();
+        void createSurface();
         void cleanup();
     };
 }
