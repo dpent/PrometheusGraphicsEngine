@@ -3,7 +3,7 @@
 using namespace Prometheus;
 
 namespace Prometheus{
-    QueueFamilyIndices findQueueFamilies(const VkPhysicalDevice& device, VkSurfaceKHR& surface){
+    QueueFamilyIndices findQueueFamilies(const VkPhysicalDevice& device, const VkSurfaceKHR& surface){
         QueueFamilyIndices indices;
 
         uint32_t queueFamilyCount = 0;

@@ -1,9 +1,11 @@
 #include "../headers/deviceManager.h"
+#include "../headers/engine.h"
+#include "../headers/swapChainManager.h"
 
 using namespace Prometheus;
 
 namespace Prometheus{
-    void DeviceManager::pickPhysicalDevice(VkInstance instance, VkPhysicalDevice& physicalDevice, VkSurfaceKHR& surface){
+    void DeviceManager::pickPhysicalDevice(VkInstance instance, VkPhysicalDevice& physicalDevice, const VkSurfaceKHR& surface){
         uint32_t deviceCount = 0;
         vkEnumeratePhysicalDevices(instance, &deviceCount, nullptr);
 
@@ -30,7 +32,7 @@ namespace Prometheus{
 
     }
 
-    bool DeviceManager::rateDeviceSuitability(const VkPhysicalDevice& device, VkSurfaceKHR& surface) {
+    bool DeviceManager::rateDeviceSuitability(const VkPhysicalDevice& device, const VkSurfaceKHR& surface) {
 
         VkPhysicalDeviceProperties deviceProperties;
         VkPhysicalDeviceFeatures deviceFeatures;
@@ -38,6 +40,8 @@ namespace Prometheus{
         vkGetPhysicalDeviceFeatures(device, &deviceFeatures);
 
         QueueFamilyIndices indices = findQueueFamilies(device, surface);
+
+        bool extensionsSupported = DeviceManager::checkDeviceExtensionSupport(device);
 
         int score = 0;
 
@@ -53,12 +57,34 @@ namespace Prometheus{
         // Maximum possible size of textures affects graphics quality
         score += deviceProperties.limits.maxImageDimension2D;
 
+        bool swapChainAdequate = false;
+        if (extensionsSupported) {
+            SwapChainSupportDetails swapChainSupport = SwapChainSupportDetails::querySwapChainSupport(device,surface);
+            swapChainAdequate = !swapChainSupport.formats.empty() && !swapChainSupport.presentModes.empty();
+        }
+
         // Application can't function without geometry shaders
-        if (!deviceFeatures.geometryShader) {
+        if (!deviceFeatures.geometryShader || !extensionsSupported || !swapChainAdequate) {
             return 0;
         }
 
         return score;
+    }
+
+    bool DeviceManager::checkDeviceExtensionSupport(const VkPhysicalDevice& device){
+        uint32_t extensionCount;
+        vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, nullptr);
+
+        std::vector<VkExtensionProperties> availableExtensions(extensionCount);
+        vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, availableExtensions.data());
+        
+        std::set<std::string> requiredExtensions(Engine::deviceExtensions.begin(), Engine::deviceExtensions.end());
+
+        for (const auto& extension : availableExtensions) {
+            requiredExtensions.erase(extension.extensionName);
+        }
+
+        return requiredExtensions.empty();
     }
 
     void DeviceManager::createLogicalDevice(const VkPhysicalDevice& physicalDevice, VkDevice& device, VkQueue& graphicsQueue, VkQueue& presentQueue, VkSurfaceKHR& surface){
@@ -89,7 +115,8 @@ namespace Prometheus{
 
         createInfo.pEnabledFeatures = &deviceFeatures;
 
-        createInfo.enabledExtensionCount = 0;
+        createInfo.enabledExtensionCount = static_cast<uint32_t>(Engine::deviceExtensions.size());
+        createInfo.ppEnabledExtensionNames = Engine::deviceExtensions.data();
 
         if (InstanceManager::enableValidationLayers) {
             createInfo.enabledLayerCount = static_cast<uint32_t>(InstanceManager::validationLayers.size());

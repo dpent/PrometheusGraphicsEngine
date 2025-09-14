@@ -17,5 +17,5 @@ namespace Prometheus{
         }
     };
 
-    QueueFamilyIndices findQueueFamilies(const VkPhysicalDevice& device, VkSurfaceKHR& surface);
+    QueueFamilyIndices findQueueFamilies(const VkPhysicalDevice& device, const VkSurfaceKHR& surface);
 }
