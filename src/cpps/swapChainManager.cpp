@@ -1,5 +1,6 @@
 #include "../headers/swapChainManager.h"
 #include "../headers/engine.h"
+#include "../headers/queueManager.h"
 
 using namespace Prometheus;
 
@@ -67,6 +68,99 @@ namespace Prometheus{
             actualExtent.height = std::clamp(actualExtent.height, capabilities.minImageExtent.height, capabilities.maxImageExtent.height);
 
             return actualExtent;
+        }
+    }
+
+    void SwapChainManager::createSwapChain(VkSurfaceKHR& surface, VkPhysicalDevice& physicalDevice, VkDevice& device, VkSwapchainKHR& swapChain){
+        SwapChainSupportDetails swapChainSupport = SwapChainSupportDetails::querySwapChainSupport(physicalDevice, surface);
+
+        VkSurfaceFormatKHR surfaceFormat = SwapChainManager::chooseSwapSurfaceFormat(swapChainSupport.formats);
+        VkPresentModeKHR presentMode = SwapChainManager::chooseSwapPresentMode(swapChainSupport.presentModes);
+        VkExtent2D extent = SwapChainManager::chooseSwapExtent(swapChainSupport.capabilities);
+
+        uint32_t imageCount = swapChainSupport.capabilities.minImageCount + 1; /*Simply sticking to this minimum means that we may sometimes have to
+                                                                                wait on the driver to complete internal operations before we can acquire
+                                                                                another image to render to.*/
+        if (swapChainSupport.capabilities.maxImageCount > 0 && imageCount > swapChainSupport.capabilities.maxImageCount) {
+            imageCount = swapChainSupport.capabilities.maxImageCount;
+        }
+
+        VkSwapchainCreateInfoKHR createInfo{};
+        createInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
+        createInfo.surface = surface;
+        createInfo.minImageCount = imageCount;
+        createInfo.imageFormat = surfaceFormat.format;
+        createInfo.imageColorSpace = surfaceFormat.colorSpace;
+        createInfo.imageExtent = extent;
+        createInfo.imageArrayLayers = 1;
+        createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;/*It is also possible that you'll render images to a separate
+                                                                    image first to perform operations like post-processing. In that
+                                                                    case you may use a value like VK_IMAGE_USAGE_TRANSFER_DST_BIT
+                                                                    instead and use a memory operation to transfer the rendered image
+                                                                    to a swap chain image.*/
+
+        QueueFamilyIndices indices = findQueueFamilies(physicalDevice, surface);
+        uint32_t queueFamilyIndices[] = {indices.graphicsFamily.value(), indices.presentFamily.value()};
+
+        if (indices.graphicsFamily != indices.presentFamily) {
+            createInfo.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
+            createInfo.queueFamilyIndexCount = 2;
+            createInfo.pQueueFamilyIndices = queueFamilyIndices;
+        } else {
+            createInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
+            createInfo.queueFamilyIndexCount = 0; // Optional
+            createInfo.pQueueFamilyIndices = nullptr; // Optional 
+            /*
+            -- VK_SHARING_MODE_EXCLUSIVE: An image is owned by one queue family at a time and
+            ownership must be explicitly transferred before using it in another queue family.
+            This option offers the best performance.
+
+            -- VK_SHARING_MODE_CONCURRENT: Images can be used across
+            multiple queue families without explicit ownership transfers.
+            */
+        }
+
+        createInfo.preTransform = swapChainSupport.capabilities.currentTransform;
+        createInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+        createInfo.presentMode = Engine::presentMode;
+        createInfo.clipped = VK_TRUE;
+        createInfo.oldSwapchain = VK_NULL_HANDLE;
+
+        if (vkCreateSwapchainKHR(device, &createInfo, nullptr, &swapChain) != VK_SUCCESS) {
+            throw std::runtime_error("failed to create swap chain!");
+        }
+
+        vkGetSwapchainImagesKHR(device, swapChain, &imageCount, nullptr); //We need to fill swapChainImages vector
+        Engine::swapChainImages.resize(imageCount);
+        vkGetSwapchainImagesKHR(device, swapChain, &imageCount, Engine::swapChainImages.data());
+
+        Engine::swapChainImageFormat = surfaceFormat.format;
+        Engine::swapChainExtent = extent;
+    }
+
+    void SwapChainManager::createImageViews(VkDevice& device){
+        Engine::swapChainImageViews.resize(Engine::swapChainImages.size());
+
+        for (size_t i = 0; i < Engine::swapChainImages.size(); i++) {
+            VkImageViewCreateInfo createInfo{};
+            createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+            createInfo.image = Engine::swapChainImages[i];
+            createInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+            createInfo.format = Engine::swapChainImageFormat;
+            createInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
+            createInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
+            createInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
+            createInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
+            createInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+            createInfo.subresourceRange.baseMipLevel = 0;
+            createInfo.subresourceRange.levelCount = 1;
+            createInfo.subresourceRange.baseArrayLayer = 0;
+            createInfo.subresourceRange.layerCount = 1;
+
+            if (vkCreateImageView(device, &createInfo, nullptr, &Engine::swapChainImageViews[i]) != VK_SUCCESS) {
+                throw std::runtime_error("failed to create image views!");
+            }
+
         }
     }
     

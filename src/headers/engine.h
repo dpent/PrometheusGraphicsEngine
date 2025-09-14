@@ -2,6 +2,7 @@
 #include <GLFW/glfw3.h>
 #include <iostream>
 #include <vector>
+#include <fstream>
 
 namespace Prometheus{
     class Engine{
@@ -38,8 +39,21 @@ namespace Prometheus{
         static GLFWwindow* window;
 
         static std::vector<VkImage> swapChainImages;
+        static std::vector<VkImageView> swapChainImageViews;
+        static VkExtent2D swapChainExtent;
+        static VkFormat swapChainImageFormat;
+
+        static VkPipelineLayout pipelineLayout;
+        static VkRenderPass renderPass;
+        static VkPipeline graphicsPipeline;
+
+        static std::vector<VkFramebuffer> swapChainFramebuffers;
+
+        static VkCommandPool commandPool;
+        static VkCommandBuffer commandBuffer;
 
         void run();
+        static std::vector<char> readFile(const std::string& filename);
 
     private:
         //Window variables
@@ -60,14 +74,12 @@ namespace Prometheus{
         VkSurfaceKHR surface;
 
         VkSwapchainKHR swapChain;
-        VkFormat swapChainImageFormat;
-        VkExtent2D swapChainExtent;
 
         void initWindow();
         void initVulkan();
         void mainLoop();
         void createSurface();
         void cleanup();
-        void createSwapChain();
+        void createImageViews();
     };
 }

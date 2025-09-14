@@ -20,6 +20,12 @@ namespace Prometheus{
         static VkSurfaceFormatKHR chooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats);
         static VkPresentModeKHR chooseSwapPresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes);
         static VkExtent2D chooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities);
+        static void createSwapChain(VkSurfaceKHR& surface,
+            VkPhysicalDevice& physicalDevice, 
+            VkDevice& device,
+            VkSwapchainKHR& swapChain
+        );
+        static void createImageViews(VkDevice& device);
     };
     
 }

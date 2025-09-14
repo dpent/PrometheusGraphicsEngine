@@ -7,7 +7,6 @@ using namespace Prometheus;
 
 int main(){
     Engine app;
-
     try{
         app.run();
     }catch( const std::exception& e){
