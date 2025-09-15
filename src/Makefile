@@ -1,5 +1,5 @@
 CXX = g++
-CFLAGS = -std=c++23 -O2 -g -Iheaders -fsanitize=address -fno-omit-frame-pointer
+CFLAGS = -std=c++23 -O2 -g -Iheaders
 LDFLAGS = -lglfw -lvulkan -ldl -lpthread -lX11 -lXxf86vm -lXrandr -lXi
 
 CPP_DIR = cpps

@@ -52,6 +52,10 @@ namespace Prometheus{
         static VkCommandPool commandPool;
         static VkCommandBuffer commandBuffer;
 
+        static VkSemaphore imageAvailableSemaphore;
+        static VkSemaphore renderFinishedSemaphore;
+        static VkFence inFlightFence;
+
         void run();
         static std::vector<char> readFile(const std::string& filename);
 
@@ -81,5 +85,6 @@ namespace Prometheus{
         void createSurface();
         void cleanup();
         void createImageViews();
+        void drawFrame();
     };
 }

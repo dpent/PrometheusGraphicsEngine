@@ -4,6 +4,7 @@
 #include "../headers/graphicsPipelineManager.h"
 #include "../headers/renderPassManager.h"
 #include "../headers/bufferManager.h"
+#include "../headers/syncManager.h"
 
 
 using namespace Prometheus;
@@ -25,6 +26,10 @@ VkCommandPool Engine::commandPool;
 VkCommandBuffer Engine::commandBuffer;
 
 std::vector<VkFramebuffer> Engine::swapChainFramebuffers;
+
+VkSemaphore Engine::imageAvailableSemaphore;
+VkSemaphore Engine::renderFinishedSemaphore;
+VkFence Engine::inFlightFence;
 
 namespace Prometheus{
     void Engine::run() {
@@ -63,12 +68,18 @@ namespace Prometheus{
 
         BufferManager::createFrameBuffers(this->device);
         BufferManager::createCommandPool(this->physicalDevice, this->surface,this->device);
+        BufferManager::createCommandBuffer(this->device);
+
+        SyncManager::createSyncObjects(this->device);
     }
 
     void Engine::mainLoop() {
         while (!glfwWindowShouldClose(Engine::window)) {
             glfwPollEvents();
+            drawFrame();
         }
+
+        vkDeviceWaitIdle(device);
     }
 
     void Engine::createSurface(){
@@ -78,6 +89,11 @@ namespace Prometheus{
     }
 
     void Engine::cleanup() {
+
+        vkDestroySemaphore(device, Engine::imageAvailableSemaphore, nullptr);
+        vkDestroySemaphore(device, Engine::renderFinishedSemaphore, nullptr);
+        vkDestroyFence(device, Engine::inFlightFence, nullptr);
+
         vkDestroyCommandPool(device, commandPool, nullptr);
 
         for (auto framebuffer : swapChainFramebuffers) {
@@ -152,5 +168,50 @@ namespace Prometheus{
         file.close();
 
         return buffer;
+    }
+
+    void Engine::drawFrame(){
+        vkWaitForFences(device, 1, &Engine::inFlightFence, VK_TRUE, UINT64_MAX);
+        
+        vkResetFences(device, 1, &Engine::inFlightFence);
+
+        uint32_t imageIndex;
+        vkAcquireNextImageKHR(device, Engine::swapChain, UINT64_MAX, Engine::imageAvailableSemaphore, VK_NULL_HANDLE, &imageIndex);
+
+        vkResetCommandBuffer(Engine::commandBuffer, 0);
+        BufferManager::recordCommandBuffer(Engine::commandBuffer, imageIndex);
+
+        VkSubmitInfo submitInfo{};
+        submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+
+        VkSemaphore waitSemaphores[] = {Engine::imageAvailableSemaphore};
+        VkPipelineStageFlags waitStages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
+        submitInfo.waitSemaphoreCount = 1;
+        submitInfo.pWaitSemaphores = waitSemaphores;
+        submitInfo.pWaitDstStageMask = waitStages;
+        submitInfo.commandBufferCount = 1;
+        submitInfo.pCommandBuffers = &Engine::commandBuffer;
+
+        VkSemaphore signalSemaphores[] = {Engine::renderFinishedSemaphore};
+        submitInfo.signalSemaphoreCount = 1;
+        submitInfo.pSignalSemaphores = signalSemaphores;
+
+        if (vkQueueSubmit(graphicsQueue, 1, &submitInfo, Engine::inFlightFence) != VK_SUCCESS) {
+            throw std::runtime_error("failed to submit draw command buffer!");
+        }
+
+        VkPresentInfoKHR presentInfo{};
+        presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+
+        presentInfo.waitSemaphoreCount = 1;
+        presentInfo.pWaitSemaphores = signalSemaphores;
+
+        VkSwapchainKHR swapChains[] = {Engine::swapChain};
+        presentInfo.swapchainCount = 1;
+        presentInfo.pSwapchains = swapChains;
+        presentInfo.pImageIndices = &imageIndex;
+        presentInfo.pResults = nullptr; // Optional
+
+        vkQueuePresentKHR(presentQueue, &presentInfo);
     }
 }
