@@ -42,6 +42,7 @@ namespace Prometheus{
         static std::vector<VkImageView> swapChainImageViews;
         static VkExtent2D swapChainExtent;
         static VkFormat swapChainImageFormat;
+        static VkSwapchainKHR swapChain;
 
         static VkPipelineLayout pipelineLayout;
         static VkRenderPass renderPass;
@@ -50,14 +51,20 @@ namespace Prometheus{
         static std::vector<VkFramebuffer> swapChainFramebuffers;
 
         static VkCommandPool commandPool;
-        static VkCommandBuffer commandBuffer;
+        static std::vector<VkCommandBuffer> commandBuffers;
 
-        static VkSemaphore imageAvailableSemaphore;
-        static VkSemaphore renderFinishedSemaphore;
-        static VkFence inFlightFence;
+        static std::vector<VkSemaphore> imageAvailableSemaphores;
+        static std::vector<VkSemaphore> renderFinishedSemaphores;
+        static std::vector<VkFence> inFlightFences;
+
+        static const int MAX_FRAMES_IN_FLIGHT = 2;
+        static uint32_t currentFrame;
+
+        static bool framebufferResized;
 
         void run();
         static std::vector<char> readFile(const std::string& filename);
+        static void frameBufferResizeCallback(GLFWwindow* window, int width, int height);
 
     private:
         //Window variables
@@ -76,8 +83,6 @@ namespace Prometheus{
         VkQueue presentQueue;
 
         VkSurfaceKHR surface;
-
-        VkSwapchainKHR swapChain;
 
         void initWindow();
         void initVulkan();

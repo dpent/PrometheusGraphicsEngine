@@ -6,7 +6,7 @@ namespace Prometheus{
     public:
         static void createFrameBuffers(VkDevice& device);
         static void createCommandPool(VkPhysicalDevice& physicalDevice, VkSurfaceKHR& surface, VkDevice& device);
-        static void createCommandBuffer(VkDevice& device);
+        static void createCommandBuffers(VkDevice& device);
         static void recordCommandBuffer(VkCommandBuffer& commandBuffer, uint32_t& imageIndex);
     };
 }

@@ -47,6 +47,12 @@
         "cinttypes": "cpp",
         "typeinfo": "cpp",
         "map": "cpp",
-        "set": "cpp"
+        "set": "cpp",
+        "codecvt": "cpp",
+        "ctime": "cpp",
+        "ratio": "cpp",
+        "fstream": "cpp",
+        "iomanip": "cpp",
+        "sstream": "cpp"
     }
 }

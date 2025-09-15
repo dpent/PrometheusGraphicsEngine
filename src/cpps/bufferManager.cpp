@@ -42,7 +42,8 @@ namespace Prometheus{
         }
     }
 
-    void BufferManager::createCommandBuffer(VkDevice& device){
+    void BufferManager::createCommandBuffers(VkDevice& device){
+        Engine::commandBuffers.resize(Engine::MAX_FRAMES_IN_FLIGHT);
         VkCommandBufferAllocateInfo allocInfo{};
         allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
         allocInfo.commandPool = Engine::commandPool;
@@ -52,9 +53,9 @@ namespace Prometheus{
                                                             -- VK_COMMAND_BUFFER_LEVEL_SECONDARY: Cannot be submitted directly, but can
                                                             be called from primary command buffers.
                                                         */
-        allocInfo.commandBufferCount = 1;
+        allocInfo.commandBufferCount = (uint32_t) Engine::commandBuffers.size();
 
-        if (vkAllocateCommandBuffers(device, &allocInfo, &Engine::commandBuffer) != VK_SUCCESS) {
+        if (vkAllocateCommandBuffers(device, &allocInfo, Engine::commandBuffers.data()) != VK_SUCCESS) {
             throw std::runtime_error("failed to allocate command buffers!");
         }
     }

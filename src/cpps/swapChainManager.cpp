@@ -1,6 +1,7 @@
 #include "../headers/swapChainManager.h"
 #include "../headers/engine.h"
 #include "../headers/queueManager.h"
+#include "../headers/bufferManager.h"
 
 using namespace Prometheus;
 
@@ -71,7 +72,7 @@ namespace Prometheus{
         }
     }
 
-    void SwapChainManager::createSwapChain(VkSurfaceKHR& surface, VkPhysicalDevice& physicalDevice, VkDevice& device, VkSwapchainKHR& swapChain){
+    void SwapChainManager::createSwapChain(VkSurfaceKHR& surface, VkPhysicalDevice& physicalDevice, VkDevice& device, VkSwapchainKHR oldSwapChain){
         SwapChainSupportDetails swapChainSupport = SwapChainSupportDetails::querySwapChainSupport(physicalDevice, surface);
 
         VkSurfaceFormatKHR surfaceFormat = SwapChainManager::chooseSwapSurfaceFormat(swapChainSupport.formats);
@@ -124,15 +125,15 @@ namespace Prometheus{
         createInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
         createInfo.presentMode = Engine::presentMode;
         createInfo.clipped = VK_TRUE;
-        createInfo.oldSwapchain = VK_NULL_HANDLE;
+        createInfo.oldSwapchain = oldSwapChain; //Necessary for smooth transitions e.g. window resize
 
-        if (vkCreateSwapchainKHR(device, &createInfo, nullptr, &swapChain) != VK_SUCCESS) {
+        if (vkCreateSwapchainKHR(device, &createInfo, nullptr, &Engine::swapChain) != VK_SUCCESS) {
             throw std::runtime_error("failed to create swap chain!");
         }
 
-        vkGetSwapchainImagesKHR(device, swapChain, &imageCount, nullptr); //We need to fill swapChainImages vector
+        vkGetSwapchainImagesKHR(device, Engine::swapChain, &imageCount, nullptr); //We need to fill swapChainImages vector
         Engine::swapChainImages.resize(imageCount);
-        vkGetSwapchainImagesKHR(device, swapChain, &imageCount, Engine::swapChainImages.data());
+        vkGetSwapchainImagesKHR(device, Engine::swapChain, &imageCount, Engine::swapChainImages.data());
 
         Engine::swapChainImageFormat = surfaceFormat.format;
         Engine::swapChainExtent = extent;
@@ -161,6 +162,58 @@ namespace Prometheus{
                 throw std::runtime_error("failed to create image views!");
             }
 
+        }
+    }
+
+    void SwapChainManager::recreateSwapChain(VkSurfaceKHR& surface,
+            VkPhysicalDevice& physicalDevice, 
+            VkDevice& device,
+            VkQueue& presentQueue)
+    {
+        int width = 0, height = 0;
+        glfwGetFramebufferSize(Engine::window, &width, &height);
+        while (width == 0 || height == 0) {
+            glfwGetFramebufferSize(Engine::window, &width, &height);
+            glfwWaitEvents();
+        }
+
+        VkSwapchainKHR oldSwapChain = Engine::swapChain;
+        vkQueueWaitIdle(presentQueue);
+
+        SwapChainManager::cleanupSwapChainDependents(device);
+
+        SwapChainManager::createSwapChain(surface,physicalDevice,device,oldSwapChain);
+        SwapChainManager::createImageViews(device);
+        BufferManager::createFrameBuffers(device);
+
+        if (oldSwapChain != VK_NULL_HANDLE) {
+            vkDestroySwapchainKHR(device, oldSwapChain, nullptr);
+            oldSwapChain = VK_NULL_HANDLE;
+        }
+    }
+
+    void SwapChainManager::cleanupSwapChain(VkDevice& device){
+        for (auto framebuffer : Engine::swapChainFramebuffers) {
+            vkDestroyFramebuffer(device, framebuffer, nullptr);
+        }
+
+        for (auto imageView : Engine::swapChainImageViews) {
+            vkDestroyImageView(device, imageView, nullptr);
+        }
+
+        if (Engine::swapChain != VK_NULL_HANDLE) {
+            vkDestroySwapchainKHR(device, Engine::swapChain, nullptr);
+            Engine::swapChain = VK_NULL_HANDLE;
+        }
+    }
+
+    void SwapChainManager::cleanupSwapChainDependents(VkDevice& device){
+        for (auto framebuffer : Engine::swapChainFramebuffers) {
+            vkDestroyFramebuffer(device, framebuffer, nullptr);
+        }
+
+        for (auto imageView : Engine::swapChainImageViews) {
+            vkDestroyImageView(device, imageView, nullptr);
         }
     }
     

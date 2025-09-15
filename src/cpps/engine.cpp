@@ -5,6 +5,7 @@
 #include "../headers/renderPassManager.h"
 #include "../headers/bufferManager.h"
 #include "../headers/syncManager.h"
+#include <vulkan/vulkan_core.h>
 
 
 using namespace Prometheus;
@@ -17,19 +18,24 @@ std::vector<VkImage> Engine::swapChainImages;
 std::vector<VkImageView> Engine::swapChainImageViews;
 VkExtent2D Engine::swapChainExtent;
 VkFormat Engine::swapChainImageFormat;
+VkSwapchainKHR Engine::swapChain;
 
 VkPipelineLayout Engine::pipelineLayout;
 VkRenderPass Engine::renderPass;
 VkPipeline Engine::graphicsPipeline;
 
 VkCommandPool Engine::commandPool;
-VkCommandBuffer Engine::commandBuffer;
+std::vector<VkCommandBuffer> Engine::commandBuffers;
 
 std::vector<VkFramebuffer> Engine::swapChainFramebuffers;
 
-VkSemaphore Engine::imageAvailableSemaphore;
-VkSemaphore Engine::renderFinishedSemaphore;
-VkFence Engine::inFlightFence;
+std::vector<VkSemaphore> Engine::imageAvailableSemaphores;
+std::vector<VkSemaphore> Engine::renderFinishedSemaphores;
+std::vector<VkFence> Engine::inFlightFences;
+
+uint32_t Engine::currentFrame = 0;
+
+bool Engine::framebufferResized = false;
 
 namespace Prometheus{
     void Engine::run() {
@@ -43,12 +49,13 @@ namespace Prometheus{
         glfwInit();
 
         glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-        glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
+
+        Engine::window = glfwCreateWindow(WIDTH, HEIGHT, "Prometheus", nullptr, nullptr);
+        glfwSetWindowUserPointer(Engine::window, this);
+        glfwSetFramebufferSizeCallback(Engine::window, frameBufferResizeCallback);
     }
 
     void Engine::initVulkan() {
-
-        Engine::window = glfwCreateWindow(WIDTH, HEIGHT, "Prometheus", nullptr, nullptr);
 
         InstanceManager::createInstance(this->instance);
         InstanceManager::setupDebugMessenger(this->instance,this->debugMessenger);
@@ -58,8 +65,7 @@ namespace Prometheus{
         DeviceManager::pickPhysicalDevice(this->instance,this->physicalDevice, this->surface);
         DeviceManager::createLogicalDevice(this->physicalDevice, this->device, this->graphicsQueue,this->presentQueue, this->surface);
 
-        SwapChainManager::createSwapChain(this->surface,this->physicalDevice,this->device,
-            this->swapChain);
+        SwapChainManager::createSwapChain(this->surface,this->physicalDevice,this->device, Engine::swapChain);
         SwapChainManager::createImageViews(this->device);
 
         RenderPassManager::createRenderPass(this->device);
@@ -68,7 +74,7 @@ namespace Prometheus{
 
         BufferManager::createFrameBuffers(this->device);
         BufferManager::createCommandPool(this->physicalDevice, this->surface,this->device);
-        BufferManager::createCommandBuffer(this->device);
+        BufferManager::createCommandBuffers(this->device);
 
         SyncManager::createSyncObjects(this->device);
     }
@@ -90,21 +96,15 @@ namespace Prometheus{
 
     void Engine::cleanup() {
 
-        vkDestroySemaphore(device, Engine::imageAvailableSemaphore, nullptr);
-        vkDestroySemaphore(device, Engine::renderFinishedSemaphore, nullptr);
-        vkDestroyFence(device, Engine::inFlightFence, nullptr);
+        SwapChainManager::cleanupSwapChain(device);
+
+        for (size_t i = 0; i < Engine::MAX_FRAMES_IN_FLIGHT; i++) {
+            vkDestroySemaphore(device, Engine::renderFinishedSemaphores[i], nullptr);
+            vkDestroySemaphore(device, Engine::imageAvailableSemaphores[i], nullptr);
+            vkDestroyFence(device, Engine::inFlightFences[i], nullptr);
+        }
 
         vkDestroyCommandPool(device, commandPool, nullptr);
-
-        for (auto framebuffer : swapChainFramebuffers) {
-            vkDestroyFramebuffer(device, framebuffer, nullptr);
-        }
-
-        for (auto imageView : swapChainImageViews) {
-            vkDestroyImageView(device, imageView, nullptr);
-        }
-
-        vkDestroySwapchainKHR(device, swapChain, nullptr);
 
         vkDestroyPipeline(device, graphicsPipeline, nullptr);
         vkDestroyPipelineLayout(device, pipelineLayout, nullptr);
@@ -171,32 +171,42 @@ namespace Prometheus{
     }
 
     void Engine::drawFrame(){
-        vkWaitForFences(device, 1, &Engine::inFlightFence, VK_TRUE, UINT64_MAX);
-        
-        vkResetFences(device, 1, &Engine::inFlightFence);
+        vkWaitForFences(device, 1, &Engine::inFlightFences[currentFrame], VK_TRUE, UINT64_MAX);
 
         uint32_t imageIndex;
-        vkAcquireNextImageKHR(device, Engine::swapChain, UINT64_MAX, Engine::imageAvailableSemaphore, VK_NULL_HANDLE, &imageIndex);
+        VkResult result = vkAcquireNextImageKHR(device, Engine::swapChain, UINT64_MAX,
+            Engine::imageAvailableSemaphores[currentFrame], 
+            VK_NULL_HANDLE, &imageIndex);
 
-        vkResetCommandBuffer(Engine::commandBuffer, 0);
-        BufferManager::recordCommandBuffer(Engine::commandBuffer, imageIndex);
+        if (result == VK_ERROR_OUT_OF_DATE_KHR) {
+            SwapChainManager::recreateSwapChain(surface,physicalDevice,device,presentQueue);
+            framebufferResized = false;
+            return;
+        } else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) { //Lacks logic for suboptimal swap chains
+            throw std::runtime_error("failed to acquire swap chain image!");
+        }
+
+        vkResetFences(device, 1, &Engine::inFlightFences[currentFrame]);
+
+        vkResetCommandBuffer(Engine::commandBuffers[currentFrame],  0);
+        BufferManager::recordCommandBuffer(Engine::commandBuffers[currentFrame], imageIndex);
 
         VkSubmitInfo submitInfo{};
         submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
-        VkSemaphore waitSemaphores[] = {Engine::imageAvailableSemaphore};
+        VkSemaphore waitSemaphores[] = {Engine::imageAvailableSemaphores[currentFrame]};
         VkPipelineStageFlags waitStages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
         submitInfo.waitSemaphoreCount = 1;
         submitInfo.pWaitSemaphores = waitSemaphores;
         submitInfo.pWaitDstStageMask = waitStages;
         submitInfo.commandBufferCount = 1;
-        submitInfo.pCommandBuffers = &Engine::commandBuffer;
+        submitInfo.pCommandBuffers = &Engine::commandBuffers[currentFrame];
 
-        VkSemaphore signalSemaphores[] = {Engine::renderFinishedSemaphore};
+        VkSemaphore signalSemaphores[] = {Engine::renderFinishedSemaphores[currentFrame]};
         submitInfo.signalSemaphoreCount = 1;
         submitInfo.pSignalSemaphores = signalSemaphores;
 
-        if (vkQueueSubmit(graphicsQueue, 1, &submitInfo, Engine::inFlightFence) != VK_SUCCESS) {
+        if (vkQueueSubmit(graphicsQueue, 1, &submitInfo, Engine::inFlightFences[currentFrame]) != VK_SUCCESS) {
             throw std::runtime_error("failed to submit draw command buffer!");
         }
 
@@ -212,6 +222,20 @@ namespace Prometheus{
         presentInfo.pImageIndices = &imageIndex;
         presentInfo.pResults = nullptr; // Optional
 
-        vkQueuePresentKHR(presentQueue, &presentInfo);
+        result = vkQueuePresentKHR(presentQueue, &presentInfo);
+
+        if (result == VK_ERROR_OUT_OF_DATE_KHR || Engine::framebufferResized) {
+            SwapChainManager::recreateSwapChain(surface,physicalDevice,device,presentQueue);
+            framebufferResized = false;
+        } else if (result != VK_SUCCESS) {
+            throw std::runtime_error("failed to present swap chain image!");
+        }
+
+        currentFrame = (currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
+    }
+
+    void Engine::frameBufferResizeCallback(GLFWwindow* window, int width, int height){
+        auto app = reinterpret_cast<Engine*>(glfwGetWindowUserPointer(window));
+        app->framebufferResized = true;
     }
 }

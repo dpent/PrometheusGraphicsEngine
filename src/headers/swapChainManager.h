@@ -23,9 +23,16 @@ namespace Prometheus{
         static void createSwapChain(VkSurfaceKHR& surface,
             VkPhysicalDevice& physicalDevice, 
             VkDevice& device,
-            VkSwapchainKHR& swapChain
+            VkSwapchainKHR oldSwapChain
         );
         static void createImageViews(VkDevice& device);
+        static void recreateSwapChain(VkSurfaceKHR& surface,
+            VkPhysicalDevice& physicalDevice, 
+            VkDevice& device,
+            VkQueue& presentQueue
+        );
+        static void cleanupSwapChain(VkDevice& device);
+        static void cleanupSwapChainDependents(VkDevice& device);
     };
     
 }
