@@ -1,10 +1,15 @@
+#include <vulkan/vulkan_core.h>
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 #include <iostream>
 #include <vector>
 #include <fstream>
+#include <array>
+#include <glm/glm.hpp>
+#include "../headers/vertex.h"
 
 namespace Prometheus{
+
     class Engine{
     public:
         inline static const std::vector<const char*> deviceExtensions = {
@@ -61,6 +66,20 @@ namespace Prometheus{
         static uint32_t currentFrame;
 
         static bool framebufferResized;
+
+        static std::vector<Vertex> vertices;
+        static std::vector<uint32_t> indices;
+
+        static VkBuffer vertexBuffer;
+        static VkDeviceMemory vertexBufferMemory;
+        static VkBuffer indexBuffer;
+        static VkDeviceMemory indexBufferMemory;
+
+        static VkBuffer indexVertexBuffer;
+        static VkDeviceMemory indexVertexBufferMemory;
+
+        static VkDeviceSize indexOffset;
+
 
         void run();
         static std::vector<char> readFile(const std::string& filename);

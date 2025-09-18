@@ -37,6 +37,26 @@ uint32_t Engine::currentFrame = 0;
 
 bool Engine::framebufferResized = false;
 
+std::vector<Vertex> Engine::vertices = {
+    {{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}},
+    {{0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}},
+    {{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}},
+    {{-0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}}
+};
+std::vector<uint32_t> Engine::indices = {
+    0, 1, 2, 2, 3, 0
+};
+
+VkBuffer Engine::vertexBuffer= nullptr;
+VkDeviceMemory Engine::vertexBufferMemory=nullptr;
+VkBuffer Engine::indexBuffer=nullptr;
+VkDeviceMemory Engine::indexBufferMemory=nullptr;
+
+VkBuffer Engine::indexVertexBuffer= nullptr;
+VkDeviceMemory Engine::indexVertexBufferMemory= nullptr;
+
+VkDeviceSize Engine::indexOffset=0;
+
 namespace Prometheus{
     void Engine::run() {
         initWindow();
@@ -74,6 +94,12 @@ namespace Prometheus{
 
         BufferManager::createFrameBuffers(this->device);
         BufferManager::createCommandPool(this->physicalDevice, this->surface,this->device);
+
+        VkDeviceSize bufferSize = (sizeof(Engine::vertices[0]) * Engine::vertices.size()) + (sizeof(Engine::indices[0]) * Engine::indices.size());
+        BufferManager::createIndexVertexBuffer(this->device,this->physicalDevice,this->graphicsQueue);
+        //BufferManager::createVertexBuffer(this->device,this->physicalDevice, this->graphicsQueue);
+        //BufferManager::createIndexBuffer(this->device,this->physicalDevice,this->graphicsQueue);
+
         BufferManager::createCommandBuffers(this->device);
 
         SyncManager::createSyncObjects(this->device);
@@ -97,6 +123,15 @@ namespace Prometheus{
     void Engine::cleanup() {
 
         SwapChainManager::cleanupSwapChain(device);
+
+        //vkDestroyBuffer(device, Engine::indexBuffer, nullptr);
+        //vkFreeMemory(device, Engine::indexBufferMemory, nullptr);
+
+        //vkDestroyBuffer(device, Engine::vertexBuffer, nullptr);
+        //vkFreeMemory(device, Engine::vertexBufferMemory, nullptr);
+
+        vkDestroyBuffer(device, Engine::indexVertexBuffer, nullptr);
+        vkFreeMemory(device, Engine::indexVertexBufferMemory, nullptr);
 
         for (size_t i = 0; i < Engine::MAX_FRAMES_IN_FLIGHT; i++) {
             vkDestroySemaphore(device, Engine::renderFinishedSemaphores[i], nullptr);
