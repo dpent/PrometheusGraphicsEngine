@@ -1,4 +1,12 @@
 #include <vulkan/vulkan_core.h>
+#define GLM_FORCE_RADIANS
+#define GLM_FORCE_DEFAULT_ALIGNED_GENTYPES //REMEMBER THIS IS SUPPOSED TO ALIGN EVERYTHING
+#include <glm/glm.hpp>  
+#include <glm/gtc/matrix_transform.hpp>
+#define STB_IMAGE_IMPLEMENTATION //Don't redo this in another file. Simply include the .h file
+#include "stb_image.h"
+
+#include <chrono>
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 #include <iostream>
@@ -87,6 +95,15 @@ namespace Prometheus{
 
         static VkDescriptorPool descriptorPool;
         static std::vector<VkDescriptorSet> descriptorSets;
+
+        static glm::mat4 model;
+        static glm::mat4 view;
+        static glm::mat4 proj; //Camera movement is based on these
+
+        VkImage textureImage;
+        VkDeviceMemory textureImageMemory;
+
+
 
         void run();
         static std::vector<char> readFile(const std::string& filename);

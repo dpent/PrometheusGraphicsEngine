@@ -99,10 +99,7 @@ namespace Prometheus{
 
         VkBuffer vertexBuffers[] = {Engine::indexVertexBuffer};
         VkDeviceSize offsets[] = {0};
-        //vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
         vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
-
-        //vkCmdBindIndexBuffer(commandBuffer, Engine::indexBuffer, 0, VK_INDEX_TYPE_UINT32);
         vkCmdBindIndexBuffer(commandBuffer, Engine::indexVertexBuffer, Engine::indexOffset, VK_INDEX_TYPE_UINT32);
 
         VkViewport viewport{}; //Viewport and Scissor was set to dynamic in createGraphicsPipeline (graphicsPipeline.cpp)
@@ -119,7 +116,32 @@ namespace Prometheus{
         scissor.extent = Engine::swapChainExtent;
         vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
-        vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, Engine::pipelineLayout, 0, 1, &Engine::descriptorSets[Engine::currentFrame], 0, nullptr);
+        //vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, Engine::pipelineLayout, 0, 1, &Engine::descriptorSets[Engine::currentFrame], 0, nullptr);
+
+        static auto startTime = std::chrono::high_resolution_clock::now();
+
+        auto currentTime = std::chrono::high_resolution_clock::now();
+        float time = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
+
+        Engine::model=glm::rotate(glm::mat4(1.0f), time * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+        Engine::view=glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+        Engine::proj=glm::perspective(glm::radians(45.0f), Engine::swapChainExtent.width / (float) Engine::swapChainExtent.height, 0.1f, 10.0f);
+        Engine::proj[1][1] *= -1;
+
+        UniformBufferObject* cameraPushConstants= new UniformBufferObject();
+        cameraPushConstants->model=Engine::model;
+        cameraPushConstants->view=Engine::view;
+        cameraPushConstants->proj=Engine::proj;
+
+
+        vkCmdPushConstants(
+            commandBuffer,
+            Engine::pipelineLayout,
+            VK_SHADER_STAGE_VERTEX_BIT,
+            0,
+            sizeof(*cameraPushConstants),
+            cameraPushConstants
+        );
 
         vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(Engine::indices.size()), 1, 0, 0, 0);
 
@@ -129,6 +151,7 @@ namespace Prometheus{
             throw std::runtime_error("failed to record command buffer!");
         }
 
+        delete cameraPushConstants;
     }
 
     void BufferManager::createIndexVertexBuffer(VkDevice& device, VkPhysicalDevice& physicalDevice, VkQueue& graphicsQueue){
@@ -144,11 +167,11 @@ namespace Prometheus{
 
         void* data;
         vkMapMemory(device, stagingBufferMemory, 0, Engine::indexOffset, 0, &data);
-        memcpy(data, Engine::vertices.data(), (size_t) bufferSize);
+        memcpy(data, Engine::vertices.data(), (size_t) (sizeof(Engine::vertices[0]) * Engine::vertices.size()));
         vkUnmapMemory(device, stagingBufferMemory);
 
         vkMapMemory(device, stagingBufferMemory, Engine::indexOffset, bufferSize-Engine::indexOffset, 0, &data);
-        memcpy(data, Engine::indices.data(), (size_t) bufferSize);
+        memcpy(data, Engine::indices.data(), (size_t) (sizeof(Engine::indices[0]) * Engine::indices.size()));
         vkUnmapMemory(device, stagingBufferMemory);
 
         BufferManager::createJointBuffer(sizeof(Engine::vertices[0]) * Engine::vertices.size(), 

@@ -66,6 +66,11 @@ std::vector<void*> Engine::uniformBuffersMapped;
 VkDescriptorPool Engine::descriptorPool;
 std::vector<VkDescriptorSet> Engine::descriptorSets;
 
+glm::mat4 Engine::model;// = 
+glm::mat4 Engine::view;// = 
+glm::mat4 Engine::proj;// = 
+// //Image will be flipped if this is deleted since glm was originaly made for openGL where the y coordinate is flipped.
+
 namespace Prometheus{
     void Engine::run() {
         initWindow();
@@ -99,7 +104,7 @@ namespace Prometheus{
 
         RenderPassManager::createRenderPass(this->device);
 
-        DescriptorManager::createDescriptorSetLayout(this->device);
+        //DescriptorManager::createDescriptorSetLayout(this->device);
 
         GraphicsPipelineManager::createGraphicsPipeline(this->device);
 
@@ -108,10 +113,10 @@ namespace Prometheus{
 
         VkDeviceSize bufferSize = (sizeof(Engine::vertices[0]) * Engine::vertices.size()) + (sizeof(Engine::indices[0]) * Engine::indices.size());
         BufferManager::createIndexVertexBuffer(this->device,this->physicalDevice,this->graphicsQueue);
-        BufferManager::createUniformBuffers(this->device,this->physicalDevice);
+        //BufferManager::createUniformBuffers(this->device,this->physicalDevice);
 
-        DescriptorManager::createDescriptorPool(this->device);
-        DescriptorManager::createDescriptorSets(this->device);
+        //DescriptorManager::createDescriptorPool(this->device);
+        //DescriptorManager::createDescriptorSets(this->device);
 
         BufferManager::createCommandBuffers(this->device);
 
@@ -137,14 +142,14 @@ namespace Prometheus{
 
         SwapChainManager::cleanupSwapChain(device);
 
-        for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
-            vkDestroyBuffer(device, Engine::uniformBuffers[i], nullptr);
-            vkFreeMemory(device, Engine::uniformBuffersMemory[i], nullptr);
-        }
+        //for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+            //vkDestroyBuffer(device, Engine::uniformBuffers[i], nullptr);
+            //vkFreeMemory(device, Engine::uniformBuffersMemory[i], nullptr);
+        //}
 
-        vkDestroyDescriptorSetLayout(device, Engine::descriptorSetLayout, nullptr);
+        //vkDestroyDescriptorSetLayout(device, Engine::descriptorSetLayout, nullptr);
 
-        vkDestroyDescriptorPool(device, Engine::descriptorPool, nullptr);
+        //vkDestroyDescriptorPool(device, Engine::descriptorPool, nullptr);
 
         vkDestroyBuffer(device, Engine::indexVertexBuffer, nullptr);
         vkFreeMemory(device, Engine::indexVertexBufferMemory, nullptr);
@@ -242,7 +247,7 @@ namespace Prometheus{
         vkResetCommandBuffer(Engine::commandBuffers[Engine::currentFrame],  0);
         BufferManager::recordCommandBuffer(Engine::commandBuffers[Engine::currentFrame], imageIndex);
 
-        BufferManager::updateUniformBuffer(Engine::currentFrame);
+        //BufferManager::updateUniformBuffer(Engine::currentFrame);
 
         VkSubmitInfo submitInfo{};
         submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
