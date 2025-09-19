@@ -5,6 +5,8 @@
 namespace Prometheus{
     class DescriptorManager{
     public:
-        static void createDescriptorSetLayout();
+        static void createDescriptorSetLayout(VkDevice& device);
+        static void createDescriptorPool(VkDevice& device);
+        static void createDescriptorSets(VkDevice& device);
     };
 }

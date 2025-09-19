@@ -49,6 +49,7 @@ namespace Prometheus{
         static VkFormat swapChainImageFormat;
         static VkSwapchainKHR swapChain;
 
+        static VkDescriptorSetLayout descriptorSetLayout;
         static VkPipelineLayout pipelineLayout;
         static VkRenderPass renderPass;
         static VkPipeline graphicsPipeline;
@@ -80,6 +81,12 @@ namespace Prometheus{
 
         static VkDeviceSize indexOffset;
 
+        static std::vector<VkBuffer> uniformBuffers;
+        static std::vector<VkDeviceMemory> uniformBuffersMemory;
+        static std::vector<void*> uniformBuffersMapped;
+
+        static VkDescriptorPool descriptorPool;
+        static std::vector<VkDescriptorSet> descriptorSets;
 
         void run();
         static std::vector<char> readFile(const std::string& filename);

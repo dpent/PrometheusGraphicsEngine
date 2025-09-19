@@ -119,6 +119,8 @@ namespace Prometheus{
         scissor.extent = Engine::swapChainExtent;
         vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
+        vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, Engine::pipelineLayout, 0, 1, &Engine::descriptorSets[Engine::currentFrame], 0, nullptr);
+
         vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(Engine::indices.size()), 1, 0, 0, 0);
 
         vkCmdEndRenderPass(commandBuffer);
@@ -270,6 +272,39 @@ namespace Prometheus{
 
         vkFreeCommandBuffers(device, Engine::commandPool, 1, &commandBuffer);
 
+    }
+
+    void BufferManager::createUniformBuffers(VkDevice& device, VkPhysicalDevice& physicalDevice){
+        VkDeviceSize bufferSize = sizeof(UniformBufferObject);
+        
+        Engine::uniformBuffers.resize(Engine::MAX_FRAMES_IN_FLIGHT);
+        Engine::uniformBuffersMemory.resize(Engine::MAX_FRAMES_IN_FLIGHT);
+        Engine::uniformBuffersMapped.resize(Engine::MAX_FRAMES_IN_FLIGHT);
+
+        for (size_t i = 0; i < Engine::MAX_FRAMES_IN_FLIGHT; i++) {
+            createBuffer(bufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+                VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
+                Engine::uniformBuffers[i], Engine::uniformBuffersMemory[i], device, physicalDevice);
+
+            vkMapMemory(device, Engine::uniformBuffersMemory[i], 0, bufferSize, 0, &Engine::uniformBuffersMapped[i]);
+        }
+    }
+    // A more efficient way to pass a small buffer of data to shaders are push constants.
+    void BufferManager::updateUniformBuffer(uint32_t currentImage){
+        static auto startTime = std::chrono::high_resolution_clock::now();
+
+        auto currentTime = std::chrono::high_resolution_clock::now();
+        float time = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
+
+        UniformBufferObject ubo{};
+        ubo.model = glm::rotate(glm::mat4(1.0f), time * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+
+        ubo.view = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+
+        ubo.proj = glm::perspective(glm::radians(45.0f), Engine::swapChainExtent.width / (float) Engine::swapChainExtent.height, 0.1f, 10.0f);
+        ubo.proj[1][1] *= -1; //Image will be flipped if this is deleted since glm was originaly made for openGL where the y coordinate is flipped.
+
+        memcpy(Engine::uniformBuffersMapped[currentImage], &ubo, sizeof(ubo));
     }
 
 }

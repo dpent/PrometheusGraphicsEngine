@@ -1,5 +1,5 @@
 #version 450
-
+//Nested structures need alignment
 layout(binding = 0) uniform UniformBufferObject {
     mat4 model;
     mat4 view;

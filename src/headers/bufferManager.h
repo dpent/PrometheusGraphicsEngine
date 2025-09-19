@@ -2,6 +2,12 @@
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 #include <cstring>
+#define GLM_FORCE_RADIANS
+#define GLM_FORCE_DEFAULT_ALIGNED_GENTYPES //REMEMBER THIS IS SUPPOSED TO ALIGN EVERYTHING
+#include <glm/glm.hpp>  
+#include <glm/gtc/matrix_transform.hpp>
+
+#include <chrono>
 
 namespace Prometheus{
     class BufferManager{
@@ -36,5 +42,8 @@ namespace Prometheus{
         );
 
         static void copyBuffer(VkBuffer& srcBuffer, VkBuffer& dstBuffer, VkDeviceSize size, VkDevice& device, VkQueue& graphicsQueue);
+
+        static void createUniformBuffers(VkDevice& device, VkPhysicalDevice& physicalDevice);
+        static void updateUniformBuffer(uint32_t currentImage);
     };
 }
