@@ -45,5 +45,8 @@ namespace Prometheus{
 
         static void createUniformBuffers(VkDevice& device, VkPhysicalDevice& physicalDevice);
         static void updateUniformBuffer(uint32_t currentImage);
+
+        static VkCommandBuffer beginSingleTimeCommands(VkDevice& device);
+        static void endSingleTimeCommands(VkCommandBuffer& commandBuffer, VkDevice& device, VkQueue& graphicsQueue);
     };
 }

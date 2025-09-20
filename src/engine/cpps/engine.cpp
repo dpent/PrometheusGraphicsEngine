@@ -7,7 +7,7 @@
 #include "../headers/syncManager.h"
 #include <vulkan/vulkan_core.h>
 #include "../headers/descriptorManager.h"
-
+#include "../headers/textureManager.h"
 
 using namespace Prometheus;
 
@@ -66,10 +66,12 @@ std::vector<void*> Engine::uniformBuffersMapped;
 VkDescriptorPool Engine::descriptorPool;
 std::vector<VkDescriptorSet> Engine::descriptorSets;
 
-glm::mat4 Engine::model;// = 
-glm::mat4 Engine::view;// = 
-glm::mat4 Engine::proj;// = 
-// //Image will be flipped if this is deleted since glm was originaly made for openGL where the y coordinate is flipped.
+glm::mat4 Engine::model;
+glm::mat4 Engine::view;
+glm::mat4 Engine::proj;
+
+std::vector<GameObject*> Engine::gameObjects;
+std::unordered_map<uint64_t,GameObject*> Engine::gameObjectMap;
 
 namespace Prometheus{
     void Engine::run() {
@@ -111,6 +113,10 @@ namespace Prometheus{
         BufferManager::createFrameBuffers(this->device);
         BufferManager::createCommandPool(this->physicalDevice, this->surface,this->device);
 
+        GameObject* rectangle=new GameObject("../textures/statue.jpg",STBI_rgb_alpha, this->device, this->physicalDevice, this->graphicsQueue);
+        Engine::gameObjects.push_back(rectangle);
+        Engine::gameObjectMap.insert({rectangle->id,rectangle});
+
         VkDeviceSize bufferSize = (sizeof(Engine::vertices[0]) * Engine::vertices.size()) + (sizeof(Engine::indices[0]) * Engine::indices.size());
         BufferManager::createIndexVertexBuffer(this->device,this->physicalDevice,this->graphicsQueue);
         //BufferManager::createUniformBuffers(this->device,this->physicalDevice);
@@ -139,6 +145,13 @@ namespace Prometheus{
     }
 
     void Engine::cleanup() {
+
+        for(int i=0; i<Engine::gameObjects.size(); i++){
+
+            vkDestroyImage(device, Engine::gameObjects[i]->textureImage, nullptr);
+            vkFreeMemory(device, Engine::gameObjects[i]->textureImageMemory, nullptr);
+            delete Engine::gameObjects[i];
+        }
 
         SwapChainManager::cleanupSwapChain(device);
 
