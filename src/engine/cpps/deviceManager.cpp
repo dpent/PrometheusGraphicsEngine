@@ -1,6 +1,7 @@
 #include "../headers/deviceManager.h"
 #include "../headers/engine.h"
 #include "../headers/swapChainManager.h"
+#include <vulkan/vulkan_core.h>
 
 using namespace Prometheus;
 
@@ -63,6 +64,10 @@ namespace Prometheus{
             swapChainAdequate = !swapChainSupport.formats.empty() && !swapChainSupport.presentModes.empty();
         }
 
+        if(!deviceFeatures.samplerAnisotropy){
+            score-=50;
+        }
+
         // Application can't function without geometry shaders
         if (!deviceFeatures.geometryShader || !extensionsSupported || !swapChainAdequate) {
             return 0;
@@ -106,6 +111,11 @@ namespace Prometheus{
 
 
         VkPhysicalDeviceFeatures deviceFeatures{};//TODO FILL THE FIELDS RIGHT NOW ALL ARE FALSE
+        if(!Engine::physicalDeviceFeatures.samplerAnisotropy){
+            deviceFeatures.samplerAnisotropy = VK_FALSE;
+        }else{
+            deviceFeatures.samplerAnisotropy = VK_TRUE;
+        } //We need this if we use it
 
         VkDeviceCreateInfo createInfo{};
         createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;

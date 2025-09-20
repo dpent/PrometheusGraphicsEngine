@@ -10,9 +10,12 @@ namespace Prometheus{
         uint64_t id;
         VkImage textureImage;
         VkDeviceMemory textureImageMemory;
+        VkImageView textureImageView;
+        VkSampler textureSampler;
         const char* texturePath;
 
         GameObject(const char* texturePath,int req_comp, VkDevice& device, VkPhysicalDevice& physicalDevice,VkQueue& graphicsQueue);
         ~GameObject();
+        void terminate(VkDevice& device);
     };
 }

@@ -1,6 +1,7 @@
 #include "../headers/textureManager.h"
 #include "../headers/engine.h"
 #include "../headers/bufferManager.h"
+#include "../headers/swapChainManager.h"
 
 
 using namespace Prometheus;
@@ -185,5 +186,46 @@ namespace Prometheus{
         );
 
         BufferManager::endSingleTimeCommands(commandBuffer,device,graphicsQueue);
+    }
+
+    void TextureManager::createTextureImageView(VkDevice& device, VkImage& image, VkImageView& imageView){
+        
+        imageView=SwapChainManager::createImageView(device,image,VK_FORMAT_R8G8B8A8_SRGB);
+    }
+
+    void TextureManager::createTextureSampler(VkDevice& device, VkSampler& sampler){
+        VkSamplerCreateInfo samplerInfo{};
+        samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+        samplerInfo.magFilter = VK_FILTER_LINEAR;
+        samplerInfo.minFilter = VK_FILTER_LINEAR;
+        samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+        samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+        samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+        /*
+        VK_SAMPLER_ADDRESS_MODE_REPEAT: Repeat the texture when going beyond the image dimensions.
+        VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT: Like repeat, but inverts the coordinates to mirror the image when going beyond the dimensions.
+        VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE: Take the color of the edge closest to the coordinate beyond the image dimensions.
+        VK_SAMPLER_ADDRESS_MODE_MIRROR_CLAMP_TO_EDGE: Like clamp to edge, but instead uses the edge opposite to the closest edge.
+        VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER: Return a solid color when sampling beyond the dimensions of the image.
+        */
+        if(!Engine::physicalDeviceFeatures.samplerAnisotropy){ //Anisotropic filtering
+            samplerInfo.anisotropyEnable = VK_FALSE;
+            samplerInfo.maxAnisotropy = 1.0f;
+        }else{
+            samplerInfo.anisotropyEnable = VK_FALSE;
+            samplerInfo.maxAnisotropy = Engine::physicalDeviceProperties.limits.maxSamplerAnisotropy;
+        }
+        samplerInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK; //It is possible to return black, white or transparent in either float or int formats. You cannot specify an arbitrary color.
+        samplerInfo.unnormalizedCoordinates = VK_FALSE;
+        samplerInfo.compareEnable = VK_FALSE;
+        samplerInfo.compareOp = VK_COMPARE_OP_ALWAYS;
+        samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+        samplerInfo.mipLodBias = 0.0f;
+        samplerInfo.minLod = 0.0f;
+        samplerInfo.maxLod = 0.0f;
+
+        if (vkCreateSampler(device, &samplerInfo, nullptr, &sampler) != VK_SUCCESS) {
+            throw std::runtime_error("failed to create texture sampler!");
+        }
     }
 }

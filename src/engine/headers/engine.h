@@ -106,6 +106,9 @@ namespace Prometheus{
         static std::vector<GameObject*> gameObjects;
         static std::unordered_map<uint64_t,GameObject*> gameObjectMap;
 
+        static VkPhysicalDeviceProperties physicalDeviceProperties;
+        static VkPhysicalDeviceFeatures physicalDeviceFeatures;
+
         void run();
         static std::vector<char> readFile(const std::string& filename);
         static void frameBufferResizeCallback(GLFWwindow* window, int width, int height);

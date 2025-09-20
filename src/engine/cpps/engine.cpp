@@ -73,6 +73,9 @@ glm::mat4 Engine::proj;
 std::vector<GameObject*> Engine::gameObjects;
 std::unordered_map<uint64_t,GameObject*> Engine::gameObjectMap;
 
+VkPhysicalDeviceProperties Engine::physicalDeviceProperties;
+VkPhysicalDeviceFeatures Engine::physicalDeviceFeatures;
+
 namespace Prometheus{
     void Engine::run() {
         initWindow();
@@ -100,6 +103,9 @@ namespace Prometheus{
 
         DeviceManager::pickPhysicalDevice(this->instance,this->physicalDevice, this->surface);
         DeviceManager::createLogicalDevice(this->physicalDevice, this->device, this->graphicsQueue,this->presentQueue, this->surface);
+
+        vkGetPhysicalDeviceProperties(physicalDevice, &Engine::physicalDeviceProperties); //We will use them for anisotropic filtering etc later on
+        vkGetPhysicalDeviceFeatures(physicalDevice, &Engine::physicalDeviceFeatures);
 
         SwapChainManager::createSwapChain(this->surface,this->physicalDevice,this->device, Engine::swapChain);
         SwapChainManager::createImageViews(this->device);
@@ -147,9 +153,7 @@ namespace Prometheus{
     void Engine::cleanup() {
 
         for(int i=0; i<Engine::gameObjects.size(); i++){
-
-            vkDestroyImage(device, Engine::gameObjects[i]->textureImage, nullptr);
-            vkFreeMemory(device, Engine::gameObjects[i]->textureImageMemory, nullptr);
+            Engine::gameObjects[i]->terminate(device);
             delete Engine::gameObjects[i];
         }
 

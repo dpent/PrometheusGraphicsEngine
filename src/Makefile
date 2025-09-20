@@ -29,15 +29,17 @@ $(foreach src,$(SRCS),$(eval $(call cpp-to-obj,$(src))))
 all: $(TARGET)
 
 $(TARGET): $(OBJS)
-	$(CXX) $(CFLAGS) -o $@ $(OBJS) $(LDFLAGS)
+	@echo "Linking..."
+	@$(CXX) $(CFLAGS) -o $@ $(OBJS) $(LDFLAGS)
 	@echo "Cleaning up object files..."
-	rm -f $(OBJS)
-	@echo "Build complete! Executable: $(TARGET)"
+	@rm -f $(OBJS)
+	@echo "==============================BUILD COMPLETE=============================="
+	@echo "Executable: $(TARGET) is now running..."
 
 .PHONY: clean run all
 
 run: $(TARGET)
-	$(TARGET)
+	@$(TARGET)
 
 clean:
 	rm -f $(BUILD_DIR)/*.o $(TARGET)

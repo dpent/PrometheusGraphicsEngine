@@ -15,9 +15,20 @@ namespace Prometheus{
 
         TextureManager::createTextureImage(texturePath, req_comp, device, physicalDevice,
         this->textureImage,this->textureImageMemory,graphicsQueue);
+
+        TextureManager::createTextureImageView(device,this->textureImage,this->textureImageView);
+
+        TextureManager::createTextureSampler(device,this->textureSampler);
     }
 
     GameObject::~GameObject(){
+    }
+
+    void GameObject::terminate(VkDevice& device){ //Used for object deletion
+        vkDestroySampler(device, this->textureSampler, nullptr);
+        vkDestroyImageView(device, this->textureImageView, nullptr);
+        vkDestroyImage(device, this->textureImage, nullptr);
+        vkFreeMemory(device, this->textureImageMemory, nullptr);
     }
 }
 

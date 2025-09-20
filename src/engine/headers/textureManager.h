@@ -19,5 +19,9 @@ namespace Prometheus{
 
         static void copyBufferToImage(VkBuffer& buffer, VkImage& image, const uint32_t& width, const uint32_t& height,
         VkDevice& device, VkQueue& graphicsQueue);
+
+        static void createTextureImageView(VkDevice& device, VkImage& image, VkImageView& imageView);
+
+        static void createTextureSampler(VkDevice& device, VkSampler& sampler);
     };
 }
