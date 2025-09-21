@@ -39,13 +39,19 @@ uint32_t Engine::currentFrame = 0;
 bool Engine::framebufferResized = false;
 
 std::vector<Vertex> Engine::vertices = {
-    {{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}},
-    {{0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}},
-    {{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f}},
-    {{-0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}, {1.0f, 1.0f}}
+    {{-0.5f, -0.5f, 0.0f}, {1.0f, 0.0f, 0.0f}, {0.0f, 0.0f}},
+    {{0.5f, -0.5f, 0.0f}, {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f}},
+    {{0.5f, 0.5f, 0.0f}, {0.0f, 0.0f, 1.0f}, {1.0f, 1.0f}},
+    {{-0.5f, 0.5f, 0.0f}, {1.0f, 1.0f, 1.0f}, {0.0f, 1.0f}},
+
+    {{-0.5f, -0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}, {0.0f, 0.0f}},
+    {{0.5f, -0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f}},
+    {{0.5f, 0.5f, -0.5f}, {0.0f, 0.0f, 1.0f}, {1.0f, 1.0f}},
+    {{-0.5f, 0.5f, -0.5f}, {1.0f, 1.0f, 1.0f}, {0.0f, 1.0f}}
 };
 std::vector<uint32_t> Engine::indices = {
-    0, 1, 2, 2, 3, 0
+    0, 1, 2, 2, 3, 0,
+    4, 5, 6, 6, 7, 4
 };
 
 VkBuffer Engine::vertexBuffer= nullptr;
@@ -76,6 +82,9 @@ VkPhysicalDeviceProperties Engine::physicalDeviceProperties;
 VkPhysicalDeviceFeatures Engine::physicalDeviceFeatures;
 
 std::unordered_map<std::string, Texture> Engine::textureMap;
+std::unordered_map<std::string,std::vector<uint64_t>> Engine::objectIdsByTexture;
+
+std::unordered_map<std::string,Mesh> Engine::meshMap;
 
 namespace Prometheus{
     void Engine::run() {
@@ -120,9 +129,15 @@ namespace Prometheus{
         BufferManager::createFrameBuffers(this->device);
         BufferManager::createCommandPool(this->physicalDevice, this->surface,this->device);
 
-        GameObject* rectangle=new GameObject("../textures/statue.jpg",STBI_rgb_alpha, this->device, this->physicalDevice, this->graphicsQueue);
+        Engine::meshMap["Rectangle"]=Mesh(0,4,0,6);
+
+        GameObject* rectangle=new GameObject("../textures/statue.jpg",STBI_rgb_alpha, this->device, this->physicalDevice, this->graphicsQueue,"Rectangle");
         Engine::gameObjects.push_back(rectangle);
         Engine::gameObjectMap.insert({rectangle->id,rectangle});
+
+        GameObject* rectangle2=new GameObject("../textures/statue.jpg",STBI_rgb_alpha, this->device, this->physicalDevice, this->graphicsQueue,"Rectangle");
+        Engine::gameObjects.push_back(rectangle2);
+        Engine::gameObjectMap.insert({rectangle2->id,rectangle2});
 
         VkDeviceSize bufferSize = (sizeof(Engine::vertices[0]) * Engine::vertices.size()) + (sizeof(Engine::indices[0]) * Engine::indices.size());
         BufferManager::createIndexVertexBuffer(this->device,this->physicalDevice,this->graphicsQueue);

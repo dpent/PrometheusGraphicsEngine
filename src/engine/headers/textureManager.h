@@ -30,8 +30,11 @@ namespace Prometheus{
         VkDeviceMemory textureImageMemory;
         VkImageView textureImageView;
         VkSampler textureSampler;
+        uint32_t count;
+        uint64_t descriptorIndex;
 
         Texture(const char * filepath,int req_comp, VkDevice& device, VkPhysicalDevice& physicalDevice, VkQueue& graphicsQueue);
+        Texture();
         void terminate(VkDevice& device);
     };
 }

@@ -63,7 +63,7 @@ namespace Prometheus{
         }
 
         std::vector<Texture*> values;
-         for (auto& [_, tex] : Engine::textureMap) {
+        for (auto& [_, tex] : Engine::textureMap) {
             values.push_back(&tex);
         }
 
@@ -83,6 +83,8 @@ namespace Prometheus{
             write.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
             write.pImageInfo = &imageInfo;
 
+            values[i]->descriptorIndex=i;
+            
             vkUpdateDescriptorSets(device, 1, &write, 0, nullptr);
 
         }

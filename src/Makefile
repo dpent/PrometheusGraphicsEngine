@@ -1,5 +1,5 @@
 CXX = g++
-CFLAGS = -std=c++23 -O2 -g -Iengine/headers -Iobjects/headers
+CFLAGS = -std=c++23 -O2 -g -Iengine/headers -Iobjects/headers #-fsanitize=address
 LDFLAGS = -lglfw -lvulkan -ldl -lpthread -lX11 -lXxf86vm -lXrandr -lXi
 
 BUILD_DIR = ../build

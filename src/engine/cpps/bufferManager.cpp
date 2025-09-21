@@ -144,8 +144,9 @@ namespace Prometheus{
             cameraPushConstants
         );
 
-        for(uint32_t i=0; i<Engine::gameObjects.size(); i++){
-            GameObject* obj = Engine::gameObjects[i];
+        for (const auto& pair : Engine::objectIdsByTexture) {
+            const std::string& textureName = pair.first;
+            const std::vector<uint64_t>& ids = pair.second;
 
             vkCmdBindDescriptorSets(
                 commandBuffer,
@@ -153,13 +154,18 @@ namespace Prometheus{
                 Engine::pipelineLayout,
                 0,                              // first set
                 1,                              // number of sets
-                &Engine::descriptorSets[i],     // pointer to descriptor set
+                &Engine::descriptorSets[Engine::textureMap[textureName].descriptorIndex],     // pointer to descriptor set
                 0,
                 nullptr
             );
-        }
 
-        vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(Engine::indices.size()), 1, 0, 0, 0);
+            //std::cout << "Texture: " << textureName << "\n";
+            for (uint64_t id : ids) {
+                //Engine::gameObjectMap[id]->toString();
+                Engine::gameObjectMap[id]->draw(commandBuffer);
+                //std::cout << "  Object ID: " << id << "\n";
+            }
+        }
 
         vkCmdEndRenderPass(commandBuffer);
 

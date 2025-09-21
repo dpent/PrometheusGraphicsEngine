@@ -18,6 +18,7 @@
 #include <glm/glm.hpp>
 #include "../headers/vertex.h"
 #include "../../objects/headers/gameObject.h"
+#include "../../objects/headers/mesh.h"
 
 namespace Prometheus{
 
@@ -109,6 +110,9 @@ namespace Prometheus{
         static VkPhysicalDeviceProperties physicalDeviceProperties;
         static VkPhysicalDeviceFeatures physicalDeviceFeatures;
         static std::unordered_map<std::string, Texture> textureMap;
+        static std::unordered_map<std::string,std::vector<uint64_t>> objectIdsByTexture;
+
+        static std::unordered_map<std::string,Mesh> meshMap;
 
         void run();
         static std::vector<char> readFile(const std::string& filename);

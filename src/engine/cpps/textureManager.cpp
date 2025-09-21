@@ -236,6 +236,12 @@ namespace Prometheus{
         TextureManager::createTextureImageView(device,this->textureImage,this->textureImageView);
 
         TextureManager::createTextureSampler(device,this->textureSampler);
+
+        this->count=1;
+    }
+
+    Texture::Texture(){
+        
     }
 
     void Texture::terminate(VkDevice& device){
