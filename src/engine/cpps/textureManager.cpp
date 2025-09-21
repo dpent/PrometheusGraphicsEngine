@@ -1,4 +1,3 @@
-#include "../headers/textureManager.h"
 #include "../headers/engine.h"
 #include "../headers/bufferManager.h"
 #include "../headers/swapChainManager.h"
@@ -227,5 +226,22 @@ namespace Prometheus{
         if (vkCreateSampler(device, &samplerInfo, nullptr, &sampler) != VK_SUCCESS) {
             throw std::runtime_error("failed to create texture sampler!");
         }
+    }
+
+    Texture::Texture(const char * filpath,int req_comp, VkDevice& device, VkPhysicalDevice& physicalDevice, VkQueue& graphicsQueue){
+
+        TextureManager::createTextureImage(filpath, req_comp, device, physicalDevice,
+        this->textureImage,this->textureImageMemory,graphicsQueue);
+
+        TextureManager::createTextureImageView(device,this->textureImage,this->textureImageView);
+
+        TextureManager::createTextureSampler(device,this->textureSampler);
+    }
+
+    void Texture::terminate(VkDevice& device){
+        vkDestroySampler(device, this->textureSampler, nullptr);
+        vkDestroyImageView(device, this->textureImageView, nullptr);
+        vkDestroyImage(device, this->textureImage, nullptr);
+        vkFreeMemory(device, this->textureImageMemory, nullptr);
     }
 }

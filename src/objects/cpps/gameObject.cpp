@@ -1,5 +1,4 @@
-#include "../headers/gameObject.h"
-#include "../../engine/headers/textureManager.h"
+#include "../../engine/headers/engine.h"
 #include <vulkan/vulkan_core.h>
 
 
@@ -13,22 +12,21 @@ namespace Prometheus{
         GameObject::autoIncrementId++;
         this->texturePath=texturePath;
 
-        TextureManager::createTextureImage(texturePath, req_comp, device, physicalDevice,
-        this->textureImage,this->textureImageMemory,graphicsQueue);
-
-        TextureManager::createTextureImageView(device,this->textureImage,this->textureImageView);
-
-        TextureManager::createTextureSampler(device,this->textureSampler);
+         if (Engine::textureMap.find(texturePath) != Engine::textureMap.end()) {
+        } else {
+            Engine::textureMap.insert(std::make_pair(std::string(texturePath), Texture(texturePath, 4, device, physicalDevice, graphicsQueue)));
+        }
     }
 
     GameObject::~GameObject(){
     }
 
     void GameObject::terminate(VkDevice& device){ //Used for object deletion
-        vkDestroySampler(device, this->textureSampler, nullptr);
-        vkDestroyImageView(device, this->textureImageView, nullptr);
-        vkDestroyImage(device, this->textureImage, nullptr);
-        vkFreeMemory(device, this->textureImageMemory, nullptr);
+        auto it = Engine::textureMap.find(this->texturePath);
+        if (it != Engine::textureMap.end()) {
+            it->second.terminate(device);
+        }
+
     }
 }
 

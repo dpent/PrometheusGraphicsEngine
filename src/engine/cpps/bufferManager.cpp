@@ -116,7 +116,8 @@ namespace Prometheus{
         scissor.extent = Engine::swapChainExtent;
         vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
-        //vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, Engine::pipelineLayout, 0, 1, &Engine::descriptorSets[Engine::currentFrame], 0, nullptr);
+        //vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, Engine::pipelineLayout, 0,
+        //    static_cast<uint32_t>(Engine::descriptorSets.size()) , Engine::descriptorSets.data(), 0, nullptr);
 
         static auto startTime = std::chrono::high_resolution_clock::now();
 
@@ -142,6 +143,21 @@ namespace Prometheus{
             sizeof(*cameraPushConstants),
             cameraPushConstants
         );
+
+        for(uint32_t i=0; i<Engine::gameObjects.size(); i++){
+            GameObject* obj = Engine::gameObjects[i];
+
+            vkCmdBindDescriptorSets(
+                commandBuffer,
+                VK_PIPELINE_BIND_POINT_GRAPHICS,
+                Engine::pipelineLayout,
+                0,                              // first set
+                1,                              // number of sets
+                &Engine::descriptorSets[i],     // pointer to descriptor set
+                0,
+                nullptr
+            );
+        }
 
         vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(Engine::indices.size()), 1, 0, 0, 0);
 

@@ -108,6 +108,7 @@ namespace Prometheus{
 
         static VkPhysicalDeviceProperties physicalDeviceProperties;
         static VkPhysicalDeviceFeatures physicalDeviceFeatures;
+        static std::unordered_map<std::string, Texture> textureMap;
 
         void run();
         static std::vector<char> readFile(const std::string& filename);
@@ -136,7 +137,6 @@ namespace Prometheus{
         void mainLoop();
         void createSurface();
         void cleanup();
-        void createImageViews();
         void drawFrame();
     };
 }

@@ -24,4 +24,14 @@ namespace Prometheus{
 
         static void createTextureSampler(VkDevice& device, VkSampler& sampler);
     };
+
+    struct Texture{
+        VkImage textureImage;
+        VkDeviceMemory textureImageMemory;
+        VkImageView textureImageView;
+        VkSampler textureSampler;
+
+        Texture(const char * filepath,int req_comp, VkDevice& device, VkPhysicalDevice& physicalDevice, VkQueue& graphicsQueue);
+        void terminate(VkDevice& device);
+    };
 }

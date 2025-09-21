@@ -7,7 +7,6 @@
 #include "../headers/syncManager.h"
 #include <vulkan/vulkan_core.h>
 #include "../headers/descriptorManager.h"
-#include "../headers/textureManager.h"
 
 using namespace Prometheus;
 
@@ -40,10 +39,10 @@ uint32_t Engine::currentFrame = 0;
 bool Engine::framebufferResized = false;
 
 std::vector<Vertex> Engine::vertices = {
-    {{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}},
-    {{0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}},
-    {{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}},
-    {{-0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}}
+    {{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}},
+    {{0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}},
+    {{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f}},
+    {{-0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}, {1.0f, 1.0f}}
 };
 std::vector<uint32_t> Engine::indices = {
     0, 1, 2, 2, 3, 0
@@ -75,6 +74,8 @@ std::unordered_map<uint64_t,GameObject*> Engine::gameObjectMap;
 
 VkPhysicalDeviceProperties Engine::physicalDeviceProperties;
 VkPhysicalDeviceFeatures Engine::physicalDeviceFeatures;
+
+std::unordered_map<std::string, Texture> Engine::textureMap;
 
 namespace Prometheus{
     void Engine::run() {
@@ -112,7 +113,7 @@ namespace Prometheus{
 
         RenderPassManager::createRenderPass(this->device);
 
-        //DescriptorManager::createDescriptorSetLayout(this->device);
+        DescriptorManager::createDescriptorSetLayout(this->device);
 
         GraphicsPipelineManager::createGraphicsPipeline(this->device);
 
@@ -127,8 +128,8 @@ namespace Prometheus{
         BufferManager::createIndexVertexBuffer(this->device,this->physicalDevice,this->graphicsQueue);
         //BufferManager::createUniformBuffers(this->device,this->physicalDevice);
 
-        //DescriptorManager::createDescriptorPool(this->device);
-        //DescriptorManager::createDescriptorSets(this->device);
+        DescriptorManager::createDescriptorPool(this->device);
+        DescriptorManager::createDescriptorSets(this->device);
 
         BufferManager::createCommandBuffers(this->device);
 
@@ -164,9 +165,9 @@ namespace Prometheus{
             //vkFreeMemory(device, Engine::uniformBuffersMemory[i], nullptr);
         //}
 
-        //vkDestroyDescriptorSetLayout(device, Engine::descriptorSetLayout, nullptr);
+        vkDestroyDescriptorSetLayout(device, Engine::descriptorSetLayout, nullptr);
 
-        //vkDestroyDescriptorPool(device, Engine::descriptorPool, nullptr);
+        vkDestroyDescriptorPool(device, Engine::descriptorPool, nullptr);
 
         vkDestroyBuffer(device, Engine::indexVertexBuffer, nullptr);
         vkFreeMemory(device, Engine::indexVertexBufferMemory, nullptr);
@@ -197,32 +198,6 @@ namespace Prometheus{
         glfwDestroyWindow(Engine::window);
 
         glfwTerminate();
-    }
-
-    void Engine::createImageViews(){
-        Engine::swapChainImageViews.resize(Engine::swapChainImages.size());
-
-        for (size_t i = 0; i < swapChainImages.size(); i++) {
-            VkImageViewCreateInfo createInfo{};
-            createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-            createInfo.image = swapChainImages[i];
-            createInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
-            createInfo.format = Engine::swapChainImageFormat;
-            createInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
-            createInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
-            createInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
-            createInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
-            createInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-            createInfo.subresourceRange.baseMipLevel = 0;
-            createInfo.subresourceRange.levelCount = 1;
-            createInfo.subresourceRange.baseArrayLayer = 0;
-            createInfo.subresourceRange.layerCount = 1;
-
-            if (vkCreateImageView(device, &createInfo, nullptr, &swapChainImageViews[i]) != VK_SUCCESS) {
-                throw std::runtime_error("failed to create image views!");
-            }
-
-        }
     }
 
     std::vector<char> Engine::readFile(const std::string& filename) {
