@@ -3,6 +3,9 @@
 #include <GLFW/glfw3.h>
 #include "../../engine/headers/textureManager.h"
 #include <string>
+#define GLM_FORCE_RADIANS
+#define GLM_FORCE_DEFAULT_ALIGNED_GENTYPES //REMEMBER THIS IS SUPPOSED TO ALIGN EVERYTHING
+#include <glm/glm.hpp>  
 
 namespace Prometheus{
     class GameObject{
@@ -13,6 +16,7 @@ namespace Prometheus{
         uint64_t id;
         const char * texturePath;
         std::string meshPath;
+        glm::mat4 modelMatrix;
 
         GameObject(const char* texturePath,int req_comp, VkDevice& device, VkPhysicalDevice& physicalDevice,VkQueue& graphicsQueue,
         std::string meshPath);
@@ -21,5 +25,6 @@ namespace Prometheus{
         void terminate(VkDevice& device);
         virtual void draw(VkCommandBuffer& commandBuffer);
         std::string toString();
+        glm::mat4 animateCircularMotion(float centerX, float centerY, float centerZ, float radius, float speed, float offset);
     };
 }

@@ -61,7 +61,8 @@ namespace Prometheus{
         }
     }
 
-    void BufferManager::recordCommandBuffer(VkCommandBuffer& commandBuffer, uint32_t& imageIndex){
+    void BufferManager::recordCommandBuffer(VkCommandBuffer& commandBuffer, uint32_t& imageIndex,
+        VkDevice& device, VkPhysicalDevice& physicalDevice, VkQueue& graphicsQueue){
 
         VkCommandBufferBeginInfo beginInfo{};
         beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -97,9 +98,11 @@ namespace Prometheus{
 
         vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, Engine::graphicsPipeline);
 
-        VkBuffer vertexBuffers[] = {Engine::indexVertexBuffer};
-        VkDeviceSize offsets[] = {0};
-        vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
+        BufferManager::updateInstanceBuffer(Engine::currentFrame);
+
+        VkBuffer vertexBuffers[] = {Engine::indexVertexBuffer,Engine::instanceBuffers[Engine::currentFrame]};
+        VkDeviceSize offsets[] = {0,0};
+        vkCmdBindVertexBuffers(commandBuffer, 0, 2, vertexBuffers, offsets);
         vkCmdBindIndexBuffer(commandBuffer, Engine::indexVertexBuffer, Engine::indexOffset, VK_INDEX_TYPE_UINT32);
 
         VkViewport viewport{}; //Viewport and Scissor was set to dynamic in createGraphicsPipeline (graphicsPipeline.cpp)
@@ -129,8 +132,7 @@ namespace Prometheus{
         Engine::proj=glm::perspective(glm::radians(45.0f), Engine::swapChainExtent.width / (float) Engine::swapChainExtent.height, 0.1f, 10.0f);
         Engine::proj[1][1] *= -1;
 
-        UniformBufferObject* cameraPushConstants= new UniformBufferObject();
-        cameraPushConstants->model=Engine::model;
+        CameraObject* cameraPushConstants= new CameraObject();
         cameraPushConstants->view=Engine::view;
         cameraPushConstants->proj=Engine::proj;
 
@@ -174,6 +176,7 @@ namespace Prometheus{
         }
 
         delete cameraPushConstants;
+        Engine::instances.clear();
     }
 
     void BufferManager::createIndexVertexBuffer(VkDevice& device, VkPhysicalDevice& physicalDevice, VkQueue& graphicsQueue){
@@ -360,6 +363,29 @@ namespace Prometheus{
         vkQueueWaitIdle(graphicsQueue);
 
         vkFreeCommandBuffers(device, Engine::commandPool, 1, &commandBuffer);
+    }
+
+    void BufferManager::createInstanceBuffers(VkDevice& device, VkPhysicalDevice& physicalDevice, VkQueue& graphicsQueue){
+
+        Engine::instanceBuffers.resize(Engine::MAX_FRAMES_IN_FLIGHT);
+        Engine::instanceBufferMemories.resize(Engine::MAX_FRAMES_IN_FLIGHT);
+        Engine::instanceBuffersMapped.resize(Engine::MAX_FRAMES_IN_FLIGHT);
+        VkDeviceSize bufferSize = (sizeof(InstanceInfo) * Engine::instances.size());
+
+        for(size_t i=0; i<Engine::MAX_FRAMES_IN_FLIGHT; i++){
+            BufferManager::createBuffer(bufferSize, 
+            VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, 
+            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
+            Engine::instanceBuffers[i], Engine::instanceBufferMemories[i],device,physicalDevice);
+
+            vkMapMemory(device, Engine::instanceBufferMemories[i], 0, bufferSize, 0, &Engine::instanceBuffersMapped[i]);
+        }
+    }
+
+    void BufferManager::updateInstanceBuffer(uint32_t currentImage){
+        Engine::updateGameObjects();
+
+        memcpy(Engine::instanceBuffersMapped[currentImage], Engine::instances.data(), (size_t)(Engine::instances.size() * sizeof(InstanceInfo)));
     }
 
 }

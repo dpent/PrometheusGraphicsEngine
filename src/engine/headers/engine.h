@@ -83,13 +83,12 @@ namespace Prometheus{
         static std::vector<Vertex> vertices;
         static std::vector<uint32_t> indices;
 
-        static VkBuffer vertexBuffer;
-        static VkDeviceMemory vertexBufferMemory;
-        static VkBuffer indexBuffer;
-        static VkDeviceMemory indexBufferMemory;
-
         static VkBuffer indexVertexBuffer;
         static VkDeviceMemory indexVertexBufferMemory;
+
+        static std::vector<VkBuffer> instanceBuffers;
+        static std::vector<VkDeviceMemory> instanceBufferMemories;
+        static std::vector<void*> instanceBuffersMapped;
 
         static VkDeviceSize indexOffset;
 
@@ -113,10 +112,12 @@ namespace Prometheus{
         static std::unordered_map<std::string,std::vector<uint64_t>> objectIdsByTexture;
 
         static std::unordered_map<std::string,Mesh> meshMap;
+        static std::vector<InstanceInfo> instances;
 
         void run();
         static std::vector<char> readFile(const std::string& filename);
         static void frameBufferResizeCallback(GLFWwindow* window, int width, int height);
+        static void updateGameObjects();
 
     private:
         //Window variables

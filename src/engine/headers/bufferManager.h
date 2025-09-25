@@ -15,7 +15,8 @@ namespace Prometheus{
         static void createFrameBuffers(VkDevice& device);
         static void createCommandPool(VkPhysicalDevice& physicalDevice, VkSurfaceKHR& surface, VkDevice& device);
         static void createCommandBuffers(VkDevice& device);
-        static void recordCommandBuffer(VkCommandBuffer& commandBuffer, uint32_t& imageIndex);
+        static void recordCommandBuffer(VkCommandBuffer& commandBuffer, uint32_t& imageIndex,
+            VkDevice& device, VkPhysicalDevice& physicalDevice, VkQueue& graphicsQueue);
 
         static void createIndexVertexBuffer(VkDevice& device, VkPhysicalDevice& physicalDevice, VkQueue& graphicsQueue);
 
@@ -48,5 +49,8 @@ namespace Prometheus{
 
         static VkCommandBuffer beginSingleTimeCommands(VkDevice& device);
         static void endSingleTimeCommands(VkCommandBuffer& commandBuffer, VkDevice& device, VkQueue& graphicsQueue);
+
+        static void createInstanceBuffers(VkDevice& device, VkPhysicalDevice& physicalDevice, VkQueue& graphicsQueue);
+        static void updateInstanceBuffer(uint32_t currentImage);
     };
 }

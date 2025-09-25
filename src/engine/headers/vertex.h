@@ -10,10 +10,17 @@ namespace Prometheus{
         glm::vec3 color;
         glm::vec2 texCoord;
 
-        static VkVertexInputBindingDescription getBindingDescription();
+        static std::array<VkVertexInputBindingDescription,2> getBindingDescription();
 
-        static std::array<VkVertexInputAttributeDescription, 3> getAttributeDescriptions();
+        static std::array<VkVertexInputAttributeDescription, 7> getAttributeDescriptions();
     };
+
+    struct CameraObject
+    {
+        glm::mat4 view;
+        glm::mat4 proj;   
+    };
+    
 
     struct UniformBufferObject {
         glm::mat4 model;

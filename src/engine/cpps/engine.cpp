@@ -54,13 +54,12 @@ std::vector<uint32_t> Engine::indices = {
     4, 5, 6, 6, 7, 4
 };
 
-VkBuffer Engine::vertexBuffer= nullptr;
-VkDeviceMemory Engine::vertexBufferMemory=nullptr;
-VkBuffer Engine::indexBuffer=nullptr;
-VkDeviceMemory Engine::indexBufferMemory=nullptr;
-
 VkBuffer Engine::indexVertexBuffer= nullptr;
 VkDeviceMemory Engine::indexVertexBufferMemory= nullptr;
+
+std::vector<VkBuffer> Engine::instanceBuffers;
+std::vector<VkDeviceMemory> Engine::instanceBufferMemories;
+std::vector<void*> Engine::instanceBuffersMapped;
 
 VkDeviceSize Engine::indexOffset=0;
 
@@ -85,6 +84,7 @@ std::unordered_map<std::string, Texture> Engine::textureMap;
 std::unordered_map<std::string,std::vector<uint64_t>> Engine::objectIdsByTexture;
 
 std::unordered_map<std::string,Mesh> Engine::meshMap;
+std::vector<InstanceInfo> Engine::instances;
 
 namespace Prometheus{
     void Engine::run() {
@@ -139,10 +139,14 @@ namespace Prometheus{
         Engine::gameObjects.push_back(rectangle2);
         Engine::gameObjectMap.insert({rectangle2->id,rectangle2});
 
-        VkDeviceSize bufferSize = (sizeof(Engine::vertices[0]) * Engine::vertices.size()) + (sizeof(Engine::indices[0]) * Engine::indices.size());
         BufferManager::createIndexVertexBuffer(this->device,this->physicalDevice,this->graphicsQueue);
-        //BufferManager::createUniformBuffers(this->device,this->physicalDevice);
 
+        Engine::updateGameObjects();
+
+        BufferManager::createInstanceBuffers(this->device,this->physicalDevice,this->graphicsQueue);
+
+        //BufferManager::createUniformBuffers(this->device,this->physicalDevice);
+        
         DescriptorManager::createDescriptorPool(this->device);
         DescriptorManager::createDescriptorSets(this->device);
 
@@ -186,6 +190,12 @@ namespace Prometheus{
 
         vkDestroyBuffer(device, Engine::indexVertexBuffer, nullptr);
         vkFreeMemory(device, Engine::indexVertexBufferMemory, nullptr);
+
+        for(size_t i=0; i<MAX_FRAMES_IN_FLIGHT; i++){
+            vkDestroyBuffer(device, Engine::instanceBuffers[i], nullptr);
+            vkFreeMemory(device, Engine::instanceBufferMemories[i], nullptr);
+        }
+
 
         for (size_t i = 0; i < Engine::MAX_FRAMES_IN_FLIGHT; i++) {
             vkDestroySemaphore(device, Engine::renderFinishedSemaphores[i], nullptr);
@@ -252,7 +262,8 @@ namespace Prometheus{
         vkResetFences(device, 1, &Engine::inFlightFences[Engine::currentFrame]);
 
         vkResetCommandBuffer(Engine::commandBuffers[Engine::currentFrame],  0);
-        BufferManager::recordCommandBuffer(Engine::commandBuffers[Engine::currentFrame], imageIndex);
+        BufferManager::recordCommandBuffer(Engine::commandBuffers[Engine::currentFrame], imageIndex,device,
+        physicalDevice,graphicsQueue);
 
         //BufferManager::updateUniformBuffer(Engine::currentFrame);
 
@@ -302,5 +313,13 @@ namespace Prometheus{
     void Engine::frameBufferResizeCallback(GLFWwindow* window, int width, int height){
         auto app = reinterpret_cast<Engine*>(glfwGetWindowUserPointer(window));
         app->framebufferResized = true;
+    }
+
+    void Engine::updateGameObjects(){
+
+        for(uint32_t i=0; i<Engine::gameObjects.size(); i++){
+            //Engine::gameObjects[i]->modelMatrix
+            Engine::instances.push_back(InstanceInfo(Engine::gameObjects[i]->animateCircularMotion(0.0f,0.0f,0.0f,1.0f,2.0f,i*2.0f)));
+        }
     }
 }
