@@ -15,7 +15,7 @@ namespace Prometheus{
 
         VkDescriptorSetLayoutBinding samplerLayoutBinding{};
         samplerLayoutBinding.binding = 0;
-        samplerLayoutBinding.descriptorCount = 1;
+        samplerLayoutBinding.descriptorCount = 64; // Max per batch
         samplerLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
         samplerLayoutBinding.pImmutableSamplers = nullptr;
         samplerLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
@@ -35,13 +35,13 @@ namespace Prometheus{
     void DescriptorManager::createDescriptorPool(VkDevice& device){
         VkDescriptorPoolSize poolSize{};
         poolSize.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-        poolSize.descriptorCount = static_cast<uint32_t>(Engine::textureMap.size());
+        poolSize.descriptorCount = static_cast<uint32_t>(Engine::meshBatches.size() * 64);
 
         VkDescriptorPoolCreateInfo poolInfo{};
         poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
         poolInfo.poolSizeCount = 1;
         poolInfo.pPoolSizes = &poolSize;
-        poolInfo.maxSets = static_cast<uint32_t>(Engine::textureMap.size());
+        poolInfo.maxSets = static_cast<uint32_t>(Engine::meshBatches.size());
 
         if (vkCreateDescriptorPool(device, &poolInfo, nullptr, &Engine::descriptorPool) != VK_SUCCESS) {
             throw std::runtime_error("failed to create descriptor pool!");
@@ -50,43 +50,42 @@ namespace Prometheus{
 
     void DescriptorManager::createDescriptorSets(VkDevice& device){
 
-        std::vector<VkDescriptorSetLayout> layouts(Engine::textureMap.size(), Engine::descriptorSetLayout);
-        VkDescriptorSetAllocateInfo allocInfo{};
-        allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-        allocInfo.descriptorPool = Engine::descriptorPool;
-        allocInfo.descriptorSetCount = static_cast<uint32_t>(Engine::textureMap.size());
-        allocInfo.pSetLayouts = layouts.data();
+        Engine::descriptorSets.resize(Engine::meshBatches.size());
+        uint32_t i=0;
+        for (auto &batch : Engine::meshBatches) {
+            VkDescriptorSetAllocateInfo allocInfo{};
+            allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+            allocInfo.descriptorPool = Engine::descriptorPool;
+            allocInfo.descriptorSetCount = 1;
+            allocInfo.pSetLayouts = &Engine::descriptorSetLayout;
 
-        Engine::descriptorSets.resize(Engine::textureMap.size());
-        if (vkAllocateDescriptorSets(device, &allocInfo, Engine::descriptorSets.data()) != VK_SUCCESS) {
-            throw std::runtime_error("failed to allocate descriptor sets!");
-        }
+            if (vkAllocateDescriptorSets(device, &allocInfo, &Engine::descriptorSets[i]) != VK_SUCCESS) {
+                throw std::runtime_error("failed to allocate descriptor set!");
+            }
 
-        std::vector<Texture*> values;
-        for (auto& [_, tex] : Engine::textureMap) {
-            values.push_back(&tex);
-        }
+            std::vector<VkDescriptorImageInfo> imageInfos;
+            imageInfos.reserve(batch.textures.size());
 
-        for (size_t i = 0; i < Engine::textureMap.size(); i++) {
-
-            VkDescriptorImageInfo imageInfo{};
-            imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-            imageInfo.imageView = values[i]->textureImageView;
-            imageInfo.sampler = values[i]->textureSampler;
+            for (auto tex : batch.textures) {
+                VkDescriptorImageInfo info{};
+                info.sampler     = tex.textureSampler;
+                info.imageView   = tex.textureImageView;
+                info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+                imageInfos.push_back(info);
+            }
 
             VkWriteDescriptorSet write{};
-            write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-            write.dstSet = Engine::descriptorSets[i];
-            write.dstBinding = 0;
+            write.sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            write.dstSet          = Engine::descriptorSets[i];
+            write.dstBinding      = 0;
             write.dstArrayElement = 0;
-            write.descriptorCount = 1;
-            write.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-            write.pImageInfo = &imageInfo;
+            write.descriptorType  = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+            write.descriptorCount = static_cast<uint32_t>(imageInfos.size());
+            write.pImageInfo      = imageInfos.data();
 
-            values[i]->descriptorIndex=i;
-            
             vkUpdateDescriptorSets(device, 1, &write, 0, nullptr);
 
+            i++;
         }
     }
 }

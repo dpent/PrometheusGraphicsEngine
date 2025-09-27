@@ -28,6 +28,8 @@ namespace Prometheus{
             Engine::objectIdsByTexture[texturePath].push_back(this->id);
             this->textureVecIndex=0;
         }
+
+        Engine::objectsByMesh[meshPath][this->id]=this;
     }
 
     GameObject::~GameObject(){
@@ -41,12 +43,14 @@ namespace Prometheus{
             it->second.terminate(device);
         }
         Engine::objectIdsByTexture[this->texturePath].erase(Engine::objectIdsByTexture[this->texturePath].begin()+this->textureVecIndex);
+        Engine::objectsByMesh[meshPath].erase(this->id);
     }
 
-    void GameObject::draw(VkCommandBuffer& commandBuffer){
+    void GameObject::draw(VkCommandBuffer& commandBuffer, uint32_t instanceCount, uint32_t firstInstance){
         //std::cout<< "Mesh path " << Engine::meshMap[this->meshPath].toString()<<std::endl;
+        
         vkCmdDrawIndexed(commandBuffer, Engine::meshMap[this->meshPath].indexCount, 
-            2, Engine::meshMap[this->meshPath].indexOffset, Engine::meshMap[this->meshPath].vertexOffset, 0); //Remember to see instancing
+            instanceCount, Engine::meshMap[this->meshPath].indexOffset, Engine::meshMap[this->meshPath].vertexOffset, firstInstance); //Remember to see instancing
     }
 
     GameObject::GameObject(){

@@ -12,7 +12,7 @@ namespace Prometheus{
 
         static std::array<VkVertexInputBindingDescription,2> getBindingDescription();
 
-        static std::array<VkVertexInputAttributeDescription, 7> getAttributeDescriptions();
+        static std::array<VkVertexInputAttributeDescription, 8> getAttributeDescriptions();
     };
 
     struct CameraObject

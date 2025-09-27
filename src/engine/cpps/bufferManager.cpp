@@ -119,17 +119,16 @@ namespace Prometheus{
         scissor.extent = Engine::swapChainExtent;
         vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
-        //vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, Engine::pipelineLayout, 0,
-        //    static_cast<uint32_t>(Engine::descriptorSets.size()) , Engine::descriptorSets.data(), 0, nullptr);
-
-        static auto startTime = std::chrono::high_resolution_clock::now();
-
-        auto currentTime = std::chrono::high_resolution_clock::now();
-        float time = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
-
-        Engine::model=glm::rotate(glm::mat4(1.0f), time * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-        Engine::view=glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-        Engine::proj=glm::perspective(glm::radians(45.0f), Engine::swapChainExtent.width / (float) Engine::swapChainExtent.height, 0.1f, 10.0f);
+        Engine::view = glm::lookAt(
+            glm::vec3(3.0f, 2.0f, 3.0f),
+            glm::vec3(0.0f, 0.0f, 0.0f),
+            glm::vec3(0.0f, 0.0f, 1.0f)
+        );
+        Engine::proj=glm::perspective(
+            glm::radians(45.0f),
+            Engine::swapChainExtent.width / 
+            (float) Engine::swapChainExtent.height, 0.1f, 10.0f
+        );
         Engine::proj[1][1] *= -1;
 
         CameraObject* cameraPushConstants= new CameraObject();
@@ -146,27 +145,23 @@ namespace Prometheus{
             cameraPushConstants
         );
 
-        for (const auto& pair : Engine::objectIdsByTexture) {
-            const std::string& textureName = pair.first;
-            const std::vector<uint64_t>& ids = pair.second;
+        uint32_t instanceCount=0;
 
+        for(uint32_t i=0; i<Engine::meshBatches.size(); i++){
             vkCmdBindDescriptorSets(
                 commandBuffer,
                 VK_PIPELINE_BIND_POINT_GRAPHICS,
                 Engine::pipelineLayout,
                 0,                              // first set
                 1,                              // number of sets
-                &Engine::descriptorSets[Engine::textureMap[textureName].descriptorIndex],     // pointer to descriptor set
+                &Engine::descriptorSets[i],     // pointer to descriptor set
                 0,
                 nullptr
             );
 
-            //std::cout << "Texture: " << textureName << "\n";
-            for (uint64_t id : ids) {
-                //Engine::gameObjectMap[id]->toString();
-                Engine::gameObjectMap[id]->draw(commandBuffer);
-                //std::cout << "  Object ID: " << id << "\n";
-            }
+            Engine::gameObjectMap[Engine::meshBatches[i].ids[0]]->draw(commandBuffer,Engine::meshBatches[i].instances.size(),instanceCount);
+
+            instanceCount+=Engine::meshBatches[i].instances.size();
         }
 
         vkCmdEndRenderPass(commandBuffer);
@@ -177,6 +172,7 @@ namespace Prometheus{
 
         delete cameraPushConstants;
         Engine::instances.clear();
+        Engine::meshBatches.clear();
     }
 
     void BufferManager::createIndexVertexBuffer(VkDevice& device, VkPhysicalDevice& physicalDevice, VkQueue& graphicsQueue){
@@ -370,7 +366,11 @@ namespace Prometheus{
         Engine::instanceBuffers.resize(Engine::MAX_FRAMES_IN_FLIGHT);
         Engine::instanceBufferMemories.resize(Engine::MAX_FRAMES_IN_FLIGHT);
         Engine::instanceBuffersMapped.resize(Engine::MAX_FRAMES_IN_FLIGHT);
-        VkDeviceSize bufferSize = (sizeof(InstanceInfo) * Engine::instances.size());
+
+        VkDeviceSize bufferSize=0;
+        for(uint32_t i=0; i<Engine::meshBatches.size(); i++){
+            bufferSize+=sizeof(InstanceInfo) * Engine::meshBatches[i].instances.size();
+        }
 
         for(size_t i=0; i<Engine::MAX_FRAMES_IN_FLIGHT; i++){
             BufferManager::createBuffer(bufferSize, 
@@ -385,7 +385,14 @@ namespace Prometheus{
     void BufferManager::updateInstanceBuffer(uint32_t currentImage){
         Engine::updateGameObjects();
 
-        memcpy(Engine::instanceBuffersMapped[currentImage], Engine::instances.data(), (size_t)(Engine::instances.size() * sizeof(InstanceInfo)));
+        char* dst = reinterpret_cast<char*>(Engine::instanceBuffersMapped[currentImage]);
+        size_t offset = 0;
+
+        for (auto &batch : Engine::meshBatches) {
+            size_t batchSize = batch.instances.size() * sizeof(InstanceInfo);
+            memcpy(dst + offset, batch.instances.data(), batchSize);
+            offset += batchSize;
+        }
     }
 
 }

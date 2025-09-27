@@ -1,7 +1,6 @@
 #include <cstdint>
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
-#include "../../engine/headers/textureManager.h"
 #include <string>
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEFAULT_ALIGNED_GENTYPES //REMEMBER THIS IS SUPPOSED TO ALIGN EVERYTHING
@@ -23,7 +22,7 @@ namespace Prometheus{
         GameObject();
         ~GameObject();
         void terminate(VkDevice& device);
-        virtual void draw(VkCommandBuffer& commandBuffer);
+        virtual void draw(VkCommandBuffer& commandBuffer, uint32_t instanceCount, uint32_t firstInstance);
         std::string toString();
         glm::mat4 animateCircularMotion(float centerX, float centerY, float centerZ, float radius, float speed, float offset);
     };

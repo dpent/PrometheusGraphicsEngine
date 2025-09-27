@@ -7,6 +7,8 @@
 #include <string>
 #include <sstream>
 #include <iomanip>
+#include <vector>
+#include "../../engine/headers/textureManager.h"
 
 
 namespace Prometheus{
@@ -24,9 +26,19 @@ namespace Prometheus{
 
     struct InstanceInfo{
         glm::mat4 modelMatrix;
+        alignas(16) uint32_t textureIndex;
 
-        InstanceInfo(glm::mat4 model);
+        InstanceInfo(glm::mat4 model, uint32_t textureIndex);
 
         std::string toString();
+    };
+
+    struct MeshBatch{
+        std::string meshPath;
+        std::vector<InstanceInfo> instances;
+        std::vector<uint64_t> ids;
+        std::vector<Texture> textures;
+
+        MeshBatch(std::string path);
     };
 }

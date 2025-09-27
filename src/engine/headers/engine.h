@@ -13,6 +13,7 @@
 #include <iostream>
 #include <vector>
 #include <unordered_map>
+#include <map>
 #include <fstream>
 #include <array>
 #include <glm/glm.hpp>
@@ -112,7 +113,9 @@ namespace Prometheus{
         static std::unordered_map<std::string,std::vector<uint64_t>> objectIdsByTexture;
 
         static std::unordered_map<std::string,Mesh> meshMap;
-        static std::vector<InstanceInfo> instances;
+        static std::vector<InstanceInfo> instances; //Deprecated
+        static std::map<std::string,std::map<uint64_t,GameObject*>> objectsByMesh;
+        static std::vector<MeshBatch> meshBatches;
 
         void run();
         static std::vector<char> readFile(const std::string& filename);

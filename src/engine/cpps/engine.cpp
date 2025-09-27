@@ -85,6 +85,8 @@ std::unordered_map<std::string,std::vector<uint64_t>> Engine::objectIdsByTexture
 
 std::unordered_map<std::string,Mesh> Engine::meshMap;
 std::vector<InstanceInfo> Engine::instances;
+std::map<std::string,std::map<uint64_t,GameObject*>> Engine::objectsByMesh;
+std::vector<MeshBatch> Engine::meshBatches;
 
 namespace Prometheus{
     void Engine::run() {
@@ -131,13 +133,17 @@ namespace Prometheus{
 
         Engine::meshMap["Rectangle"]=Mesh(0,4,0,6);
 
-        GameObject* rectangle=new GameObject("../textures/statue.jpg",STBI_rgb_alpha, this->device, this->physicalDevice, this->graphicsQueue,"Rectangle");
+        GameObject* rectangle=new GameObject("../textures/angel.jpg",STBI_rgb_alpha, this->device, this->physicalDevice, this->graphicsQueue,"Rectangle");
         Engine::gameObjects.push_back(rectangle);
         Engine::gameObjectMap.insert({rectangle->id,rectangle});
 
         GameObject* rectangle2=new GameObject("../textures/statue.jpg",STBI_rgb_alpha, this->device, this->physicalDevice, this->graphicsQueue,"Rectangle");
         Engine::gameObjects.push_back(rectangle2);
         Engine::gameObjectMap.insert({rectangle2->id,rectangle2});
+
+        GameObject* rectangle3=new GameObject("../textures/angel2.jpg",STBI_rgb_alpha, this->device, this->physicalDevice, this->graphicsQueue,"Rectangle");
+        Engine::gameObjects.push_back(rectangle3);
+        Engine::gameObjectMap.insert({rectangle3->id,rectangle3});
 
         BufferManager::createIndexVertexBuffer(this->device,this->physicalDevice,this->graphicsQueue);
 
@@ -262,6 +268,7 @@ namespace Prometheus{
         vkResetFences(device, 1, &Engine::inFlightFences[Engine::currentFrame]);
 
         vkResetCommandBuffer(Engine::commandBuffers[Engine::currentFrame],  0);
+        Engine::meshBatches.clear();
         BufferManager::recordCommandBuffer(Engine::commandBuffers[Engine::currentFrame], imageIndex,device,
         physicalDevice,graphicsQueue);
 
@@ -316,10 +323,27 @@ namespace Prometheus{
     }
 
     void Engine::updateGameObjects(){
+        int i=0;
+        for (auto& [meshName, innerMap] : Engine::objectsByMesh) {
 
-        for(uint32_t i=0; i<Engine::gameObjects.size(); i++){
-            //Engine::gameObjects[i]->modelMatrix
-            Engine::instances.push_back(InstanceInfo(Engine::gameObjects[i]->animateCircularMotion(0.0f,0.0f,0.0f,1.0f,2.0f,i*2.0f)));
+            uint64_t currIndex=0;
+            std::unordered_map<std::string,uint64_t> textureIndices;
+            Engine::meshBatches.push_back(MeshBatch(meshName));
+
+            for (auto& [id, objPtr] : innerMap) {
+
+                if (textureIndices.find(objPtr->texturePath) == textureIndices.end()) {
+                    Engine::meshBatches[Engine::meshBatches.size()-1].textures.push_back(Engine::textureMap[objPtr->texturePath]);
+                    textureIndices[objPtr->texturePath] = currIndex;
+                    currIndex++; 
+                }
+
+                Engine::meshBatches[Engine::meshBatches.size()-1].instances.push_back(
+                    InstanceInfo(Engine::gameObjects[i]->animateCircularMotion(0.0f,0.0f,0.0f,1.0f,2.0f,i*2.0f),textureIndices.at(objPtr->texturePath))
+                );
+                Engine::meshBatches[Engine::meshBatches.size()-1].ids.push_back(objPtr->id);
+                i++;
+            }
         }
     }
 }

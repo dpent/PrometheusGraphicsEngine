@@ -23,8 +23,8 @@ namespace Prometheus{
         return bindingDescriptions;
     }
 
-    std::array<VkVertexInputAttributeDescription, 7> Vertex::getAttributeDescriptions() {
-        std::array<VkVertexInputAttributeDescription, 7> attributeDescriptions{};
+    std::array<VkVertexInputAttributeDescription, 8> Vertex::getAttributeDescriptions() {
+        std::array<VkVertexInputAttributeDescription, 8> attributeDescriptions{};
 
         attributeDescriptions[0].binding = 0;
         attributeDescriptions[0].location = 0;
@@ -47,6 +47,11 @@ namespace Prometheus{
             attributeDescriptions[3 + i].format   = VK_FORMAT_R32G32B32A32_SFLOAT;
             attributeDescriptions[3 + i].offset   = offsetof(InstanceInfo, modelMatrix) + sizeof(glm::vec4) * i;
         }
+
+        attributeDescriptions[7].binding  = 1;
+        attributeDescriptions[7].location = 7; // pick next free location
+        attributeDescriptions[7].format   = VK_FORMAT_R32_UINT;
+        attributeDescriptions[7].offset   = offsetof(InstanceInfo, textureIndex);
 
         return attributeDescriptions;
     }
