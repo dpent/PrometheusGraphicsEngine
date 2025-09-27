@@ -20,7 +20,7 @@ namespace Prometheus{
         GameObject(const char* texturePath,int req_comp, VkDevice& device, VkPhysicalDevice& physicalDevice,VkQueue& graphicsQueue,
         std::string meshPath);
         GameObject();
-        ~GameObject();
+        virtual ~GameObject();
         void terminate(VkDevice& device);
         virtual void draw(VkCommandBuffer& commandBuffer, uint32_t instanceCount, uint32_t firstInstance);
         std::string toString();

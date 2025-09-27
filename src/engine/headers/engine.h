@@ -1,6 +1,7 @@
 #include <vulkan/vulkan_core.h>
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEFAULT_ALIGNED_GENTYPES //REMEMBER THIS IS SUPPOSED TO ALIGN EVERYTHING
+#define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #include <glm/glm.hpp>  
 #include <glm/gtc/matrix_transform.hpp>
 
@@ -116,6 +117,11 @@ namespace Prometheus{
         static std::vector<InstanceInfo> instances; //Deprecated
         static std::map<std::string,std::map<uint64_t,GameObject*>> objectsByMesh;
         static std::vector<MeshBatch> meshBatches;
+
+        static VkImage depthImage;
+        static VkDeviceMemory depthImageMemory;
+        static VkImageView depthImageView;
+
 
         void run();
         static std::vector<char> readFile(const std::string& filename);

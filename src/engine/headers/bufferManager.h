@@ -1,6 +1,7 @@
 #include <vulkan/vulkan_core.h>
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
+#include <vector>
 #include <cstring>
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEFAULT_ALIGNED_GENTYPES //REMEMBER THIS IS SUPPOSED TO ALIGN EVERYTHING
@@ -52,5 +53,12 @@ namespace Prometheus{
 
         static void createInstanceBuffers(VkDevice& device, VkPhysicalDevice& physicalDevice, VkQueue& graphicsQueue);
         static void updateInstanceBuffer(uint32_t currentImage);
+
+        static void createDepthResources(VkDevice& device,VkPhysicalDevice& physicalDevice);
+
+        static VkFormat findSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features,
+            VkPhysicalDevice& physicalDevice);
+        static VkFormat findDepthFormat(VkPhysicalDevice& physicalDevice);
+        static bool hasStencilComponent(VkFormat format);
     };
 }

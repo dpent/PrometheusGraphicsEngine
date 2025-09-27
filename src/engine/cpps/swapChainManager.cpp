@@ -77,7 +77,7 @@ namespace Prometheus{
         SwapChainSupportDetails swapChainSupport = SwapChainSupportDetails::querySwapChainSupport(physicalDevice, surface);
 
         VkSurfaceFormatKHR surfaceFormat = SwapChainManager::chooseSwapSurfaceFormat(swapChainSupport.formats);
-        VkPresentModeKHR presentMode = SwapChainManager::chooseSwapPresentMode(swapChainSupport.presentModes);
+        Engine::presentMode = SwapChainManager::chooseSwapPresentMode(swapChainSupport.presentModes);
         VkExtent2D extent = SwapChainManager::chooseSwapExtent(swapChainSupport.capabilities);
 
         uint32_t imageCount = swapChainSupport.capabilities.minImageCount + 1; /*Simply sticking to this minimum means that we may sometimes have to
@@ -145,12 +145,12 @@ namespace Prometheus{
 
         for (size_t i = 0; i < Engine::swapChainImages.size(); i++) {
             Engine::swapChainImageViews[i]=SwapChainManager::createImageView(device,Engine::swapChainImages[i],
-            Engine::swapChainImageFormat);
+            Engine::swapChainImageFormat,VK_IMAGE_ASPECT_COLOR_BIT);
 
         }
     }
 
-    VkImageView SwapChainManager::createImageView(VkDevice& device, VkImage& image, VkFormat format){
+    VkImageView SwapChainManager::createImageView(VkDevice& device, VkImage& image, VkFormat format, VkImageAspectFlags aspectFlags){
         VkImageViewCreateInfo createInfo{};
         createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
         createInfo.image = image;
@@ -160,7 +160,7 @@ namespace Prometheus{
         createInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
         createInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
         createInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
-        createInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        createInfo.subresourceRange.aspectMask = aspectFlags;
         createInfo.subresourceRange.baseMipLevel = 0;
         createInfo.subresourceRange.levelCount = 1;
         createInfo.subresourceRange.baseArrayLayer = 0;
@@ -192,7 +192,9 @@ namespace Prometheus{
         SwapChainManager::cleanupSwapChainDependents(device);
 
         SwapChainManager::createSwapChain(surface,physicalDevice,device,oldSwapChain);
+
         SwapChainManager::createImageViews(device);
+        BufferManager::createDepthResources(device,physicalDevice);
         BufferManager::createFrameBuffers(device);
 
         if (oldSwapChain != VK_NULL_HANDLE) {
@@ -202,13 +204,23 @@ namespace Prometheus{
     }
 
     void SwapChainManager::cleanupSwapChain(VkDevice& device){
+
         for (auto framebuffer : Engine::swapChainFramebuffers) {
             vkDestroyFramebuffer(device, framebuffer, nullptr);
         }
+        Engine::swapChainFramebuffers.clear();
 
         for (auto imageView : Engine::swapChainImageViews) {
             vkDestroyImageView(device, imageView, nullptr);
         }
+        Engine::swapChainImageViews.clear();
+
+        vkDestroyImageView(device, Engine::depthImageView, nullptr);
+        Engine::depthImageView = VK_NULL_HANDLE;
+        vkDestroyImage(device, Engine::depthImage, nullptr);
+        Engine::depthImage = VK_NULL_HANDLE;
+        vkFreeMemory(device, Engine::depthImageMemory, nullptr);
+        Engine::depthImageMemory = VK_NULL_HANDLE;
 
         if (Engine::swapChain != VK_NULL_HANDLE) {
             vkDestroySwapchainKHR(device, Engine::swapChain, nullptr);
@@ -224,6 +236,13 @@ namespace Prometheus{
         for (auto imageView : Engine::swapChainImageViews) {
             vkDestroyImageView(device, imageView, nullptr);
         }
+
+        vkDestroyImageView(device, Engine::depthImageView, nullptr);
+        Engine::depthImageView = VK_NULL_HANDLE;
+        vkDestroyImage(device, Engine::depthImage, nullptr);
+        Engine::depthImage = VK_NULL_HANDLE;
+        vkFreeMemory(device, Engine::depthImageMemory, nullptr);
+        Engine::depthImageMemory = VK_NULL_HANDLE;
     }
     
 }

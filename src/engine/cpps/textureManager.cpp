@@ -189,7 +189,7 @@ namespace Prometheus{
 
     void TextureManager::createTextureImageView(VkDevice& device, VkImage& image, VkImageView& imageView){
         
-        imageView=SwapChainManager::createImageView(device,image,VK_FORMAT_R8G8B8A8_SRGB);
+        imageView=SwapChainManager::createImageView(device,image,VK_FORMAT_R8G8B8A8_SRGB,VK_IMAGE_ASPECT_COLOR_BIT);
     }
 
     void TextureManager::createTextureSampler(VkDevice& device, VkSampler& sampler){

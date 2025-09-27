@@ -2,6 +2,7 @@
 #include "../headers/engine.h"
 #include "../headers/queueManager.h"
 #include <vulkan/vulkan_core.h>
+#include "../headers/swapChainManager.h"
 
 
 using namespace Prometheus;
@@ -11,15 +12,16 @@ namespace Prometheus{
         Engine::swapChainFramebuffers.resize(Engine::swapChainImageViews.size());
 
         for (size_t i = 0; i < Engine::swapChainImageViews.size(); i++) {
-            VkImageView attachments[] = {
-                Engine::swapChainImageViews[i]
+            std::array<VkImageView, 2> attachments = {
+                Engine::swapChainImageViews[i],
+                Engine::depthImageView
             };
 
             VkFramebufferCreateInfo framebufferInfo{};
             framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
             framebufferInfo.renderPass = Engine::renderPass;
-            framebufferInfo.attachmentCount = 1;
-            framebufferInfo.pAttachments = attachments;
+            framebufferInfo.attachmentCount = static_cast<uint32_t>(attachments.size());;
+            framebufferInfo.pAttachments = attachments.data();
             framebufferInfo.width = Engine::swapChainExtent.width;
             framebufferInfo.height = Engine::swapChainExtent.height;
             framebufferInfo.layers = 1;
@@ -86,9 +88,12 @@ namespace Prometheus{
         renderPassInfo.renderArea.offset = {0, 0};
         renderPassInfo.renderArea.extent = Engine::swapChainExtent;
 
-        VkClearValue clearColor = {{{0.0f, 0.0f, 0.0f, 1.0f}}}; //This is the background color or when nothing exists there it paints it this color
-        renderPassInfo.clearValueCount = 1;
-        renderPassInfo.pClearValues = &clearColor;
+        std::array<VkClearValue, 2> clearValues{};
+        clearValues[0].color = {{0.0f, 0.0f, 0.0f, 1.0f}}; //This is the background color. When nothing is drawn it defaults to this
+        clearValues[1].depthStencil = {1.0f, 0};
+
+        renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
+        renderPassInfo.pClearValues = clearValues.data();
 
         vkCmdBeginRenderPass(commandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
         /* 
@@ -393,6 +398,56 @@ namespace Prometheus{
             memcpy(dst + offset, batch.instances.data(), batchSize);
             offset += batchSize;
         }
+    }
+
+    void BufferManager::createDepthResources(VkDevice& device,VkPhysicalDevice& physicalDevice){
+
+        VkFormat depthFormat=BufferManager::findDepthFormat(physicalDevice);
+
+        TextureManager::createImage(Engine::swapChainExtent.width, 
+            Engine::swapChainExtent.height, depthFormat, 
+            VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, 
+            VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, Engine::depthImage, 
+            Engine::depthImageMemory, device, physicalDevice
+        );
+
+        Engine::depthImageView=SwapChainManager::createImageView(device,Engine::depthImage,depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT);
+    }
+
+    /*
+    VK_FORMAT_D32_SFLOAT: 32-bit float for depth
+    VK_FORMAT_D32_SFLOAT_S8_UINT: 32-bit signed float for depth and 8 bit stencil component
+    VK_FORMAT_D24_UNORM_S8_UINT: 24-bit float for depth and 8 bit stencil component
+    */
+
+    VkFormat BufferManager::findSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features,
+        VkPhysicalDevice& physicalDevice){
+
+        for (VkFormat format : candidates) {
+
+            VkFormatProperties props;
+            vkGetPhysicalDeviceFormatProperties(physicalDevice, format, &props);
+
+            if (tiling == VK_IMAGE_TILING_LINEAR && (props.linearTilingFeatures & features) == features) {
+                return format;
+            } else if (tiling == VK_IMAGE_TILING_OPTIMAL && (props.optimalTilingFeatures & features) == features) {
+                return format;
+            }
+        }
+
+        throw std::runtime_error("failed to find supported format!");
+    }
+
+    VkFormat BufferManager::findDepthFormat(VkPhysicalDevice& physicalDevice){
+        
+        return findSupportedFormat({VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT},
+        VK_IMAGE_TILING_OPTIMAL,
+        VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT,
+        physicalDevice);
+    }
+
+    bool BufferManager::hasStencilComponent(VkFormat format){
+        return format == VK_FORMAT_D32_SFLOAT_S8_UINT || format == VK_FORMAT_D24_UNORM_S8_UINT;
     }
 
 }

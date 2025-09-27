@@ -17,8 +17,8 @@ namespace Prometheus{
         createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
         createInfo.pApplicationInfo = &appInfo;
 
-        uint32_t glfwExtensionCount = 0;
-        const char** glfwExtensions;
+        //uint32_t glfwExtensionCount = 0;
+        //const char** glfwExtensions;
 
         auto extensionsReq = getRequiredExtensions();
 

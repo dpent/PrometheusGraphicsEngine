@@ -88,6 +88,10 @@ std::vector<InstanceInfo> Engine::instances;
 std::map<std::string,std::map<uint64_t,GameObject*>> Engine::objectsByMesh;
 std::vector<MeshBatch> Engine::meshBatches;
 
+VkImage Engine::depthImage;
+VkDeviceMemory Engine::depthImageMemory;
+VkImageView Engine::depthImageView;
+
 namespace Prometheus{
     void Engine::run() {
         initWindow();
@@ -122,12 +126,13 @@ namespace Prometheus{
         SwapChainManager::createSwapChain(this->surface,this->physicalDevice,this->device, Engine::swapChain);
         SwapChainManager::createImageViews(this->device);
 
-        RenderPassManager::createRenderPass(this->device);
+        RenderPassManager::createRenderPass(this->device, this->physicalDevice);
 
         DescriptorManager::createDescriptorSetLayout(this->device);
 
         GraphicsPipelineManager::createGraphicsPipeline(this->device);
 
+        BufferManager::createDepthResources(this->device,this->physicalDevice);
         BufferManager::createFrameBuffers(this->device);
         BufferManager::createCommandPool(this->physicalDevice, this->surface,this->device);
 
@@ -178,7 +183,7 @@ namespace Prometheus{
 
     void Engine::cleanup() {
 
-        for(int i=0; i<Engine::gameObjects.size(); i++){
+        for(size_t i=0; i<Engine::gameObjects.size(); i++){
             Engine::gameObjects[i]->terminate(device);
             delete Engine::gameObjects[i];
         }
