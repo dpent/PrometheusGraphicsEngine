@@ -13,12 +13,11 @@ namespace Prometheus{
         
         uint64_t textureVecIndex;
         uint64_t id;
-        const char * texturePath;
+        std::string texturePath;
         std::string meshPath;
         glm::mat4 modelMatrix;
 
-        GameObject(const char* texturePath,int req_comp, VkDevice& device, VkPhysicalDevice& physicalDevice,VkQueue& graphicsQueue,
-        std::string meshPath);
+        GameObject(std::string texturePath,std::string modelPath,int req_comp, VkDevice& device, VkPhysicalDevice& physicalDevice,VkQueue& graphicsQueue);
         GameObject();
         virtual ~GameObject();
         void terminate(VkDevice& device);

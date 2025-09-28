@@ -2,6 +2,9 @@ CXX = g++
 CFLAGS = -std=c++23 -O3 -Wall -g -Iengine/headers -Iobjects/headers #-fsanitize=address
 LDFLAGS = -lglfw -lvulkan -ldl -lpthread -lX11 -lXxf86vm -lXrandr -lXi
 
+STATIC_FLAGS = -static -static-libgcc -static-libstdc++
+STATIC_LIBS = -Wl,-Bstatic -lglfw -Wl,-Bdynamic -lvulkan -ldl -lpthread -lX11 -lXxf86vm -lXrandr -lXi
+
 BUILD_DIR = ../build
 TARGET = $(BUILD_DIR)/Prometheus
 
@@ -24,6 +27,15 @@ $(BUILD_DIR):
 
 # Generate rules for each source file
 $(foreach src,$(SRCS),$(eval $(call cpp-to-obj,$(src))))
+
+portable: $(OBJS) | $(BUILD_DIR)
+	@echo "Creating portable build..."
+	@$(CXX) $(CFLAGS) -static-libgcc -static-libstdc++ -o $(TARGET) $(OBJS) -lglfw -lvulkan -ldl -lpthread -lX11 -lXxf86vm -lXrandr -lXi
+	@echo "Cleaning up object files..."
+	@rm -f $(OBJS)
+	@echo "==============================PORTABLE BUILD COMPLETE=============================="
+	@echo "Dependencies:"
+	@ldd $(TARGET)
 
 # Build executable and clean up object files
 all: $(TARGET)

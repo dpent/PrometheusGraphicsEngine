@@ -1,6 +1,7 @@
 #include "../../engine/headers/engine.h"
 #include <vulkan/vulkan_core.h> 
 #include <sstream>
+#include "../../engine/headers/modelManager.h"
 
 
 using namespace Prometheus;
@@ -8,13 +9,12 @@ using namespace Prometheus;
 namespace Prometheus{
     uint64_t GameObject::autoIncrementId=0;
 
-    GameObject::GameObject(const char* texturePath,int req_comp, VkDevice& device, VkPhysicalDevice& physicalDevice, VkQueue& graphicsQueue,
-    std::string meshPath)
+    GameObject::GameObject(std::string texturePath, std::string modelPath, int req_comp, VkDevice& device, VkPhysicalDevice& physicalDevice, VkQueue& graphicsQueue)
     {
         this->id=GameObject::autoIncrementId;
         GameObject::autoIncrementId++;
         this->texturePath=texturePath;
-        this->meshPath=meshPath;
+        this->meshPath=modelPath;
         this->modelMatrix=glm::mat4(1.0f);
 
         if (Engine::textureMap.find(texturePath) != Engine::textureMap.end()) {
@@ -24,12 +24,18 @@ namespace Prometheus{
             Engine::textureMap[texturePath].count++;
 
         } else {
-            Engine::textureMap.insert(std::make_pair(std::string(texturePath), Texture(texturePath, 4, device, physicalDevice, graphicsQueue)));
+            Engine::textureMap.insert(std::make_pair(texturePath, Texture(texturePath, 4, device, physicalDevice, graphicsQueue)));
             Engine::objectIdsByTexture[texturePath].push_back(this->id);
             this->textureVecIndex=0;
         }
 
-        Engine::objectsByMesh[meshPath][this->id]=this;
+        if(Engine::meshMap.find(modelPath) == Engine::meshMap.end()){
+            ModelManager::loadModel(modelPath); //Also inserts the mesh into meshMap
+        }
+
+        Engine::objectsByMesh[modelPath][this->id]=this;
+        Engine::gameObjects.push_back(this);
+        Engine::gameObjectMap.insert({this->id,this});
     }
 
     GameObject::~GameObject(){
@@ -47,7 +53,7 @@ namespace Prometheus{
     }
 
     void GameObject::draw(VkCommandBuffer& commandBuffer, uint32_t instanceCount, uint32_t firstInstance){
-        //std::cout<< "Mesh path " << Engine::meshMap[this->meshPath].toString()<<std::endl;
+        //std::cout<<Engine::meshMap[this->meshPath].toString()<<std::endl;
         
         vkCmdDrawIndexed(commandBuffer, Engine::meshMap[this->meshPath].indexCount, 
             instanceCount, Engine::meshMap[this->meshPath].indexOffset, Engine::meshMap[this->meshPath].vertexOffset, firstInstance); //Remember to see instancing
@@ -63,7 +69,7 @@ namespace Prometheus{
             << "id=" << id << ", "
             << "autoIncrementId=" << autoIncrementId << ", "
             << "textureVecIndex=" << textureVecIndex << ", "
-            << "texturePath=\"" << (texturePath ? texturePath : "null") << "\", "
+            << "texturePath=\"" << (texturePath=="" ? texturePath : "null") << "\", "
             << "meshPath=\"" << meshPath << "\" }";
         return oss.str();
     }

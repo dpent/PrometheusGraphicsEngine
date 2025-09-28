@@ -6,10 +6,10 @@
 using namespace Prometheus;
 
 namespace Prometheus{
-    void TextureManager::createTextureImage(const char * filename, int req_comp, VkDevice& device, VkPhysicalDevice& physicalDevice, 
+    void TextureManager::createTextureImage(std::string filename, int req_comp, VkDevice& device, VkPhysicalDevice& physicalDevice, 
         VkImage& image, VkDeviceMemory& imageMemory, VkQueue& graphicsQueue){
         int texWidth, texHeight, texChannels;
-        stbi_uc* pixels = stbi_load(filename, &texWidth, &texHeight, &texChannels, req_comp);
+        stbi_uc* pixels = stbi_load(filename.c_str(), &texWidth, &texHeight, &texChannels, req_comp);
         VkDeviceSize imageSize = texWidth * texHeight * 4;
 
         if (!pixels) {
@@ -228,7 +228,7 @@ namespace Prometheus{
         }
     }
 
-    Texture::Texture(const char * filpath,int req_comp, VkDevice& device, VkPhysicalDevice& physicalDevice, VkQueue& graphicsQueue){
+    Texture::Texture(std::string filpath,int req_comp, VkDevice& device, VkPhysicalDevice& physicalDevice, VkQueue& graphicsQueue){
 
         TextureManager::createTextureImage(filpath, req_comp, device, physicalDevice,
         this->textureImage,this->textureImageMemory,graphicsQueue);

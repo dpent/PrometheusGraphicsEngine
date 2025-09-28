@@ -22,5 +22,8 @@ namespace Prometheus{
             VkQueue& presentQueue,
             VkSurfaceKHR& surface
         );
+
+        static const char* deviceTypeToString(VkPhysicalDeviceType& deviceType);
+        static const char* vendorIdToString(uint32_t& vendorId);
     };
 }

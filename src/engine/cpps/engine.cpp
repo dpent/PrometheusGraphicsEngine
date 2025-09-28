@@ -38,21 +38,8 @@ uint32_t Engine::currentFrame = 0;
 
 bool Engine::framebufferResized = false;
 
-std::vector<Vertex> Engine::vertices = {
-    {{-0.5f, -0.5f, 0.0f}, {1.0f, 0.0f, 0.0f}, {0.0f, 0.0f}},
-    {{0.5f, -0.5f, 0.0f}, {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f}},
-    {{0.5f, 0.5f, 0.0f}, {0.0f, 0.0f, 1.0f}, {1.0f, 1.0f}},
-    {{-0.5f, 0.5f, 0.0f}, {1.0f, 1.0f, 1.0f}, {0.0f, 1.0f}},
-
-    {{-0.5f, -0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}, {0.0f, 0.0f}},
-    {{0.5f, -0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f}},
-    {{0.5f, 0.5f, -0.5f}, {0.0f, 0.0f, 1.0f}, {1.0f, 1.0f}},
-    {{-0.5f, 0.5f, -0.5f}, {1.0f, 1.0f, 1.0f}, {0.0f, 1.0f}}
-};
-std::vector<uint32_t> Engine::indices = {
-    0, 1, 2, 2, 3, 0,
-    4, 5, 6, 6, 7, 4
-};
+std::vector<Vertex> Engine::vertices;
+std::vector<uint32_t> Engine::indices;
 
 VkBuffer Engine::indexVertexBuffer= nullptr;
 VkDeviceMemory Engine::indexVertexBufferMemory= nullptr;
@@ -136,19 +123,41 @@ namespace Prometheus{
         BufferManager::createFrameBuffers(this->device);
         BufferManager::createCommandPool(this->physicalDevice, this->surface,this->device);
 
-        Engine::meshMap["Rectangle"]=Mesh(0,4,0,6);
+        new GameObject("../textures/statue.jpg","../models/stanford_sphere.obj",STBI_rgb_alpha,
+        this->device,this->physicalDevice,this->graphicsQueue);
 
-        GameObject* rectangle=new GameObject("../textures/angel.jpg",STBI_rgb_alpha, this->device, this->physicalDevice, this->graphicsQueue,"Rectangle");
-        Engine::gameObjects.push_back(rectangle);
-        Engine::gameObjectMap.insert({rectangle->id,rectangle});
+        new GameObject("../textures/angel.jpg","../models/cube.obj",STBI_rgb_alpha,
+        this->device,this->physicalDevice,this->graphicsQueue);
 
-        GameObject* rectangle2=new GameObject("../textures/statue.jpg",STBI_rgb_alpha, this->device, this->physicalDevice, this->graphicsQueue,"Rectangle");
-        Engine::gameObjects.push_back(rectangle2);
-        Engine::gameObjectMap.insert({rectangle2->id,rectangle2});
+        new GameObject("../textures/viking_room.png","../models/viking_room.obj",STBI_rgb_alpha,
+        this->device,this->physicalDevice,this->graphicsQueue);
 
-        GameObject* rectangle3=new GameObject("../textures/angel2.jpg",STBI_rgb_alpha, this->device, this->physicalDevice, this->graphicsQueue,"Rectangle");
-        Engine::gameObjects.push_back(rectangle3);
-        Engine::gameObjectMap.insert({rectangle3->id,rectangle3});
+        new GameObject("../textures/statue.jpg","../models/stanford_sphere.obj",STBI_rgb_alpha,
+        this->device,this->physicalDevice,this->graphicsQueue);
+
+        new GameObject("../textures/angel.jpg","../models/cube.obj",STBI_rgb_alpha,
+        this->device,this->physicalDevice,this->graphicsQueue);
+
+        new GameObject("../textures/viking_room.png","../models/viking_room.obj",STBI_rgb_alpha,
+        this->device,this->physicalDevice,this->graphicsQueue);
+
+        new GameObject("../textures/statue.jpg","../models/stanford_sphere.obj",STBI_rgb_alpha,
+        this->device,this->physicalDevice,this->graphicsQueue);
+
+        new GameObject("../textures/angel.jpg","../models/cube.obj",STBI_rgb_alpha,
+        this->device,this->physicalDevice,this->graphicsQueue);
+
+        new GameObject("../textures/viking_room.png","../models/viking_room.obj",STBI_rgb_alpha,
+        this->device,this->physicalDevice,this->graphicsQueue);
+
+        new GameObject("../textures/statue.jpg","../models/stanford_sphere.obj",STBI_rgb_alpha,
+        this->device,this->physicalDevice,this->graphicsQueue);
+
+        new GameObject("../textures/angel.jpg","../models/cube.obj",STBI_rgb_alpha,
+        this->device,this->physicalDevice,this->graphicsQueue);
+
+        new GameObject("../textures/viking_room.png","../models/viking_room.obj",STBI_rgb_alpha,
+        this->device,this->physicalDevice,this->graphicsQueue);
 
         BufferManager::createIndexVertexBuffer(this->device,this->physicalDevice,this->graphicsQueue);
 
@@ -344,7 +353,7 @@ namespace Prometheus{
                 }
 
                 Engine::meshBatches[Engine::meshBatches.size()-1].instances.push_back(
-                    InstanceInfo(Engine::gameObjects[i]->animateCircularMotion(0.0f,0.0f,0.0f,1.0f,2.0f,i*2.0f),textureIndices.at(objPtr->texturePath))
+                    InstanceInfo(Engine::gameObjects[i]->animateCircularMotion(0.0f,0.0f,0.0f,5.0f,2.0f,i*0.25f),textureIndices.at(objPtr->texturePath))
                 );
                 Engine::meshBatches[Engine::meshBatches.size()-1].ids.push_back(objPtr->id);
                 i++;

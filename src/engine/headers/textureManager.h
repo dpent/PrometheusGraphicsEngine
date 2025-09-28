@@ -1,10 +1,11 @@
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
+#include <iostream>
 
 namespace Prometheus{
     class TextureManager{
     public:
-        static void createTextureImage(const char * filename, int req_comp, VkDevice& device, VkPhysicalDevice& physicalDevice,
+        static void createTextureImage(std::string filename, int req_comp, VkDevice& device, VkPhysicalDevice& physicalDevice,
         VkImage& image, VkDeviceMemory& imageMemory, VkQueue& graphicsQueue);
 
         static void createImage(uint32_t width, uint32_t height, VkFormat format, 
@@ -33,7 +34,7 @@ namespace Prometheus{
         uint32_t count;
         uint64_t descriptorIndex;
 
-        Texture(const char * filepath,int req_comp, VkDevice& device, VkPhysicalDevice& physicalDevice, VkQueue& graphicsQueue);
+        Texture(std::string filepath,int req_comp, VkDevice& device, VkPhysicalDevice& physicalDevice, VkQueue& graphicsQueue);
         Texture();
         void terminate(VkDevice& device);
     };

@@ -17,20 +17,37 @@ namespace Prometheus{
         std::vector<VkPhysicalDevice> devices(deviceCount);
         vkEnumeratePhysicalDevices(instance, &deviceCount, devices.data());
 
-        std::multimap<int, VkPhysicalDevice> candidates;
+        std::vector<std::pair<int, VkPhysicalDevice>> candidates;
+
+        std::cout<<"Rating available devices..."<<std::endl;
+        std::cout<<"===========================\n"<<std::endl;
 
         for (const auto& device : devices) {
             int score = rateDeviceSuitability(device, surface);
-            candidates.insert(std::make_pair(score, device));
+            if (score > 0) {  // Only add suitable devices
+                candidates.push_back(std::make_pair(score, device));
+            }
         }
 
-        // Check if the best candidate is suitable at all
-        if (candidates.rbegin()->first > 0) {
-            physicalDevice = candidates.rbegin()->second;
-        } else {
+        if (candidates.empty()) {
             throw std::runtime_error("failed to find a suitable GPU!");
         }
 
+        std::sort(candidates.begin(), candidates.end(), 
+            [](const auto& a, const auto& b) { return a.first > b.first; });
+        
+        // Select the highest scoring device
+        physicalDevice = candidates[0].second;
+
+        VkPhysicalDeviceProperties deviceProperties;
+        vkGetPhysicalDeviceProperties(physicalDevice, &deviceProperties);
+
+        std::cout<<"======================================="<<std::endl;
+        std::cout<<"Selected GPU: "<<deviceProperties.deviceName<<std::endl;
+        std::cout<<"  Driver version: "<<deviceProperties.driverVersion<<std::endl;
+        std::cout<<"  Device Type: "<<deviceProperties.deviceType<<" ("<<DeviceManager::deviceTypeToString(deviceProperties.deviceType)<<")"<<std::endl;
+        std::cout<<"  Vendor ID: "<<deviceProperties.vendorID<<" ("<<DeviceManager::vendorIdToString(deviceProperties.vendorID)<<")"<<std::endl;
+        std::cout<<"  Device ID: "<<deviceProperties.deviceID<<std::endl;
     }
 
     bool DeviceManager::rateDeviceSuitability(const VkPhysicalDevice& device, const VkSurfaceKHR& surface) {
@@ -72,6 +89,11 @@ namespace Prometheus{
         if (!deviceFeatures.geometryShader || !extensionsSupported || !swapChainAdequate) {
             return 0;
         }
+
+        std::cout<<"Evaluating device: "<<deviceProperties.deviceName<<std::endl;
+        std::cout<<"  Device Type: "<<deviceProperties.deviceType<<" ("<<DeviceManager::deviceTypeToString(deviceProperties.deviceType)<<")"<<std::endl;
+        std::cout<<"  Vendor ID: "<<deviceProperties.vendorID<<" ("<<DeviceManager::vendorIdToString(deviceProperties.vendorID)<<")"<<std::endl;
+        std::cout<<"  Final score: "<<score<<"\n"<<std::endl;
 
         return score;
     }
@@ -141,5 +163,37 @@ namespace Prometheus{
 
         vkGetDeviceQueue(device, indices.graphicsFamily.value(), 0, &graphicsQueue); //The 0 means we get the 0th queue from each family
         vkGetDeviceQueue(device, indices.presentFamily.value(), 0, &presentQueue);
+    }
+
+    const char* DeviceManager::deviceTypeToString(VkPhysicalDeviceType& deviceType) {
+        switch (deviceType) {
+            case VK_PHYSICAL_DEVICE_TYPE_OTHER:
+                return "Other";
+            case VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU:
+                return "Integrated GPU";
+            case VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU:
+                return "Discrete GPU";
+            case VK_PHYSICAL_DEVICE_TYPE_VIRTUAL_GPU:
+                return "Virtual GPU";
+            case VK_PHYSICAL_DEVICE_TYPE_CPU:
+                return "CPU/Software Renderer";
+            default:
+                return "Unknown";
+        }
+    }
+
+    const char* DeviceManager::vendorIdToString(uint32_t& vendorId) {
+        switch (vendorId) {
+            case 0x10DE:
+                return "NVIDIA";
+            case 0x1002:
+                return "AMD";
+            case 0x8086:
+                return "Intel";
+            case 0x10005:
+                return "Mesa/Software";
+            default:
+                return "Unknown";
+        }
     }
 }

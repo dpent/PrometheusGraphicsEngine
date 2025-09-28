@@ -125,14 +125,14 @@ namespace Prometheus{
         vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
         Engine::view = glm::lookAt(
-            glm::vec3(3.0f, 2.0f, 3.0f),
+            glm::vec3(15.0f, 10.0f, 15.0f),
             glm::vec3(0.0f, 0.0f, 0.0f),
             glm::vec3(0.0f, 0.0f, 1.0f)
         );
         Engine::proj=glm::perspective(
             glm::radians(45.0f),
             Engine::swapChainExtent.width / 
-            (float) Engine::swapChainExtent.height, 0.1f, 10.0f
+            (float) Engine::swapChainExtent.height, 0.1f, 100.0f
         );
         Engine::proj[1][1] *= -1;
 
@@ -151,8 +151,8 @@ namespace Prometheus{
         );
 
         uint32_t instanceCount=0;
-
         for(uint32_t i=0; i<Engine::meshBatches.size(); i++){
+
             vkCmdBindDescriptorSets(
                 commandBuffer,
                 VK_PIPELINE_BIND_POINT_GRAPHICS,
@@ -165,7 +165,6 @@ namespace Prometheus{
             );
 
             Engine::gameObjectMap[Engine::meshBatches[i].ids[0]]->draw(commandBuffer,Engine::meshBatches[i].instances.size(),instanceCount);
-
             instanceCount+=Engine::meshBatches[i].instances.size();
         }
 
@@ -181,6 +180,7 @@ namespace Prometheus{
     }
 
     void BufferManager::createIndexVertexBuffer(VkDevice& device, VkPhysicalDevice& physicalDevice, VkQueue& graphicsQueue){
+
         VkDeviceSize bufferSize = (sizeof(Engine::vertices[0]) * Engine::vertices.size())+(sizeof(Engine::indices[0]) * Engine::indices.size());
 
         VkBuffer stagingBuffer;
