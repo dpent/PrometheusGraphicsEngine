@@ -18,10 +18,8 @@ namespace Prometheus{
             throw std::runtime_error(err);
         }
 
-        uint32_t vertexOffset=Engine::vertices.size();
-        uint32_t vertexCount=0;
-        uint32_t indexOffset=Engine::indices.size();
-        uint32_t indexCount=0;
+        std::vector<Vertex> vertices;
+        std::vector<uint32_t> indices;
 
         std::unordered_map<Vertex, uint32_t> uniqueVertices{};
 
@@ -51,16 +49,13 @@ namespace Prometheus{
                 vertex.color = {1.0f, 1.0f, 1.0f};
 
                 if (uniqueVertices.count(vertex) == 0) {
-                    uniqueVertices[vertex] = static_cast<uint32_t>(Engine::vertices.size() - vertexOffset);
-                    Engine::vertices.push_back(vertex);
-                    vertexCount++;
+                    uniqueVertices[vertex] = static_cast<uint32_t>(vertices.size());
+                    vertices.push_back(vertex);
                 }
 
-                Engine::indices.push_back(uniqueVertices[vertex]);
-                indexCount++;
+                indices.push_back(uniqueVertices[vertex]);
             }
         }
-
-        Engine::meshMap[modelPath]=Mesh(vertexOffset,vertexCount,indexOffset,indexCount,modelPath);
+        Engine::meshMap[modelPath]=Mesh(modelPath,vertices,indices);
     }
 }

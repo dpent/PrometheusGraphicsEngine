@@ -1,4 +1,3 @@
-#include "../headers/vertex.h"
 #include "../../objects/headers/mesh.h"
 
 using namespace Prometheus;

@@ -14,13 +14,14 @@
 namespace Prometheus{
     struct Mesh{
         uint32_t vertexOffset;
-        uint32_t vertexCount;
         uint32_t indexOffset;
-        uint32_t indexCount;
         std::string meshPath;
 
+        std::vector<Vertex> vertices;
+        std::vector<uint32_t> indices;
+
         Mesh();
-        Mesh(uint32_t vertexOffset, uint32_t vertexCount, uint32_t indexOffset, uint32_t indexCount,std::string meshPath);
+        Mesh(std::string meshPath, std::vector<Vertex> vertices, std::vector<uint32_t> indices);
         std::string toString();
     };
 

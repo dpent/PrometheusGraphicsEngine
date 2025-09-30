@@ -79,6 +79,11 @@ VkImage Engine::depthImage;
 VkDeviceMemory Engine::depthImageMemory;
 VkImageView Engine::depthImageView;
 
+bool Engine::recreateVertexIndexInstanceBuffer=true;
+bool Engine::recreateDescriptors=true;
+
+//uint32_t Engine::frameCounter=0;
+
 namespace Prometheus{
     void Engine::run() {
         initWindow();
@@ -124,51 +129,19 @@ namespace Prometheus{
         BufferManager::createCommandPool(this->physicalDevice, this->surface,this->device);
 
         new GameObject("../textures/statue.jpg","../models/stanford_sphere.obj",STBI_rgb_alpha,
-        this->device,this->physicalDevice,this->graphicsQueue);
+        device,physicalDevice,graphicsQueue);
 
         new GameObject("../textures/angel.jpg","../models/cube.obj",STBI_rgb_alpha,
-        this->device,this->physicalDevice,this->graphicsQueue);
+        device,physicalDevice,graphicsQueue);
 
         new GameObject("../textures/viking_room.png","../models/viking_room.obj",STBI_rgb_alpha,
-        this->device,this->physicalDevice,this->graphicsQueue);
-
-        new GameObject("../textures/statue.jpg","../models/stanford_sphere.obj",STBI_rgb_alpha,
-        this->device,this->physicalDevice,this->graphicsQueue);
-
-        new GameObject("../textures/angel.jpg","../models/cube.obj",STBI_rgb_alpha,
-        this->device,this->physicalDevice,this->graphicsQueue);
-
-        new GameObject("../textures/viking_room.png","../models/viking_room.obj",STBI_rgb_alpha,
-        this->device,this->physicalDevice,this->graphicsQueue);
-
-        new GameObject("../textures/statue.jpg","../models/stanford_sphere.obj",STBI_rgb_alpha,
-        this->device,this->physicalDevice,this->graphicsQueue);
-
-        new GameObject("../textures/angel.jpg","../models/cube.obj",STBI_rgb_alpha,
-        this->device,this->physicalDevice,this->graphicsQueue);
-
-        new GameObject("../textures/viking_room.png","../models/viking_room.obj",STBI_rgb_alpha,
-        this->device,this->physicalDevice,this->graphicsQueue);
-
-        new GameObject("../textures/statue.jpg","../models/stanford_sphere.obj",STBI_rgb_alpha,
-        this->device,this->physicalDevice,this->graphicsQueue);
-
-        new GameObject("../textures/angel.jpg","../models/cube.obj",STBI_rgb_alpha,
-        this->device,this->physicalDevice,this->graphicsQueue);
-
-        new GameObject("../textures/viking_room.png","../models/viking_room.obj",STBI_rgb_alpha,
-        this->device,this->physicalDevice,this->graphicsQueue);
-
-        BufferManager::createIndexVertexBuffer(this->device,this->physicalDevice,this->graphicsQueue);
-
-        Engine::updateGameObjects();
-
-        BufferManager::createInstanceBuffers(this->device,this->physicalDevice,this->graphicsQueue);
+        device,physicalDevice,graphicsQueue);
 
         //BufferManager::createUniformBuffers(this->device,this->physicalDevice);
-        
-        DescriptorManager::createDescriptorPool(this->device);
-        DescriptorManager::createDescriptorSets(this->device);
+
+        Engine::instanceBuffers.resize(MAX_FRAMES_IN_FLIGHT);
+        Engine::instanceBufferMemories.resize(MAX_FRAMES_IN_FLIGHT);
+        Engine::instanceBuffersMapped.resize(Engine::MAX_FRAMES_IN_FLIGHT);
 
         BufferManager::createCommandBuffers(this->device);
 
@@ -283,6 +256,27 @@ namespace Prometheus{
 
         vkResetCommandBuffer(Engine::commandBuffers[Engine::currentFrame],  0);
         Engine::meshBatches.clear();
+
+        if(Engine::gameObjects.size()!=0){
+            if(Engine::recreateVertexIndexInstanceBuffer){
+                BufferManager::recreateVerIndBuffer(this->device,this->physicalDevice,this->graphicsQueue);
+
+                Engine::updateGameObjects();
+                
+                BufferManager::recreateInstanceBuffers(this->device,this->physicalDevice,this->graphicsQueue);
+
+                Engine::recreateVertexIndexInstanceBuffer=false;
+            }else{
+                Engine::updateGameObjects();
+            }
+
+            if(Engine::recreateDescriptors){
+                DescriptorManager::recreateDescriptors(this->device);
+
+                Engine::recreateDescriptors=false;
+            }
+        }
+
         BufferManager::recordCommandBuffer(Engine::commandBuffers[Engine::currentFrame], imageIndex,device,
         physicalDevice,graphicsQueue);
 

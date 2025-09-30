@@ -88,4 +88,16 @@ namespace Prometheus{
             i++;
         }
     }
+
+    void DescriptorManager::recreateDescriptors(VkDevice& device){
+
+        vkDeviceWaitIdle(device);
+
+        if(Engine::descriptorPool != VK_NULL_HANDLE){
+            vkDestroyDescriptorPool(device, Engine::descriptorPool, nullptr);
+        }
+
+        DescriptorManager::createDescriptorPool(device);
+        DescriptorManager::createDescriptorSets(device);
+    }
 }

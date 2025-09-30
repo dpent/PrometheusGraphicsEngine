@@ -18,7 +18,6 @@
 #include <fstream>
 #include <array>
 #include <glm/glm.hpp>
-#include "../headers/vertex.h"
 #include "../../objects/headers/gameObject.h"
 #include "../../objects/headers/mesh.h"
 
@@ -122,6 +121,11 @@ namespace Prometheus{
         static VkDeviceMemory depthImageMemory;
         static VkImageView depthImageView;
 
+        static bool recreateVertexIndexInstanceBuffer;
+        static bool recreateInstBuffer;
+        static bool recreateDescriptors;
+
+        //static uint32_t frameCounter;
 
         void run();
         static std::vector<char> readFile(const std::string& filename);

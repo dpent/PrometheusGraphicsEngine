@@ -8,21 +8,17 @@ namespace Prometheus{
 
     }
 
-    Mesh::Mesh(uint32_t vertexOffset, uint32_t vertexCount, uint32_t indexOffset, uint32_t indexCount, std::string meshPath){
-        this->vertexOffset=vertexOffset;
-        this->vertexCount=vertexCount;
-        this->indexCount=indexCount;
-        this->indexOffset=indexOffset;
+    Mesh::Mesh(std::string meshPath, std::vector<Vertex> vertices, std::vector<uint32_t> indices){
         this->meshPath=meshPath;
+        this->vertices=vertices;
+        this->indices=indices;
     }
 
     std::string Mesh::toString(){
         std::ostringstream oss;
         oss << "Mesh { "
             << "vertexOffset=" << vertexOffset << ", "
-            << "vertexCount=" << vertexCount << ", "
             << "indexOffset=" << indexOffset << ", "
-            << "indexCount=" << indexCount << ", "
             << "meshPath=\"" << meshPath << "\" }";
         return oss.str();
     }

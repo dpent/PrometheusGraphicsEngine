@@ -20,6 +20,7 @@ namespace Prometheus{
             VkDevice& device, VkPhysicalDevice& physicalDevice, VkQueue& graphicsQueue);
 
         static void createIndexVertexBuffer(VkDevice& device, VkPhysicalDevice& physicalDevice, VkQueue& graphicsQueue);
+        static void recreateVerIndBuffer(VkDevice& device, VkPhysicalDevice& physicalDevice, VkQueue& graphicsQueue);
 
         static uint32_t findMemoryType(uint32_t& typeFilter, VkMemoryPropertyFlags properties, VkPhysicalDevice& physicalDevice);
 
@@ -53,6 +54,7 @@ namespace Prometheus{
 
         static void createInstanceBuffers(VkDevice& device, VkPhysicalDevice& physicalDevice, VkQueue& graphicsQueue);
         static void updateInstanceBuffer(uint32_t currentImage);
+        static void recreateInstanceBuffers(VkDevice& device, VkPhysicalDevice& physicalDevice, VkQueue& graphicsQueue);
 
         static void createDepthResources(VkDevice& device,VkPhysicalDevice& physicalDevice);
 

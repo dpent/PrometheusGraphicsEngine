@@ -1,5 +1,5 @@
 CXX = g++
-CFLAGS = -std=c++23 -O3 -Wall -g -Iengine/headers -Iobjects/headers #-fsanitize=address
+CFLAGS = -std=c++23 -O3 -Wall -g -Iengine/headers -Iobjects/headers#-fsanitize=address
 LDFLAGS = -lglfw -lvulkan -ldl -lpthread -lX11 -lXxf86vm -lXrandr -lXi
 
 STATIC_FLAGS = -static -static-libgcc -static-libstdc++
@@ -46,6 +46,7 @@ $(TARGET): $(OBJS)
 	@echo "Cleaning up object files..."
 	@rm -f $(OBJS)
 	@echo "==============================BUILD COMPLETE=============================="
+	@echo "Compiled with $(shell nproc) parallel jobs"
 	@echo "Executable: $(TARGET) is now running..."
 
 .PHONY: clean run all

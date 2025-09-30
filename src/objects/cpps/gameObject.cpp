@@ -36,6 +36,8 @@ namespace Prometheus{
         Engine::objectsByMesh[modelPath][this->id]=this;
         Engine::gameObjects.push_back(this);
         Engine::gameObjectMap.insert({this->id,this});
+        Engine::recreateVertexIndexInstanceBuffer=true;
+        Engine::recreateDescriptors=true;
     }
 
     GameObject::~GameObject(){
@@ -54,9 +56,9 @@ namespace Prometheus{
 
     void GameObject::draw(VkCommandBuffer& commandBuffer, uint32_t instanceCount, uint32_t firstInstance){
         //std::cout<<Engine::meshMap[this->meshPath].toString()<<std::endl;
-        
-        vkCmdDrawIndexed(commandBuffer, Engine::meshMap[this->meshPath].indexCount, 
-            instanceCount, Engine::meshMap[this->meshPath].indexOffset, Engine::meshMap[this->meshPath].vertexOffset, firstInstance); //Remember to see instancing
+
+        vkCmdDrawIndexed(commandBuffer, Engine::meshMap[this->meshPath].indices.size(), 
+            instanceCount, Engine::meshMap[this->meshPath].indexOffset, Engine::meshMap[this->meshPath].vertexOffset, firstInstance);
     }
 
     GameObject::GameObject(){

@@ -103,12 +103,14 @@ namespace Prometheus{
 
         vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, Engine::graphicsPipeline);
 
-        BufferManager::updateInstanceBuffer(Engine::currentFrame);
+        if(Engine::gameObjects.size()!=0){
+            BufferManager::updateInstanceBuffer(Engine::currentFrame);
 
-        VkBuffer vertexBuffers[] = {Engine::indexVertexBuffer,Engine::instanceBuffers[Engine::currentFrame]};
-        VkDeviceSize offsets[] = {0,0};
-        vkCmdBindVertexBuffers(commandBuffer, 0, 2, vertexBuffers, offsets);
-        vkCmdBindIndexBuffer(commandBuffer, Engine::indexVertexBuffer, Engine::indexOffset, VK_INDEX_TYPE_UINT32);
+            VkBuffer vertexBuffers[] = {Engine::indexVertexBuffer,Engine::instanceBuffers[Engine::currentFrame]};
+            VkDeviceSize offsets[] = {0,0};
+            vkCmdBindVertexBuffers(commandBuffer, 0, 2, vertexBuffers, offsets);
+            vkCmdBindIndexBuffer(commandBuffer, Engine::indexVertexBuffer, Engine::indexOffset, VK_INDEX_TYPE_UINT32);
+        }
 
         VkViewport viewport{}; //Viewport and Scissor was set to dynamic in createGraphicsPipeline (graphicsPipeline.cpp)
         viewport.x = 0.0f;
@@ -182,7 +184,6 @@ namespace Prometheus{
     void BufferManager::createIndexVertexBuffer(VkDevice& device, VkPhysicalDevice& physicalDevice, VkQueue& graphicsQueue){
 
         VkDeviceSize bufferSize = (sizeof(Engine::vertices[0]) * Engine::vertices.size())+(sizeof(Engine::indices[0]) * Engine::indices.size());
-
         VkBuffer stagingBuffer;
         VkDeviceMemory stagingBufferMemory;
         BufferManager::createJointBuffer(sizeof(Engine::vertices[0]) * Engine::vertices.size(), 
@@ -388,7 +389,6 @@ namespace Prometheus{
     }
 
     void BufferManager::updateInstanceBuffer(uint32_t currentImage){
-        Engine::updateGameObjects();
 
         char* dst = reinterpret_cast<char*>(Engine::instanceBuffersMapped[currentImage]);
         size_t offset = 0;
@@ -448,6 +448,48 @@ namespace Prometheus{
 
     bool BufferManager::hasStencilComponent(VkFormat format){
         return format == VK_FORMAT_D32_SFLOAT_S8_UINT || format == VK_FORMAT_D24_UNORM_S8_UINT;
+    }
+
+    void BufferManager::recreateVerIndBuffer(VkDevice& device, VkPhysicalDevice& physicalDevice, VkQueue& graphicsQueue){
+
+        Engine::vertices.clear();
+        Engine::indices.clear();
+
+        vkDeviceWaitIdle(device);
+        
+        if (Engine::indexVertexBuffer != VK_NULL_HANDLE) {
+            vkDestroyBuffer(device, Engine::indexVertexBuffer, nullptr);
+        }
+        if (Engine::indexVertexBufferMemory != VK_NULL_HANDLE) {
+            vkFreeMemory(device, Engine::indexVertexBufferMemory, nullptr);
+        }
+
+        for (auto& [meshName, innerMap] : Engine::objectsByMesh) {
+
+            Engine::meshMap[meshName].vertexOffset=Engine::vertices.size();
+            Engine::meshMap[meshName].indexOffset=Engine::indices.size();
+            Engine::vertices.insert(Engine::vertices.end(),Engine::meshMap[meshName].vertices.begin(),Engine::meshMap[meshName].vertices.end());
+            Engine::indices.insert(Engine::indices.end(),Engine::meshMap[meshName].indices.begin(),Engine::meshMap[meshName].indices.end());
+        }
+
+        BufferManager::createIndexVertexBuffer(device,physicalDevice,graphicsQueue);
+    }
+
+    void BufferManager::recreateInstanceBuffers(VkDevice& device, VkPhysicalDevice& physicalDevice, VkQueue& graphicsQueue){
+
+        vkDeviceWaitIdle(device);
+
+        for(size_t i = 0; i < Engine::MAX_FRAMES_IN_FLIGHT; i++){
+            // Check before destroying
+            if (Engine::instanceBuffers[i] != VK_NULL_HANDLE) {
+                vkDestroyBuffer(device, Engine::instanceBuffers[i], nullptr);
+            }
+            if (Engine::instanceBufferMemories[i] != VK_NULL_HANDLE) {
+                vkFreeMemory(device, Engine::instanceBufferMemories[i], nullptr);
+            }
+        }
+
+        BufferManager::createInstanceBuffers(device,physicalDevice,graphicsQueue);
     }
 
 }
