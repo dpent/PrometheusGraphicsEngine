@@ -92,9 +92,9 @@ namespace Prometheus{
 
         VkPipelineMultisampleStateCreateInfo multisampling{};
         multisampling.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
-        multisampling.sampleShadingEnable = VK_FALSE;
-        multisampling.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
-        multisampling.minSampleShading = 1.0f; // Optional
+        multisampling.rasterizationSamples = Engine::msaaSamples;
+        multisampling.sampleShadingEnable = VK_FALSE; // VK_TRUE to enable sample shading in the pipeline
+        multisampling.minSampleShading = 1.0f; //0.2f is the min fraction for sample shading, closer to one is smoother
         multisampling.pSampleMask = nullptr; // Optional
         multisampling.alphaToCoverageEnable = VK_FALSE; // Optional
         multisampling.alphaToOneEnable = VK_FALSE; // Optional

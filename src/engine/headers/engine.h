@@ -125,12 +125,18 @@ namespace Prometheus{
         static bool recreateInstBuffer;
         static bool recreateDescriptors;
 
+        static VkSampleCountFlagBits msaaSamples; //MULTISAMPLING VARIABLES
+        static VkImage colorImage;
+        static VkDeviceMemory colorImageMemory;
+        static VkImageView colorImageView;
+
         //static uint32_t frameCounter;
 
         void run();
         static std::vector<char> readFile(const std::string& filename);
         static void frameBufferResizeCallback(GLFWwindow* window, int width, int height);
         static void updateGameObjects();
+        static VkSampleCountFlagBits getMaxUsableSampleCount(VkPhysicalDevice& physicalDevice);
 
     private:
         //Window variables

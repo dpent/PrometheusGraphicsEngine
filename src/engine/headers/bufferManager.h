@@ -57,6 +57,7 @@ namespace Prometheus{
         static void recreateInstanceBuffers(VkDevice& device, VkPhysicalDevice& physicalDevice, VkQueue& graphicsQueue);
 
         static void createDepthResources(VkDevice& device,VkPhysicalDevice& physicalDevice);
+        static void createColorResources(VkDevice& device, VkPhysicalDevice& physicalDevice);
 
         static VkFormat findSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features,
             VkPhysicalDevice& physicalDevice);

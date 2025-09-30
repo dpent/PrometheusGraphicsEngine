@@ -145,12 +145,12 @@ namespace Prometheus{
 
         for (size_t i = 0; i < Engine::swapChainImages.size(); i++) {
             Engine::swapChainImageViews[i]=SwapChainManager::createImageView(device,Engine::swapChainImages[i],
-            Engine::swapChainImageFormat,VK_IMAGE_ASPECT_COLOR_BIT);
+            Engine::swapChainImageFormat,VK_IMAGE_ASPECT_COLOR_BIT, 1);
 
         }
     }
 
-    VkImageView SwapChainManager::createImageView(VkDevice& device, VkImage& image, VkFormat format, VkImageAspectFlags aspectFlags){
+    VkImageView SwapChainManager::createImageView(VkDevice& device, VkImage& image, VkFormat format, VkImageAspectFlags aspectFlags, uint32_t mipLevels){
         VkImageViewCreateInfo createInfo{};
         createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
         createInfo.image = image;
@@ -162,7 +162,7 @@ namespace Prometheus{
         createInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
         createInfo.subresourceRange.aspectMask = aspectFlags;
         createInfo.subresourceRange.baseMipLevel = 0;
-        createInfo.subresourceRange.levelCount = 1;
+        createInfo.subresourceRange.levelCount = mipLevels;
         createInfo.subresourceRange.baseArrayLayer = 0;
         createInfo.subresourceRange.layerCount = 1;
 
@@ -194,6 +194,8 @@ namespace Prometheus{
         SwapChainManager::createSwapChain(surface,physicalDevice,device,oldSwapChain);
 
         SwapChainManager::createImageViews(device);
+        
+        BufferManager::createColorResources(device, physicalDevice);
         BufferManager::createDepthResources(device,physicalDevice);
         BufferManager::createFrameBuffers(device);
 
@@ -222,6 +224,13 @@ namespace Prometheus{
         vkFreeMemory(device, Engine::depthImageMemory, nullptr);
         Engine::depthImageMemory = VK_NULL_HANDLE;
 
+        vkDestroyImageView(device, Engine::colorImageView, nullptr);
+        Engine::colorImageView=VK_NULL_HANDLE;
+        vkDestroyImage(device, Engine::colorImage, nullptr);
+        Engine::colorImage=VK_NULL_HANDLE;
+        vkFreeMemory(device, Engine::colorImageMemory, nullptr);
+        Engine::colorImageMemory=VK_NULL_HANDLE;
+
         if (Engine::swapChain != VK_NULL_HANDLE) {
             vkDestroySwapchainKHR(device, Engine::swapChain, nullptr);
             Engine::swapChain = VK_NULL_HANDLE;
@@ -243,6 +252,13 @@ namespace Prometheus{
         Engine::depthImage = VK_NULL_HANDLE;
         vkFreeMemory(device, Engine::depthImageMemory, nullptr);
         Engine::depthImageMemory = VK_NULL_HANDLE;
+
+        vkDestroyImageView(device, Engine::colorImageView, nullptr);
+        Engine::colorImageView=VK_NULL_HANDLE;
+        vkDestroyImage(device, Engine::colorImage, nullptr);
+        Engine::colorImage=VK_NULL_HANDLE;
+        vkFreeMemory(device, Engine::colorImageMemory, nullptr);
+        Engine::colorImageMemory=VK_NULL_HANDLE;
     }
     
 }

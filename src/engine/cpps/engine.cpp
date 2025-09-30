@@ -82,6 +82,11 @@ VkImageView Engine::depthImageView;
 bool Engine::recreateVertexIndexInstanceBuffer=true;
 bool Engine::recreateDescriptors=true;
 
+VkSampleCountFlagBits Engine::msaaSamples=VK_SAMPLE_COUNT_1_BIT;
+VkImage Engine::colorImage;
+VkDeviceMemory Engine::colorImageMemory;
+VkImageView Engine::colorImageView;
+
 //uint32_t Engine::frameCounter=0;
 
 namespace Prometheus{
@@ -124,6 +129,7 @@ namespace Prometheus{
 
         GraphicsPipelineManager::createGraphicsPipeline(this->device);
 
+        BufferManager::createColorResources(this->device,this->physicalDevice);
         BufferManager::createDepthResources(this->device,this->physicalDevice);
         BufferManager::createFrameBuffers(this->device);
         BufferManager::createCommandPool(this->physicalDevice, this->surface,this->device);
@@ -353,5 +359,20 @@ namespace Prometheus{
                 i++;
             }
         }
+    }
+
+    VkSampleCountFlagBits Engine::getMaxUsableSampleCount(VkPhysicalDevice& physicalDevice){
+        VkPhysicalDeviceProperties physicalDeviceProperties;
+        vkGetPhysicalDeviceProperties(physicalDevice, &physicalDeviceProperties);
+
+        VkSampleCountFlags counts = physicalDeviceProperties.limits.framebufferColorSampleCounts & physicalDeviceProperties.limits.framebufferDepthSampleCounts;
+        if (counts & VK_SAMPLE_COUNT_64_BIT) { return VK_SAMPLE_COUNT_64_BIT; }
+        if (counts & VK_SAMPLE_COUNT_32_BIT) { return VK_SAMPLE_COUNT_32_BIT; }
+        if (counts & VK_SAMPLE_COUNT_16_BIT) { return VK_SAMPLE_COUNT_16_BIT; }
+        if (counts & VK_SAMPLE_COUNT_8_BIT) { return VK_SAMPLE_COUNT_8_BIT; }
+        if (counts & VK_SAMPLE_COUNT_4_BIT) { return VK_SAMPLE_COUNT_4_BIT; }
+        if (counts & VK_SAMPLE_COUNT_2_BIT) { return VK_SAMPLE_COUNT_2_BIT; }
+
+        return VK_SAMPLE_COUNT_1_BIT;
     }
 }

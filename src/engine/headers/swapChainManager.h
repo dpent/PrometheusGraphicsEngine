@@ -27,7 +27,7 @@ namespace Prometheus{
             VkSwapchainKHR oldSwapChain
         );
         static void createImageViews(VkDevice& device);
-        static VkImageView createImageView(VkDevice& device, VkImage& image, VkFormat format, VkImageAspectFlags aspectFlags);
+        static VkImageView createImageView(VkDevice& device, VkImage& image, VkFormat format, VkImageAspectFlags aspectFlags, uint32_t mipLevels);
         static void recreateSwapChain(VkSurfaceKHR& surface,
             VkPhysicalDevice& physicalDevice, 
             VkDevice& device,

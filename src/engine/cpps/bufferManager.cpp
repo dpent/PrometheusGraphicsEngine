@@ -12,9 +12,10 @@ namespace Prometheus{
         Engine::swapChainFramebuffers.resize(Engine::swapChainImageViews.size());
 
         for (size_t i = 0; i < Engine::swapChainImageViews.size(); i++) {
-            std::array<VkImageView, 2> attachments = {
-                Engine::swapChainImageViews[i],
-                Engine::depthImageView
+            std::array<VkImageView, 3> attachments = {
+                Engine::colorImageView,
+                Engine::depthImageView,
+                Engine::swapChainImageViews[i]
             };
 
             VkFramebufferCreateInfo framebufferInfo{};
@@ -408,10 +409,11 @@ namespace Prometheus{
             Engine::swapChainExtent.height, depthFormat, 
             VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, 
             VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, Engine::depthImage, 
-            Engine::depthImageMemory, device, physicalDevice
+            Engine::depthImageMemory, device, physicalDevice,1,Engine::msaaSamples
         );
 
-        Engine::depthImageView=SwapChainManager::createImageView(device,Engine::depthImage,depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT);
+        Engine::depthImageView=SwapChainManager::createImageView(device,Engine::depthImage,depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT,1);
+        //No need for transitioning this image since the render pass will take care of it
     }
 
     /*
@@ -490,6 +492,18 @@ namespace Prometheus{
         }
 
         BufferManager::createInstanceBuffers(device,physicalDevice,graphicsQueue);
+    }
+
+    void BufferManager::createColorResources(VkDevice& device, VkPhysicalDevice& physicalDevice){
+        VkFormat colorFormat = Engine::swapChainImageFormat;
+
+    TextureManager::createImage(Engine::swapChainExtent.width, Engine::swapChainExtent.height, colorFormat,VK_IMAGE_TILING_OPTIMAL,
+        VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, Engine::colorImage, Engine::colorImageMemory, device,
+        physicalDevice, 1, Engine::msaaSamples);
+
+    Engine::colorImageView = SwapChainManager::createImageView(device,Engine::colorImage, colorFormat, VK_IMAGE_ASPECT_COLOR_BIT, 1);
+
     }
 
 }

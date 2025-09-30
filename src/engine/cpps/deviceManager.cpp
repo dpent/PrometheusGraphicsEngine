@@ -38,6 +38,7 @@ namespace Prometheus{
         
         // Select the highest scoring device
         physicalDevice = candidates[0].second;
+        Engine::msaaSamples = Engine::getMaxUsableSampleCount(physicalDevice);
 
         VkPhysicalDeviceProperties deviceProperties;
         vkGetPhysicalDeviceProperties(physicalDevice, &deviceProperties);
@@ -48,6 +49,7 @@ namespace Prometheus{
         std::cout<<"  Device Type: "<<deviceProperties.deviceType<<" ("<<DeviceManager::deviceTypeToString(deviceProperties.deviceType)<<")"<<std::endl;
         std::cout<<"  Vendor ID: "<<deviceProperties.vendorID<<" ("<<DeviceManager::vendorIdToString(deviceProperties.vendorID)<<")"<<std::endl;
         std::cout<<"  Device ID: "<<deviceProperties.deviceID<<std::endl;
+        std::cout<<"  MSSAx"<<Engine::msaaSamples<<std::endl;
     }
 
     bool DeviceManager::rateDeviceSuitability(const VkPhysicalDevice& device, const VkSurfaceKHR& surface) {
@@ -138,6 +140,7 @@ namespace Prometheus{
         }else{
             deviceFeatures.samplerAnisotropy = VK_TRUE;
         } //We need this if we use it
+        //deviceFeatures.sampleRateShading = VK_TRUE; //Enable sample shading feature for the device
 
         VkDeviceCreateInfo createInfo{};
         createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
