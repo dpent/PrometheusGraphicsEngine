@@ -20,6 +20,7 @@
 #include <glm/glm.hpp>
 #include "../../objects/headers/gameObject.h"
 #include "../../objects/headers/mesh.h"
+#include "../../threads/headers/threadManager.h"
 
 namespace Prometheus{
 
@@ -129,6 +130,8 @@ namespace Prometheus{
         static VkImage colorImage;
         static VkDeviceMemory colorImageMemory;
         static VkImageView colorImageView;
+
+        static ThreadManager threadManager;
 
         //static uint32_t frameCounter;
 

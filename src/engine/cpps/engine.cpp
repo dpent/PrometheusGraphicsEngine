@@ -87,6 +87,8 @@ VkImage Engine::colorImage;
 VkDeviceMemory Engine::colorImageMemory;
 VkImageView Engine::colorImageView;
 
+ThreadManager Engine::threadManager = ThreadManager();
+
 //uint32_t Engine::frameCounter=0;
 
 namespace Prometheus{
@@ -108,6 +110,9 @@ namespace Prometheus{
     }
 
     void Engine::initVulkan() {
+
+        threadManager.start(12);
+        threadManager.detach();
 
         InstanceManager::createInstance(this->instance);
         InstanceManager::setupDebugMessenger(this->instance,this->debugMessenger);
