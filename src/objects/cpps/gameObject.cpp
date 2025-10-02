@@ -17,6 +17,7 @@ namespace Prometheus{
         this->meshPath=modelPath;
         this->modelMatrix=glm::mat4(1.0f);
 
+        Engine::textureMutex.lock();
         if (Engine::textureMap.find(texturePath) != Engine::textureMap.end()) {
             Engine::objectIdsByTexture[texturePath].push_back(this->id);
             this->textureVecIndex=Engine::objectIdsByTexture[texturePath].size()-1;
@@ -28,15 +29,21 @@ namespace Prometheus{
             Engine::objectIdsByTexture[texturePath].push_back(this->id);
             this->textureVecIndex=0;
         }
+        Engine::textureMutex.unlock();
 
         if(Engine::meshMap.find(modelPath) == Engine::meshMap.end()){
             ModelManager::loadModel(modelPath); //Also inserts the mesh into meshMap
         }
 
+        Engine::gameObjectMutex.lock();
+
         Engine::objectsByMesh[modelPath][this->id]=this;
         Engine::gameObjects.push_back(this);
         Engine::gameObjectMap.insert({this->id,this});
-        Engine::recreateVertexIndexInstanceBuffer=true;
+
+        Engine::gameObjectMutex.unlock();
+
+        Engine::recreateInstanceBuffer=true;
         Engine::recreateDescriptors=true;
     }
 
@@ -45,12 +52,19 @@ namespace Prometheus{
 
     void GameObject::terminate(VkDevice& device){ //Used for object deletion
 
+        Engine::textureMutex.lock();
+
         auto it = Engine::textureMap.find(this->texturePath);
         it->second.count--;
         if (it != Engine::textureMap.end() && it->second.count==0) {
             it->second.terminate(device);
         }
         Engine::objectIdsByTexture[this->texturePath].erase(Engine::objectIdsByTexture[this->texturePath].begin()+this->textureVecIndex);
+
+        Engine::textureMutex.unlock();
+
+        Engine::gameObjectMutex.lock();
+
         Engine::objectsByMesh[meshPath].erase(this->id);
     }
 
@@ -86,6 +100,20 @@ namespace Prometheus{
 
         glm::mat4 model = glm::translate(glm::mat4(1.0f), glm::vec3(x, y, z));
         return model;
+    }
+
+    void GameObject::createObjectThreaded(std::string texturePath,std::string modelPath, 
+        VkDevice& device, VkPhysicalDevice& physicalDevice,
+        VkQueue& graphicsQueue
+    ){
+        Job j = Job(CREATE_OBJECT);
+        j.data.push_back(texturePath);
+        j.data.push_back(modelPath);
+        j.data.push_back(&device);
+        j.data.push_back(&physicalDevice);
+        j.data.push_back(&graphicsQueue);
+
+        Engine::threadManager.jobQueue.push(j);
     }
 }
 

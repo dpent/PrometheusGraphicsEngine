@@ -1,3 +1,5 @@
+#pragma once
+
 #include <vulkan/vulkan_core.h>
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEFAULT_ALIGNED_GENTYPES //REMEMBER THIS IS SUPPOSED TO ALIGN EVERYTHING
@@ -21,6 +23,7 @@
 #include "../../objects/headers/gameObject.h"
 #include "../../objects/headers/mesh.h"
 #include "../../threads/headers/threadManager.h"
+#include "../../threads/headers/job.h"
 
 namespace Prometheus{
 
@@ -76,6 +79,8 @@ namespace Prometheus{
         static std::vector<VkSemaphore> imageAvailableSemaphores;
         static std::vector<VkSemaphore> renderFinishedSemaphores;
         static std::vector<VkFence> inFlightFences;
+        static std::mutex gameObjectMutex;
+        static std::mutex textureMutex;
 
         static const int MAX_FRAMES_IN_FLIGHT = 2;
         static uint32_t currentFrame;
@@ -122,7 +127,8 @@ namespace Prometheus{
         static VkDeviceMemory depthImageMemory;
         static VkImageView depthImageView;
 
-        static bool recreateVertexIndexInstanceBuffer;
+        static bool recreateVertexIndexBuffer;
+        static bool recreateInstanceBuffer;
         static bool recreateInstBuffer;
         static bool recreateDescriptors;
 

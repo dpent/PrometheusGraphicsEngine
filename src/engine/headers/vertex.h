@@ -1,3 +1,5 @@
+#pragma once
+
 #include <array>
 #include <glm/glm.hpp>
 #define GLFW_INCLUDE_VULKAN

@@ -57,5 +57,6 @@ namespace Prometheus{
             }
         }
         Engine::meshMap[modelPath]=Mesh(modelPath,vertices,indices);
+        Engine::recreateVertexIndexBuffer=true;
     }
 }

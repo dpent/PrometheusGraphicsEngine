@@ -1,3 +1,5 @@
+#pragma once
+
 #include <cstdint>
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
@@ -24,5 +26,7 @@ namespace Prometheus{
         virtual void draw(VkCommandBuffer& commandBuffer, uint32_t instanceCount, uint32_t firstInstance);
         std::string toString();
         glm::mat4 animateCircularMotion(float centerX, float centerY, float centerZ, float radius, float speed, float offset);
+        
+        static void createObjectThreaded(std::string texturePath,std::string modelPath,VkDevice& device, VkPhysicalDevice& physicalDevice,VkQueue& graphicsQueue);
     };
 }

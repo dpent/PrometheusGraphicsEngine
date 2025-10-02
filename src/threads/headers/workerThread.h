@@ -1,3 +1,5 @@
+#pragma once
+
 #include <unordered_map>
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
@@ -8,24 +10,22 @@
 #include <iostream>
 #include <chrono>
 #include <mutex>
+#include <string>
 
 namespace Prometheus{
 
     class WorkerThread{
-
-        std::thread thread;
-        std::unordered_map<std::thread::id, WorkerThread*>* threadPool;
-        std::unordered_map<std::thread::id, WorkerThread*>* activeThreads;
     
     public:
         std::queue<Job*> jobs;
+        std::mutex jobsMutex;
         sem_t workSemaphore;
         std::thread::id id;
-        std::mutex* poolMutex;
-
+        std::thread thread;
+        
         bool alive=true;
 
-        WorkerThread(std::mutex* poolMutex, std::unordered_map<std::thread::id, WorkerThread*>* threadPool, std::unordered_map<std::thread::id, WorkerThread*>* activeThreads);
+        WorkerThread();
 
         void workerLoop();
 

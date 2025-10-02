@@ -33,6 +33,8 @@ std::vector<VkFramebuffer> Engine::swapChainFramebuffers;
 std::vector<VkSemaphore> Engine::imageAvailableSemaphores;
 std::vector<VkSemaphore> Engine::renderFinishedSemaphores;
 std::vector<VkFence> Engine::inFlightFences;
+std::mutex Engine::gameObjectMutex;
+std::mutex Engine::textureMutex;
 
 uint32_t Engine::currentFrame = 0;
 
@@ -79,7 +81,8 @@ VkImage Engine::depthImage;
 VkDeviceMemory Engine::depthImageMemory;
 VkImageView Engine::depthImageView;
 
-bool Engine::recreateVertexIndexInstanceBuffer=true;
+bool Engine::recreateVertexIndexBuffer=true;
+bool Engine::recreateInstanceBuffer=true;
 bool Engine::recreateDescriptors=true;
 
 VkSampleCountFlagBits Engine::msaaSamples=VK_SAMPLE_COUNT_1_BIT;
@@ -111,7 +114,7 @@ namespace Prometheus{
 
     void Engine::initVulkan() {
 
-        threadManager.start(12);
+        threadManager.start(std::thread::hardware_concurrency()-2);
         threadManager.detach();
 
         InstanceManager::createInstance(this->instance);
@@ -139,14 +142,36 @@ namespace Prometheus{
         BufferManager::createFrameBuffers(this->device);
         BufferManager::createCommandPool(this->physicalDevice, this->surface,this->device);
 
-        new GameObject("../textures/statue.jpg","../models/stanford_sphere.obj",STBI_rgb_alpha,
-        device,physicalDevice,graphicsQueue);
+        threadManager.queueMutex.lock();
 
-        new GameObject("../textures/angel.jpg","../models/cube.obj",STBI_rgb_alpha,
-        device,physicalDevice,graphicsQueue);
+        GameObject::createObjectThreaded("../textures/statue.jpg", 
+            "../models/stanford_sphere.obj", 
+            device, 
+            physicalDevice, 
+            graphicsQueue
+        );
 
-        new GameObject("../textures/viking_room.png","../models/viking_room.obj",STBI_rgb_alpha,
-        device,physicalDevice,graphicsQueue);
+        GameObject::createObjectThreaded("../textures/angel.jpg", 
+            "../models/cube.obj", 
+            device, 
+            physicalDevice, 
+            graphicsQueue
+        );
+
+        GameObject::createObjectThreaded("../textures/viking_room.png", 
+            "../models/viking_room.obj", 
+            device, 
+            physicalDevice, 
+            graphicsQueue
+        );
+
+        int sval;
+        sem_getvalue(&(threadManager.workInQueueSemaphore), &sval);
+        if (sval == 0) {
+            sem_post(&(threadManager.workInQueueSemaphore));
+        }
+
+        threadManager.queueMutex.unlock();
 
         //BufferManager::createUniformBuffers(this->device,this->physicalDevice);
 
@@ -180,6 +205,8 @@ namespace Prometheus{
             Engine::gameObjects[i]->terminate(device);
             delete Engine::gameObjects[i];
         }
+
+        threadManager.terminate();
 
         SwapChainManager::cleanupSwapChain(device);
 
@@ -248,6 +275,7 @@ namespace Prometheus{
     }
 
     void Engine::drawFrame(){
+
         vkWaitForFences(device, 1, &Engine::inFlightFences[Engine::currentFrame], VK_TRUE, UINT64_MAX);
 
         uint32_t imageIndex;
@@ -269,14 +297,26 @@ namespace Prometheus{
         Engine::meshBatches.clear();
 
         if(Engine::gameObjects.size()!=0){
-            if(Engine::recreateVertexIndexInstanceBuffer){
+            if(Engine::recreateVertexIndexBuffer){
+
                 BufferManager::recreateVerIndBuffer(this->device,this->physicalDevice,this->graphicsQueue);
 
                 Engine::updateGameObjects();
-                
-                BufferManager::recreateInstanceBuffers(this->device,this->physicalDevice,this->graphicsQueue);
 
-                Engine::recreateVertexIndexInstanceBuffer=false;
+                Engine::recreateVertexIndexBuffer=false;
+
+                if(Engine::recreateInstanceBuffer){
+                    BufferManager::recreateInstanceBuffers(this->device,this->physicalDevice,this->graphicsQueue);
+                    Engine::recreateInstanceBuffer=false;
+                }
+
+            }else if(Engine::recreateInstanceBuffer){
+
+                Engine::updateGameObjects();
+
+                BufferManager::recreateInstanceBuffers(this->device,this->physicalDevice,this->graphicsQueue);
+                Engine::recreateInstanceBuffer=false;
+
             }else{
                 Engine::updateGameObjects();
             }
@@ -287,6 +327,8 @@ namespace Prometheus{
                 Engine::recreateDescriptors=false;
             }
         }
+
+        //std::cout<<Engine::gameObjects.size()<<std::endl;
 
         BufferManager::recordCommandBuffer(Engine::commandBuffers[Engine::currentFrame], imageIndex,device,
         physicalDevice,graphicsQueue);
