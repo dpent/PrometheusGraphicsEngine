@@ -35,6 +35,8 @@ std::vector<VkSemaphore> Engine::renderFinishedSemaphores;
 std::vector<VkFence> Engine::inFlightFences;
 std::mutex Engine::gameObjectMutex;
 std::mutex Engine::textureMutex;
+std::mutex Engine::graphicsQueueMutex;
+std::mutex Engine::commandPoolMutex;
 
 uint32_t Engine::currentFrame = 0;
 
@@ -65,6 +67,7 @@ glm::mat4 Engine::proj;
 
 std::vector<GameObject*> Engine::gameObjects;
 std::unordered_map<uint64_t,GameObject*> Engine::gameObjectMap;
+std::unordered_map<uint64_t,bool> Engine::gameObjectIdsToRemove;
 
 VkPhysicalDeviceProperties Engine::physicalDeviceProperties;
 VkPhysicalDeviceFeatures Engine::physicalDeviceFeatures;
@@ -73,7 +76,6 @@ std::unordered_map<std::string, Texture> Engine::textureMap;
 std::unordered_map<std::string,std::vector<uint64_t>> Engine::objectIdsByTexture;
 
 std::unordered_map<std::string,Mesh> Engine::meshMap;
-std::vector<InstanceInfo> Engine::instances;
 std::map<std::string,std::map<uint64_t,GameObject*>> Engine::objectsByMesh;
 std::vector<MeshBatch> Engine::meshBatches;
 
@@ -90,7 +92,11 @@ VkImage Engine::colorImage;
 VkDeviceMemory Engine::colorImageMemory;
 VkImageView Engine::colorImageView;
 
-ThreadManager Engine::threadManager = ThreadManager();
+std::unordered_map<std::thread::id, WorkerThread*> Engine::threadPool;
+std::queue<Job> Engine::jobQueue;
+std::queue<Job> Engine::deferredJobQueue;
+std::mutex Engine::queueMutex;
+sem_t Engine::workInQueueSemaphore;
 
 //uint32_t Engine::frameCounter=0;
 
@@ -114,8 +120,7 @@ namespace Prometheus{
 
     void Engine::initVulkan() {
 
-        threadManager.start(std::thread::hardware_concurrency()-2);
-        threadManager.detach();
+        Engine::initThreadPool(std::thread::hardware_concurrency()-1);
 
         InstanceManager::createInstance(this->instance);
         InstanceManager::setupDebugMessenger(this->instance,this->debugMessenger);
@@ -142,36 +147,28 @@ namespace Prometheus{
         BufferManager::createFrameBuffers(this->device);
         BufferManager::createCommandPool(this->physicalDevice, this->surface,this->device);
 
-        threadManager.queueMutex.lock();
+        for(int i=0; i<4; i++){
+            GameObject::createObjectThreaded("../textures/statue.jpg", 
+                "../models/stanford_sphere.obj", 
+                device, 
+                physicalDevice, 
+                graphicsQueue
+            );
 
-        GameObject::createObjectThreaded("../textures/statue.jpg", 
-            "../models/stanford_sphere.obj", 
-            device, 
-            physicalDevice, 
-            graphicsQueue
-        );
+            GameObject::createObjectThreaded("../textures/angel.jpg", 
+                "../models/cube.obj", 
+                device, 
+                physicalDevice, 
+                graphicsQueue
+            );
 
-        GameObject::createObjectThreaded("../textures/angel.jpg", 
-            "../models/cube.obj", 
-            device, 
-            physicalDevice, 
-            graphicsQueue
-        );
-
-        GameObject::createObjectThreaded("../textures/viking_room.png", 
-            "../models/viking_room.obj", 
-            device, 
-            physicalDevice, 
-            graphicsQueue
-        );
-
-        int sval;
-        sem_getvalue(&(threadManager.workInQueueSemaphore), &sval);
-        if (sval == 0) {
-            sem_post(&(threadManager.workInQueueSemaphore));
+            GameObject::createObjectThreaded("../textures/viking_room.png", 
+                "../models/viking_room.obj", 
+                device, 
+                physicalDevice, 
+                graphicsQueue
+            );
         }
-
-        threadManager.queueMutex.unlock();
 
         //BufferManager::createUniformBuffers(this->device,this->physicalDevice);
 
@@ -182,15 +179,63 @@ namespace Prometheus{
         BufferManager::createCommandBuffers(this->device);
 
         SyncManager::createSyncObjects(this->device);
+
     }
 
     void Engine::mainLoop() {
+        int frameCount=0;
         while (!glfwWindowShouldClose(Engine::window)) {
             glfwPollEvents();
             drawFrame();
+
+            if(frameCount%100==0 && frameCount>0){
+
+                if(Engine::gameObjectMap.size()>3){
+                    Engine::gameObjectMutex.lock();
+
+                    int count=0;
+                    for (const auto& pair : Engine::gameObjectMap) {
+                        GameObject::deleteObjectThreaded(device,pair.second->id);
+                        count++;
+                        if(count==3){
+                            break;
+                        }
+                    }
+
+                    Engine::gameObjectMutex.unlock();
+                }else{
+                    for(int i=0; i<4; i++){
+                        GameObject::createObjectThreaded("../textures/statue.jpg", 
+                            "../models/stanford_sphere.obj", 
+                            device, 
+                            physicalDevice, 
+                            graphicsQueue
+                        );
+
+                        GameObject::createObjectThreaded("../textures/angel.jpg", 
+                            "../models/cube.obj", 
+                            device, 
+                            physicalDevice, 
+                            graphicsQueue
+                        );
+
+                        GameObject::createObjectThreaded("../textures/viking_room.png", 
+                            "../models/viking_room.obj", 
+                            device, 
+                            physicalDevice, 
+                            graphicsQueue
+                        );
+                    }
+                }
+            }
+            frameCount++;
         }
 
+        Engine::graphicsQueueMutex.lock();
+
         vkDeviceWaitIdle(device);
+
+        Engine::graphicsQueueMutex.unlock();
     }
 
     void Engine::createSurface(){
@@ -206,7 +251,16 @@ namespace Prometheus{
             delete Engine::gameObjects[i];
         }
 
-        threadManager.terminate();
+        for (const auto& pair : Engine::threadPool) {
+            pair.second->alive=false;
+            sem_post(&(Engine::workInQueueSemaphore));
+            if (pair.second->thread.joinable()) {
+                pair.second->thread.join();
+            }
+            delete pair.second;
+        }
+
+        Engine::threadPool.clear();
 
         SwapChainManager::cleanupSwapChain(device);
 
@@ -293,10 +347,17 @@ namespace Prometheus{
 
         vkResetFences(device, 1, &Engine::inFlightFences[Engine::currentFrame]);
 
+        Engine::commandPoolMutex.lock();
+
         vkResetCommandBuffer(Engine::commandBuffers[Engine::currentFrame],  0);
+
+        Engine::commandPoolMutex.unlock();
+
         Engine::meshBatches.clear();
 
-        if(Engine::gameObjects.size()!=0){
+        Engine::gameObjectMutex.lock();
+
+        if(Engine::gameObjectMap.size()!=0){
             if(Engine::recreateVertexIndexBuffer){
 
                 BufferManager::recreateVerIndBuffer(this->device,this->physicalDevice,this->graphicsQueue);
@@ -306,7 +367,7 @@ namespace Prometheus{
                 Engine::recreateVertexIndexBuffer=false;
 
                 if(Engine::recreateInstanceBuffer){
-                    BufferManager::recreateInstanceBuffers(this->device,this->physicalDevice,this->graphicsQueue);
+                    BufferManager::recreateInstanceBuffers(this->device,this->physicalDevice);
                     Engine::recreateInstanceBuffer=false;
                 }
 
@@ -314,7 +375,7 @@ namespace Prometheus{
 
                 Engine::updateGameObjects();
 
-                BufferManager::recreateInstanceBuffers(this->device,this->physicalDevice,this->graphicsQueue);
+                BufferManager::recreateInstanceBuffers(this->device,this->physicalDevice);
                 Engine::recreateInstanceBuffer=false;
 
             }else{
@@ -328,10 +389,12 @@ namespace Prometheus{
             }
         }
 
-        //std::cout<<Engine::gameObjects.size()<<std::endl;
-
+        Engine::commandPoolMutex.lock();
         BufferManager::recordCommandBuffer(Engine::commandBuffers[Engine::currentFrame], imageIndex,device,
-        physicalDevice,graphicsQueue);
+        physicalDevice);
+        Engine::commandPoolMutex.unlock();
+
+        Engine::gameObjectMutex.unlock();
 
         //BufferManager::updateUniformBuffer(Engine::currentFrame);
 
@@ -350,9 +413,13 @@ namespace Prometheus{
         submitInfo.signalSemaphoreCount = 1;
         submitInfo.pSignalSemaphores = signalSemaphores;
 
+        Engine::graphicsQueueMutex.lock();
+
         if (vkQueueSubmit(graphicsQueue, 1, &submitInfo, Engine::inFlightFences[Engine::currentFrame]) != VK_SUCCESS) {
             throw std::runtime_error("failed to submit draw command buffer!");
         }
+
+        Engine::graphicsQueueMutex.unlock();
 
         VkPresentInfoKHR presentInfo{};
         presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
@@ -366,7 +433,11 @@ namespace Prometheus{
         presentInfo.pImageIndices = &imageIndex;
         presentInfo.pResults = nullptr; // Optional
 
+        Engine::graphicsQueueMutex.lock();
+
         result = vkQueuePresentKHR(presentQueue, &presentInfo);
+
+        Engine::graphicsQueueMutex.unlock();
 
         if (result == VK_ERROR_OUT_OF_DATE_KHR || Engine::framebufferResized) {
             SwapChainManager::recreateSwapChain(surface,physicalDevice,device,presentQueue);
@@ -384,6 +455,8 @@ namespace Prometheus{
     }
 
     void Engine::updateGameObjects(){
+
+        Engine::textureMutex.lock();
         int i=0;
         for (auto& [meshName, innerMap] : Engine::objectsByMesh) {
 
@@ -399,13 +472,23 @@ namespace Prometheus{
                     currIndex++; 
                 }
 
-                Engine::meshBatches[Engine::meshBatches.size()-1].instances.push_back(
-                    InstanceInfo(Engine::gameObjects[i]->animateCircularMotion(0.0f,0.0f,0.0f,5.0f,2.0f,i*0.25f),textureIndices.at(objPtr->texturePath))
-                );
-                Engine::meshBatches[Engine::meshBatches.size()-1].ids.push_back(objPtr->id);
-                i++;
+                if(Engine::gameObjectIdsToRemove.count(objPtr->id)>0){
+                    Engine::gameObjects.erase(Engine::gameObjects.begin()+i);
+                }else{
+                    Engine::meshBatches[Engine::meshBatches.size()-1].instances.push_back(
+                        InstanceInfo(Engine::gameObjects[i]->animateCircularMotion(0.0f,0.0f,0.0f,5.0f,2.0f,i*0.25f),textureIndices.at(objPtr->texturePath))
+                    );
+                    Engine::meshBatches[Engine::meshBatches.size()-1].ids.push_back(objPtr->id);
+                    i++;
+                }
+            }
+            if(Engine::meshBatches[Engine::meshBatches.size()-1].ids.size()==0){
+                Engine::meshBatches.pop_back();
             }
         }
+        Engine::gameObjectIdsToRemove.clear();
+
+        Engine::textureMutex.unlock();
     }
 
     VkSampleCountFlagBits Engine::getMaxUsableSampleCount(VkPhysicalDevice& physicalDevice){
@@ -421,5 +504,60 @@ namespace Prometheus{
         if (counts & VK_SAMPLE_COUNT_2_BIT) { return VK_SAMPLE_COUNT_2_BIT; }
 
         return VK_SAMPLE_COUNT_1_BIT;
+    }
+
+    void Engine::initThreadPool(uint16_t poolSize){
+
+        sem_init(&(Engine::workInQueueSemaphore),0,0);
+        std::cout<<"\nThreads in pool: "<<poolSize<<"\n"<<std::endl;
+        for (uint16_t i=0; i<poolSize; i++){
+            WorkerThread* wt = new WorkerThread();
+
+            Engine::threadPool[wt->id]=wt;
+        }
+    }
+
+    std::vector<std::queue<Job*>> Engine::batchJobs(){
+        std::vector<std::queue<Job*>> batches;
+        std::unordered_map<std::string,std::queue<Job*>> batchMap;
+
+        while(!jobQueue.empty()){
+            Job* j = new Job(jobQueue.front());
+            //std::cout<<j->opId<<std::endl;
+
+            switch (j->opId){
+                
+                case 0:
+                case 1:
+                case 2:
+                case 3:
+
+                    batchMap["0123"].push(j);
+                    break;
+                
+                case 4:
+                    batchMap["4"].push(j);
+                    break;
+                
+                case 5:
+
+                    batchMap["5"].push(j);
+                    break;
+
+                case 6:
+                    batchMap["6"].push(j);
+                    break;
+
+            }
+            jobQueue.pop();
+        }
+
+        batches.reserve(batchMap.size());
+
+        for (auto& pair : batchMap) {
+            batches.push_back(pair.second);
+        }
+
+        return batches;
     }
 }

@@ -3,7 +3,6 @@
 #include <sstream>
 #include "../../engine/headers/modelManager.h"
 
-
 using namespace Prometheus;
 
 namespace Prometheus{
@@ -25,7 +24,9 @@ namespace Prometheus{
             Engine::textureMap[texturePath].count++;
 
         } else {
+
             Engine::textureMap.insert(std::make_pair(texturePath, Texture(texturePath, 4, device, physicalDevice, graphicsQueue)));
+
             Engine::objectIdsByTexture[texturePath].push_back(this->id);
             this->textureVecIndex=0;
         }
@@ -51,21 +52,21 @@ namespace Prometheus{
     }
 
     void GameObject::terminate(VkDevice& device){ //Used for object deletion
-
         Engine::textureMutex.lock();
 
         auto it = Engine::textureMap.find(this->texturePath);
         it->second.count--;
         if (it != Engine::textureMap.end() && it->second.count==0) {
-            it->second.terminate(device);
+
+            //it->second.terminate(device);
         }
         Engine::objectIdsByTexture[this->texturePath].erase(Engine::objectIdsByTexture[this->texturePath].begin()+this->textureVecIndex);
 
         Engine::textureMutex.unlock();
 
-        Engine::gameObjectMutex.lock();
-
         Engine::objectsByMesh[meshPath].erase(this->id);
+        Engine::gameObjectMap.erase(id);
+
     }
 
     void GameObject::draw(VkCommandBuffer& commandBuffer, uint32_t instanceCount, uint32_t firstInstance){
@@ -113,7 +114,26 @@ namespace Prometheus{
         j.data.push_back(&physicalDevice);
         j.data.push_back(&graphicsQueue);
 
-        Engine::threadManager.jobQueue.push(j);
+        Engine::queueMutex.lock();
+        Engine::jobQueue.push(j);
+        Engine::queueMutex.unlock();
+
+        sem_post(&(Engine::workInQueueSemaphore));
     }
+
+    void GameObject::deleteObjectThreaded(VkDevice &device, uint64_t id){
+
+        Job j = Job(DELETE_OBJECT);
+        j.data.push_back(id);
+        j.data.push_back(&device);
+
+        Engine::queueMutex.lock();
+        Engine::jobQueue.push(j);
+        Engine::queueMutex.unlock();
+
+        Engine::gameObjectIdsToRemove[id]=true;
+        
+        sem_post(&(Engine::workInQueueSemaphore));
+    }    
 }
 

@@ -164,8 +164,12 @@ namespace Prometheus{
             throw std::runtime_error("failed to create logical device!");
         }
 
+        Engine::graphicsQueueMutex.lock();
+
         vkGetDeviceQueue(device, indices.graphicsFamily.value(), 0, &graphicsQueue); //The 0 means we get the 0th queue from each family
         vkGetDeviceQueue(device, indices.presentFamily.value(), 0, &presentQueue);
+
+        Engine::graphicsQueueMutex.unlock();
     }
 
     const char* DeviceManager::deviceTypeToString(VkPhysicalDeviceType& deviceType) {

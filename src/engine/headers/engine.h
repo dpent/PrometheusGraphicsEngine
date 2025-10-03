@@ -20,10 +20,13 @@
 #include <fstream>
 #include <array>
 #include <glm/glm.hpp>
+#include <mutex>
+#include <queue>
+#include <thread>
 #include "../../objects/headers/gameObject.h"
 #include "../../objects/headers/mesh.h"
-#include "../../threads/headers/threadManager.h"
 #include "../../threads/headers/job.h"
+#include "../../threads/headers/workerThread.h"
 
 namespace Prometheus{
 
@@ -81,6 +84,8 @@ namespace Prometheus{
         static std::vector<VkFence> inFlightFences;
         static std::mutex gameObjectMutex;
         static std::mutex textureMutex;
+        static std::mutex graphicsQueueMutex;
+        static std::mutex commandPoolMutex;
 
         static const int MAX_FRAMES_IN_FLIGHT = 2;
         static uint32_t currentFrame;
@@ -112,6 +117,7 @@ namespace Prometheus{
 
         static std::vector<GameObject*> gameObjects;
         static std::unordered_map<uint64_t,GameObject*> gameObjectMap;
+        static std::unordered_map<uint64_t,bool> gameObjectIdsToRemove;
 
         static VkPhysicalDeviceProperties physicalDeviceProperties;
         static VkPhysicalDeviceFeatures physicalDeviceFeatures;
@@ -119,7 +125,6 @@ namespace Prometheus{
         static std::unordered_map<std::string,std::vector<uint64_t>> objectIdsByTexture;
 
         static std::unordered_map<std::string,Mesh> meshMap;
-        static std::vector<InstanceInfo> instances; //Deprecated
         static std::map<std::string,std::map<uint64_t,GameObject*>> objectsByMesh;
         static std::vector<MeshBatch> meshBatches;
 
@@ -137,7 +142,11 @@ namespace Prometheus{
         static VkDeviceMemory colorImageMemory;
         static VkImageView colorImageView;
 
-        static ThreadManager threadManager;
+        static std::unordered_map<std::thread::id, WorkerThread*> threadPool;
+        static std::queue<Job> jobQueue;
+        static std::queue<Job> deferredJobQueue;
+        static std::mutex queueMutex;
+        static sem_t workInQueueSemaphore;
 
         //static uint32_t frameCounter;
 
@@ -146,6 +155,8 @@ namespace Prometheus{
         static void frameBufferResizeCallback(GLFWwindow* window, int width, int height);
         static void updateGameObjects();
         static VkSampleCountFlagBits getMaxUsableSampleCount(VkPhysicalDevice& physicalDevice);
+        static void initThreadPool(uint16_t poolSize);
+        static std::vector<std::queue<Job*>> batchJobs();
 
     private:
         //Window variables

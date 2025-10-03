@@ -17,9 +17,8 @@ namespace Prometheus{
     class WorkerThread{
     
     public:
-        std::queue<Job*> jobs;
+        std::queue<Job> jobs;
         std::mutex jobsMutex;
-        sem_t workSemaphore;
         std::thread::id id;
         std::thread thread;
         

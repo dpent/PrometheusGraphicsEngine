@@ -8,7 +8,7 @@
 namespace Prometheus{
     class TextureManager{
     public:
-        static void createTextureImage(std::string filename, int req_comp, VkDevice& device, VkPhysicalDevice& physicalDevice,
+        static uint32_t createTextureImage(std::string filename, int req_comp, VkDevice& device, VkPhysicalDevice& physicalDevice,
         VkImage& image, VkDeviceMemory& imageMemory, VkQueue& graphicsQueue);
 
         static void createImage(uint32_t width, uint32_t height, VkFormat format, 

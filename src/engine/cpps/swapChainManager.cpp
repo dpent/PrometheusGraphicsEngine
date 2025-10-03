@@ -151,6 +151,7 @@ namespace Prometheus{
     }
 
     VkImageView SwapChainManager::createImageView(VkDevice& device, VkImage& image, VkFormat format, VkImageAspectFlags aspectFlags, uint32_t mipLevels){
+        
         VkImageViewCreateInfo createInfo{};
         createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
         createInfo.image = image;
@@ -187,7 +188,12 @@ namespace Prometheus{
         }
 
         VkSwapchainKHR oldSwapChain = Engine::swapChain;
+
+        Engine::graphicsQueueMutex.lock();
+
         vkQueueWaitIdle(presentQueue);
+
+        Engine::graphicsQueueMutex.unlock();
 
         SwapChainManager::cleanupSwapChainDependents(device);
 

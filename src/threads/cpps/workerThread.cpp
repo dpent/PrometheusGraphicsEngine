@@ -1,5 +1,6 @@
 #include "../headers/workerThread.h"
 #include "../headers/gameObjectOperations.h"
+#include "../../engine/headers/engine.h"
 
 
 using namespace Prometheus;
@@ -7,8 +8,6 @@ using namespace Prometheus;
 namespace Prometheus{
 
     WorkerThread::WorkerThread(){
-
-        sem_init(&(this->workSemaphore),0,1);
         this->thread = std::thread(&WorkerThread::workerLoop, this);
         id=thread.get_id();
     }
@@ -20,30 +19,37 @@ namespace Prometheus{
             if(!(jobs.empty())){
                 jobsMutex.lock();
 
-                Job* job = jobs.front();
+                Job job = jobs.front();
                 jobs.pop();
 
                 jobsMutex.unlock();
                 
-                doWork(job);
+                doWork(&job);
             }else if(alive){
-                sem_wait(&(this->workSemaphore));
+                sem_wait(&(Engine::workInQueueSemaphore));
+
+                jobsMutex.lock();
+                Engine::queueMutex.lock();
+
+                jobs.push(Engine::jobQueue.front());
+                Engine::jobQueue.pop();
+
+                Engine::queueMutex.unlock();
+                jobsMutex.unlock();
             }
 
         }
 
         while(!jobs.empty()){
+
             jobsMutex.lock();
-
-            delete jobs.front();
             jobs.pop();
-
             jobsMutex.unlock();
         }
     }
 
     void WorkerThread::doWork(Job* job){
-
+        
         switch (job->opId){
             case CREATE_OBJECT:
                 createObject(std::get<std::string>(job->data[0]), 
@@ -56,13 +62,11 @@ namespace Prometheus{
             
             case DELETE_OBJECT:
                 deleteObject(std::get<uint64_t>(job->data[0]),
-                    *std::get<VkDevice*>(job->data[1]) 
+                    *std::get<VkDevice*>(job->data[1])
                 );
             default:
                 break;
         }
-
-        delete job;
     }
 
     void WorkerThread::detach(){

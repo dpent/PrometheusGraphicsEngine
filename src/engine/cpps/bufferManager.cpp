@@ -59,13 +59,16 @@ namespace Prometheus{
                                                         */
         allocInfo.commandBufferCount = (uint32_t) Engine::commandBuffers.size();
 
+
+        Engine::commandPoolMutex.lock();
         if (vkAllocateCommandBuffers(device, &allocInfo, Engine::commandBuffers.data()) != VK_SUCCESS) {
             throw std::runtime_error("failed to allocate command buffers!");
         }
+        Engine::commandPoolMutex.unlock();
     }
 
     void BufferManager::recordCommandBuffer(VkCommandBuffer& commandBuffer, uint32_t& imageIndex,
-        VkDevice& device, VkPhysicalDevice& physicalDevice, VkQueue& graphicsQueue){
+        VkDevice& device, VkPhysicalDevice& physicalDevice){
 
         VkCommandBufferBeginInfo beginInfo{};
         beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -77,7 +80,6 @@ namespace Prometheus{
                                 */
         beginInfo.pInheritanceInfo = nullptr; // Optional
         
-
         if (vkBeginCommandBuffer(commandBuffer, &beginInfo) != VK_SUCCESS) {
             throw std::runtime_error("failed to begin recording command buffer!");
         }
@@ -109,6 +111,7 @@ namespace Prometheus{
 
             VkBuffer vertexBuffers[] = {Engine::indexVertexBuffer,Engine::instanceBuffers[Engine::currentFrame]};
             VkDeviceSize offsets[] = {0,0};
+
             vkCmdBindVertexBuffers(commandBuffer, 0, 2, vertexBuffers, offsets);
             vkCmdBindIndexBuffer(commandBuffer, Engine::indexVertexBuffer, Engine::indexOffset, VK_INDEX_TYPE_UINT32);
         }
@@ -125,6 +128,7 @@ namespace Prometheus{
         VkRect2D scissor{};
         scissor.offset = {0, 0};
         scissor.extent = Engine::swapChainExtent;
+
         vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
         Engine::view = glm::lookAt(
@@ -178,7 +182,6 @@ namespace Prometheus{
         }
 
         delete cameraPushConstants;
-        Engine::instances.clear();
         Engine::meshBatches.clear();
     }
 
@@ -298,7 +301,7 @@ namespace Prometheus{
         copyRegion.dstOffset = 0; // Optional
         copyRegion.size = size;
         vkCmdCopyBuffer(commandBuffer, srcBuffer, dstBuffer, 1, &copyRegion);
-
+        
         BufferManager::endSingleTimeCommands(commandBuffer,device,graphicsQueue);
     }
 
@@ -343,7 +346,9 @@ namespace Prometheus{
         allocInfo.commandBufferCount = 1;
 
         VkCommandBuffer commandBuffer;
+        Engine::commandPoolMutex.lock();
         vkAllocateCommandBuffers(device, &allocInfo, &commandBuffer);
+        Engine::commandPoolMutex.unlock();
 
         VkCommandBufferBeginInfo beginInfo{};
         beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -355,20 +360,31 @@ namespace Prometheus{
     }
 
     void BufferManager::endSingleTimeCommands(VkCommandBuffer& commandBuffer, VkDevice& device, VkQueue& graphicsQueue) {
+
+        Engine::commandPoolMutex.lock();
         vkEndCommandBuffer(commandBuffer);
+        Engine::commandPoolMutex.unlock();
 
         VkSubmitInfo submitInfo{};
         submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
         submitInfo.commandBufferCount = 1;
         submitInfo.pCommandBuffers = &commandBuffer;
 
+        Engine::graphicsQueueMutex.lock();
+
         vkQueueSubmit(graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE);
         vkQueueWaitIdle(graphicsQueue);
 
+        Engine::graphicsQueueMutex.unlock();
+
+        Engine::commandPoolMutex.lock();
+
         vkFreeCommandBuffers(device, Engine::commandPool, 1, &commandBuffer);
+
+        Engine::commandPoolMutex.unlock();
     }
 
-    void BufferManager::createInstanceBuffers(VkDevice& device, VkPhysicalDevice& physicalDevice, VkQueue& graphicsQueue){
+    void BufferManager::createInstanceBuffers(VkDevice& device, VkPhysicalDevice& physicalDevice){
 
         Engine::instanceBuffers.resize(Engine::MAX_FRAMES_IN_FLIGHT);
         Engine::instanceBufferMemories.resize(Engine::MAX_FRAMES_IN_FLIGHT);
@@ -457,7 +473,11 @@ namespace Prometheus{
         Engine::vertices.clear();
         Engine::indices.clear();
 
+        Engine::graphicsQueueMutex.lock();
+
         vkDeviceWaitIdle(device);
+
+        Engine::graphicsQueueMutex.unlock();
         
         if (Engine::indexVertexBuffer != VK_NULL_HANDLE) {
             vkDestroyBuffer(device, Engine::indexVertexBuffer, nullptr);
@@ -477,9 +497,13 @@ namespace Prometheus{
         BufferManager::createIndexVertexBuffer(device,physicalDevice,graphicsQueue);
     }
 
-    void BufferManager::recreateInstanceBuffers(VkDevice& device, VkPhysicalDevice& physicalDevice, VkQueue& graphicsQueue){
+    void BufferManager::recreateInstanceBuffers(VkDevice& device, VkPhysicalDevice& physicalDevice){
+
+        Engine::graphicsQueueMutex.lock();
 
         vkDeviceWaitIdle(device);
+
+        Engine::graphicsQueueMutex.unlock();
 
         for(size_t i = 0; i < Engine::MAX_FRAMES_IN_FLIGHT; i++){
             // Check before destroying
@@ -491,7 +515,7 @@ namespace Prometheus{
             }
         }
 
-        BufferManager::createInstanceBuffers(device,physicalDevice,graphicsQueue);
+        BufferManager::createInstanceBuffers(device,physicalDevice);
     }
 
     void BufferManager::createColorResources(VkDevice& device, VkPhysicalDevice& physicalDevice){

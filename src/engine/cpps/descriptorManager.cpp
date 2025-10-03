@@ -91,7 +91,11 @@ namespace Prometheus{
 
     void DescriptorManager::recreateDescriptors(VkDevice& device){
 
+        Engine::graphicsQueueMutex.lock();
+
         vkDeviceWaitIdle(device);
+
+        Engine::graphicsQueueMutex.unlock();
 
         if(Engine::descriptorPool != VK_NULL_HANDLE){
             vkDestroyDescriptorPool(device, Engine::descriptorPool, nullptr);

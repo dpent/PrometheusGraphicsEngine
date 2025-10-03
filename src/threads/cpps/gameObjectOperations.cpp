@@ -16,10 +16,12 @@ namespace Prometheus{
     }
 
     void deleteObject(uint64_t id,VkDevice& device){
-        Engine::gameObjectMap[id]->terminate(device); //This locks gameObjectMutex
+        Engine::gameObjectMutex.lock();
 
-        delete Engine::gameObjectMap[id];
+        GameObject* gaOb = Engine::gameObjectMap[id];
+        gaOb->terminate(device);
 
+        delete gaOb;
         Engine::gameObjectMutex.unlock();
     }
 }

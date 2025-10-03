@@ -6,7 +6,7 @@
 using namespace Prometheus;
 
 namespace Prometheus{
-    void TextureManager::createTextureImage(std::string filename, int req_comp, VkDevice& device, VkPhysicalDevice& physicalDevice, 
+    uint32_t TextureManager::createTextureImage(std::string filename, int req_comp, VkDevice& device, VkPhysicalDevice& physicalDevice, 
         VkImage& image, VkDeviceMemory& imageMemory, VkQueue& graphicsQueue){
         int texWidth, texHeight, texChannels;
         stbi_uc* pixels = stbi_load(filename.c_str(), &texWidth, &texHeight, &texChannels, req_comp);
@@ -64,6 +64,8 @@ namespace Prometheus{
 
         vkDestroyBuffer(device, stagingBuffer, nullptr);
         vkFreeMemory(device, stagingBufferMemory, nullptr);
+
+        return mipLevels;
     }
 
     void TextureManager::createImage(uint32_t width, uint32_t height, VkFormat format, 
@@ -148,6 +150,8 @@ namespace Prometheus{
             throw std::invalid_argument("unsupported layout transition!");
         }
         
+        Engine::commandPoolMutex.lock();
+
         vkCmdPipelineBarrier(
             commandBuffer,
             sourceStage, destinationStage,
@@ -156,6 +160,8 @@ namespace Prometheus{
             0, nullptr,
             1, &barrier
         );
+
+        Engine::commandPoolMutex.unlock();
 
         BufferManager::endSingleTimeCommands(commandBuffer, device, graphicsQueue);
     }
@@ -236,7 +242,7 @@ namespace Prometheus{
 
     Texture::Texture(std::string filpath,int req_comp, VkDevice& device, VkPhysicalDevice& physicalDevice, VkQueue& graphicsQueue){
 
-        TextureManager::createTextureImage(filpath, req_comp, device, physicalDevice,
+        mipLevels=TextureManager::createTextureImage(filpath, req_comp, device, physicalDevice,
         this->textureImage,this->textureImageMemory,graphicsQueue);
 
         TextureManager::createTextureImageView(device,this->textureImage,this->textureImageView, mipLevels);
@@ -284,6 +290,8 @@ namespace Prometheus{
         int32_t mipWidth = texWidth;
         int32_t mipHeight = texHeight;
 
+        Engine::commandPoolMutex.lock();
+
         for (uint32_t i = 1; i < mipLevels; i++) {
             barrier.subresourceRange.baseMipLevel = i - 1;
             barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
@@ -291,6 +299,7 @@ namespace Prometheus{
             barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
             barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
 
+            
             vkCmdPipelineBarrier(commandBuffer,
                 VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0,
                 0, nullptr,
@@ -347,6 +356,8 @@ namespace Prometheus{
             0, nullptr,
             1, &barrier
         );
+
+        Engine::commandPoolMutex.unlock();
 
         BufferManager::endSingleTimeCommands(commandBuffer,device,graphicsQueue);
     }

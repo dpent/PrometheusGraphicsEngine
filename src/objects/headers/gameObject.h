@@ -28,5 +28,6 @@ namespace Prometheus{
         glm::mat4 animateCircularMotion(float centerX, float centerY, float centerZ, float radius, float speed, float offset);
         
         static void createObjectThreaded(std::string texturePath,std::string modelPath,VkDevice& device, VkPhysicalDevice& physicalDevice,VkQueue& graphicsQueue);
+        static void deleteObjectThreaded(VkDevice &device, uint64_t id);
     };
 }

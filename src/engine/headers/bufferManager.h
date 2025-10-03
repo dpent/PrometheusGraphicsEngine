@@ -19,7 +19,7 @@ namespace Prometheus{
         static void createCommandPool(VkPhysicalDevice& physicalDevice, VkSurfaceKHR& surface, VkDevice& device);
         static void createCommandBuffers(VkDevice& device);
         static void recordCommandBuffer(VkCommandBuffer& commandBuffer, uint32_t& imageIndex,
-            VkDevice& device, VkPhysicalDevice& physicalDevice, VkQueue& graphicsQueue);
+            VkDevice& device, VkPhysicalDevice& physicalDevice);
 
         static void createIndexVertexBuffer(VkDevice& device, VkPhysicalDevice& physicalDevice, VkQueue& graphicsQueue);
         static void recreateVerIndBuffer(VkDevice& device, VkPhysicalDevice& physicalDevice, VkQueue& graphicsQueue);
@@ -54,9 +54,9 @@ namespace Prometheus{
         static VkCommandBuffer beginSingleTimeCommands(VkDevice& device);
         static void endSingleTimeCommands(VkCommandBuffer& commandBuffer, VkDevice& device, VkQueue& graphicsQueue);
 
-        static void createInstanceBuffers(VkDevice& device, VkPhysicalDevice& physicalDevice, VkQueue& graphicsQueue);
+        static void createInstanceBuffers(VkDevice& device, VkPhysicalDevice& physicalDevice);
         static void updateInstanceBuffer(uint32_t currentImage);
-        static void recreateInstanceBuffers(VkDevice& device, VkPhysicalDevice& physicalDevice, VkQueue& graphicsQueue);
+        static void recreateInstanceBuffers(VkDevice& device, VkPhysicalDevice& physicalDevice);
 
         static void createDepthResources(VkDevice& device,VkPhysicalDevice& physicalDevice);
         static void createColorResources(VkDevice& device, VkPhysicalDevice& physicalDevice);
