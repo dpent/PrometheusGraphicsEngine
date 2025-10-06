@@ -11,4 +11,6 @@ namespace Prometheus
         VkDevice& device, VkPhysicalDevice& physicalDevice, VkQueue& graphicsQueue);
 
     void deleteObject(uint64_t id,VkDevice& device);
+
+    void updateTextureDeleteQueue(VkDevice& device);
 }

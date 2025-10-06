@@ -125,8 +125,8 @@ namespace Prometheus{
         static VkPhysicalDeviceFeatures physicalDeviceFeatures;
         static std::unordered_map<std::string, Texture> textureMap;
         static std::unordered_map<std::string,std::vector<uint64_t>> objectIdsByTexture;
-        static std::unordered_map<std::string, Texture> texturesQueuedForDeletion;
-        static std::unordered_map<std::string, int> framesSinceTextureQueuedForDeletion;
+        static std::unordered_map<std::string, std::vector<Texture>> texturesQueuedForDeletion;
+        static std::unordered_map<std::string, std::vector<int>> framesSinceTextureQueuedForDeletion;
 
         static std::unordered_map<std::string,Mesh> meshMap;
         static std::unordered_map<std::string,std::unordered_map<uint64_t,GameObject*>> objectsByMesh;
@@ -188,5 +188,6 @@ namespace Prometheus{
         void createSurface();
         void cleanup();
         void drawFrame();
+        void createUpdateTextureQueueJob();
     };
 }

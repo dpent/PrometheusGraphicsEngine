@@ -42,4 +42,29 @@ namespace Prometheus{
             delete object;
         }
     }
+
+    void updateTextureDeleteQueue(VkDevice& device){
+
+        Engine::textureQueuedMutex.lock();
+
+        for (auto& [path, texVec] : Engine::texturesQueuedForDeletion) {
+            // iterate from the back to the front
+            for (int i = static_cast<int>(texVec.size()) - 1; i >= 0; --i) {
+
+                auto& tex = texVec[i];
+                Engine::framesSinceTextureQueuedForDeletion[path][i]++;
+
+                if(Engine::framesSinceTextureQueuedForDeletion[path][i]==Engine::MAX_FRAMES_IN_FLIGHT){
+                    std::cout<<"Deleting texture..."<<std::endl;
+                    tex.terminate(device);
+                    texVec.erase(texVec.begin()+i);
+                    Engine::framesSinceTextureQueuedForDeletion[path]
+                    .erase(Engine::framesSinceTextureQueuedForDeletion[path].begin()+i);
+                    std::cout<<"Done!"<<std::endl;
+                }
+            }
+        }
+
+        Engine::textureQueuedMutex.unlock();
+    }
 }

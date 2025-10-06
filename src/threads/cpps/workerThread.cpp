@@ -64,6 +64,12 @@ namespace Prometheus{
                 deleteObject(std::get<uint64_t>(job->data[0]),
                     *std::get<VkDevice*>(job->data[1])
                 );
+                break;
+            
+            case UPDATE_TEXTURE_DELETE_QUEUE:
+                updateTextureDeleteQueue(*std::get<VkDevice*>(job->data[0]));
+                break;
+
             default:
                 break;
         }

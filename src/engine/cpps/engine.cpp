@@ -77,8 +77,8 @@ VkPhysicalDeviceFeatures Engine::physicalDeviceFeatures;
 
 std::unordered_map<std::string, Texture> Engine::textureMap;
 std::unordered_map<std::string,std::vector<uint64_t>> Engine::objectIdsByTexture;
-std::unordered_map<std::string, Texture> Engine::texturesQueuedForDeletion;
-std::unordered_map<std::string, int> Engine::framesSinceTextureQueuedForDeletion;
+std::unordered_map<std::string, std::vector<Texture>> Engine::texturesQueuedForDeletion;
+std::unordered_map<std::string, std::vector<int>> Engine::framesSinceTextureQueuedForDeletion;
 
 std::unordered_map<std::string,Mesh> Engine::meshMap;
 std::unordered_map<std::string,std::unordered_map<uint64_t,GameObject*>> Engine::objectsByMesh;
@@ -231,12 +231,14 @@ namespace Prometheus{
                             device, 
                             physicalDevice, 
                             graphicsQueue
-                        );   
+                        );  
                     }
 
                     Engine::gameObjectMutex.unlock();
                 }
             }
+
+            createUpdateTextureQueueJob();
         }
 
         Engine::graphicsQueueMutex.lock();
@@ -559,6 +561,8 @@ namespace Prometheus{
                 case 6:
                     batchMap["6"].push(j);
                     break;
+                default:
+                    break;
 
             }
             jobQueue.pop();
@@ -571,5 +575,16 @@ namespace Prometheus{
         }
 
         return batches;
+    }
+
+    void Engine::createUpdateTextureQueueJob(){
+        Job j = Job(UPDATE_TEXTURE_DELETE_QUEUE);
+        j.data.emplace_back(std::in_place_type<VkDevice*>, &device);
+
+        Engine::queueMutex.lock();
+        Engine::jobQueue.push(j);
+        Engine::queueMutex.unlock();
+
+        sem_post(&(Engine::workInQueueSemaphore));
     }
 }

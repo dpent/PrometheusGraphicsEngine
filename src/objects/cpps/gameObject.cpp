@@ -63,8 +63,8 @@ namespace Prometheus{
             if(Engine::textureMap[texturePath].count==0){
                 
                 Engine::textureQueuedMutex.lock();
-                Engine::texturesQueuedForDeletion[texturePath] = Engine::textureMap[texturePath];
-                Engine::framesSinceTextureQueuedForDeletion[texturePath] = 1;
+                Engine::texturesQueuedForDeletion[texturePath].push_back(std::move(Engine::textureMap[texturePath]));
+                Engine::framesSinceTextureQueuedForDeletion[texturePath].push_back(0);
                 Engine::textureQueuedMutex.unlock();
                 
                 Engine::textureMap.erase(texturePath);

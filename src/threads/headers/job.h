@@ -15,7 +15,8 @@ namespace Prometheus{
         MAKE_INSTANCE_BUFFER = 3,
         MAKE_COMMAND_BUFFER = 4,
         LOAD_MODEL = 5,
-        APPLY_INPUT = 6
+        APPLY_INPUT = 6,
+        UPDATE_TEXTURE_DELETE_QUEUE = 7,
     };
 
     struct Job{
