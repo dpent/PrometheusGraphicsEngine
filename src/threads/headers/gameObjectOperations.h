@@ -3,6 +3,8 @@
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 #include <string>
+#include <semaphore.h>
+#include "../../engine/headers/modelManager.h"
 
 
 namespace Prometheus
@@ -13,4 +15,6 @@ namespace Prometheus
     void deleteObject(uint64_t id,VkDevice& device);
 
     void updateTextureDeleteQueue(VkDevice& device);
+
+    void loadModel(std::string modelPath, sem_t& meshLoadSemaphore);
 }

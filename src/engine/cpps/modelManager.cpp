@@ -7,7 +7,7 @@
 using namespace Prometheus;
 
 namespace Prometheus{
-    void ModelManager::loadModel(std::string modelPath){
+    void ModelManager::loadModel(std::string modelPath, sem_t& meshLoadSemaphore){
         tinyobj::attrib_t attrib;
         std::vector<tinyobj::shape_t> shapes;
         std::vector<tinyobj::material_t> materials;
@@ -56,9 +56,12 @@ namespace Prometheus{
                 indices.push_back(uniqueVertices[vertex]);
             }
         }
-        //Engine::meshMutex.lock();
+        Engine::meshMutex.lock();
         Engine::meshMap[modelPath]=Mesh(modelPath,vertices,indices);
-        //Engine::meshMutex.unlock();
+        Engine::meshMutex.unlock();
+
         Engine::recreateVertexIndexBuffer=true;
+
+        sem_post(&meshLoadSemaphore);
     }
 }

@@ -1,4 +1,5 @@
 #include "../../engine/headers/engine.h"
+#include <semaphore.h>
 #include <vulkan/vulkan_core.h> 
 #include <sstream>
 #include "../../engine/headers/modelManager.h"
@@ -10,6 +11,7 @@ namespace Prometheus{
 
     GameObject::GameObject(std::string texturePath, std::string modelPath, int req_comp, VkDevice& device, VkPhysicalDevice& physicalDevice, VkQueue& graphicsQueue)
     {
+
         this->id=GameObject::autoIncrementId;
         GameObject::autoIncrementId++;
         this->texturePath=texturePath;
@@ -36,7 +38,15 @@ namespace Prometheus{
 
         if(Engine::meshMap.count(modelPath) == 0){
 
-            ModelManager::loadModel(modelPath); //Also inserts the mesh into meshMap
+            Engine::meshMap[modelPath] = Mesh();
+            Engine::meshMutex.unlock();
+
+            sem_t* meshLoadSemaphore = new sem_t(); //In case i use them sometime
+            sem_init(meshLoadSemaphore,0,0);
+
+            ModelManager::loadModel(modelPath,*meshLoadSemaphore); //Also inserts the mesh into meshMap
+            
+            delete meshLoadSemaphore;
         }
 
         Engine::meshMutex.unlock();

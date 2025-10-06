@@ -55,16 +55,19 @@ namespace Prometheus{
                 Engine::framesSinceTextureQueuedForDeletion[path][i]++;
 
                 if(Engine::framesSinceTextureQueuedForDeletion[path][i]==Engine::MAX_FRAMES_IN_FLIGHT){
-                    std::cout<<"Deleting texture..."<<std::endl;
                     tex.terminate(device);
                     texVec.erase(texVec.begin()+i);
                     Engine::framesSinceTextureQueuedForDeletion[path]
                     .erase(Engine::framesSinceTextureQueuedForDeletion[path].begin()+i);
-                    std::cout<<"Done!"<<std::endl;
                 }
             }
         }
 
         Engine::textureQueuedMutex.unlock();
+    }
+
+    void loadModel(std::string modelPath, sem_t& meshLoadSemaphore){
+
+        ModelManager::loadModel(modelPath, meshLoadSemaphore);
     }
 }

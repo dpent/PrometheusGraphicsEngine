@@ -70,6 +70,11 @@ namespace Prometheus{
                 updateTextureDeleteQueue(*std::get<VkDevice*>(job->data[0]));
                 break;
 
+            case LOAD_MODEL:
+                loadModel(std::get<std::string>(job->data[0]),
+                *std::get<sem_t*>(job->data[1]));
+                break;
+                
             default:
                 break;
         }

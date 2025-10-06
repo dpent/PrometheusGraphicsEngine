@@ -5,6 +5,7 @@
 #include <vector>
 #include <variant>
 #include <string>
+#include <semaphore.h>
 
 
 namespace Prometheus{
@@ -24,7 +25,8 @@ namespace Prometheus{
         operationId opId;
         uint64_t threadId;
         std::vector<std::variant<std::string,
-        VkDevice*,VkPhysicalDevice*,VkQueue*, uint64_t>> data;
+        VkDevice*,VkPhysicalDevice*,VkQueue*, uint64_t,
+        sem_t*>> data;
 
         Job(operationId opId);
     };
