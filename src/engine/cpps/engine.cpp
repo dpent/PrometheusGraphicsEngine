@@ -82,7 +82,6 @@ std::unordered_map<std::string, std::vector<int>> Engine::framesSinceTextureQueu
 
 std::unordered_map<std::string,Mesh> Engine::meshMap;
 std::unordered_map<std::string,std::unordered_map<uint64_t,GameObject*>> Engine::objectsByMesh;
-std::vector<std::string> Engine::describedMeshes;
 std::vector<MeshBatch> Engine::meshBatches;
 
 VkImage Engine::depthImage;
@@ -226,19 +225,22 @@ namespace Prometheus{
                             graphicsQueue
                         );
 
-                        GameObject::createObjectThreaded("../textures/viking_room.png", 
-                            "../models/viking_room.obj", 
-                            device, 
-                            physicalDevice, 
-                            graphicsQueue
-                        );  
+                          
                     }
+
+                    GameObject::createObjectThreaded("../textures/viking_room.png", 
+                        "../models/viking_room.obj", 
+                        device, 
+                        physicalDevice, 
+                        graphicsQueue
+                    );
 
                     Engine::gameObjectMutex.unlock();
                 }
             }
-
+            
             createUpdateTextureQueueJob();
+            updateMeshDataStructures();
         }
 
         Engine::graphicsQueueMutex.lock();
@@ -580,6 +582,16 @@ namespace Prometheus{
     void Engine::createUpdateTextureQueueJob(){
         Job j = Job(UPDATE_TEXTURE_DELETE_QUEUE);
         j.data.emplace_back(std::in_place_type<VkDevice*>, &device);
+
+        Engine::queueMutex.lock();
+        Engine::jobQueue.push(j);
+        Engine::queueMutex.unlock();
+
+        sem_post(&(Engine::workInQueueSemaphore));
+    }
+
+    void Engine::updateMeshDataStructures(){
+        Job j = Job(UPDATE_MESH_DATA_STRUCTURES);
 
         Engine::queueMutex.lock();
         Engine::jobQueue.push(j);

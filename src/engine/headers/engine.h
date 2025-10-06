@@ -130,7 +130,6 @@ namespace Prometheus{
 
         static std::unordered_map<std::string,Mesh> meshMap;
         static std::unordered_map<std::string,std::unordered_map<uint64_t,GameObject*>> objectsByMesh;
-        static std::vector<std::string> describedMeshes;
         static std::vector<MeshBatch> meshBatches;
 
         static VkImage depthImage;
@@ -189,5 +188,6 @@ namespace Prometheus{
         void cleanup();
         void drawFrame();
         void createUpdateTextureQueueJob();
+        void updateMeshDataStructures();
     };
 }

@@ -74,7 +74,10 @@ namespace Prometheus{
                 loadModel(std::get<std::string>(job->data[0]),
                 *std::get<sem_t*>(job->data[1]));
                 break;
-                
+
+            case UPDATE_MESH_DATA_STRUCTURES:
+                removeUnusedMeshes();
+                break; 
             default:
                 break;
         }

@@ -28,10 +28,6 @@ namespace Prometheus{
 
             if(Engine::objectsByMesh.count(meshPath)!=0){
                 Engine::objectsByMesh[meshPath].erase(id);
-
-                if(Engine::objectsByMesh[meshPath].size()==0){
-                    Engine::objectsByMesh.erase(meshPath);
-                }
             }
         }
 
@@ -69,5 +65,26 @@ namespace Prometheus{
     void loadModel(std::string modelPath, sem_t& meshLoadSemaphore){
 
         ModelManager::loadModel(modelPath, meshLoadSemaphore);
+    }
+
+    void removeUnusedMeshes(){
+
+        Engine::gameObjectMutex.lock();
+        for (auto it = Engine::objectsByMesh.begin(); it != Engine::objectsByMesh.end(); ) {
+
+            if (it->second.empty()) {
+
+                Engine::meshMutex.lock();
+                Engine::meshMap.erase(it->first);
+                Engine::meshMutex.unlock();
+
+                it = Engine::objectsByMesh.erase(it);
+
+            } else {
+                it++;
+            }
+        }
+
+        Engine::gameObjectMutex.unlock();
     }
 }

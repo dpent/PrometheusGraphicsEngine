@@ -20,7 +20,6 @@ namespace Prometheus{
         std::vector<std::pair<int, VkPhysicalDevice>> candidates;
 
         std::cout<<"Rating available devices..."<<std::endl;
-        std::cout<<"===========================\n"<<std::endl;
 
         for (const auto& device : devices) {
             int score = rateDeviceSuitability(device, surface);
@@ -92,10 +91,10 @@ namespace Prometheus{
             return 0;
         }
 
-        std::cout<<"Evaluating device: "<<deviceProperties.deviceName<<std::endl;
+        /*std::cout<<"Evaluating device: "<<deviceProperties.deviceName<<std::endl;
         std::cout<<"  Device Type: "<<deviceProperties.deviceType<<" ("<<DeviceManager::deviceTypeToString(deviceProperties.deviceType)<<")"<<std::endl;
         std::cout<<"  Vendor ID: "<<deviceProperties.vendorID<<" ("<<DeviceManager::vendorIdToString(deviceProperties.vendorID)<<")"<<std::endl;
-        std::cout<<"  Final score: "<<score<<"\n"<<std::endl;
+        std::cout<<"  Final score: "<<score<<"\n"<<std::endl;*/
 
         return score;
     }

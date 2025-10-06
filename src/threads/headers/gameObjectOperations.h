@@ -17,4 +17,6 @@ namespace Prometheus
     void updateTextureDeleteQueue(VkDevice& device);
 
     void loadModel(std::string modelPath, sem_t& meshLoadSemaphore);
+
+    void removeUnusedMeshes();
 }

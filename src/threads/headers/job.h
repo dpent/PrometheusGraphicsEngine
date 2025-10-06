@@ -18,6 +18,7 @@ namespace Prometheus{
         LOAD_MODEL = 5,
         APPLY_INPUT = 6,
         UPDATE_TEXTURE_DELETE_QUEUE = 7,
+        UPDATE_MESH_DATA_STRUCTURES = 8,
     };
 
     struct Job{
