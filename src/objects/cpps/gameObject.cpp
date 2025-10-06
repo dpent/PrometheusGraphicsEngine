@@ -17,7 +17,7 @@ namespace Prometheus{
         this->modelMatrix=glm::mat4(1.0f);
 
         Engine::textureMutex.lock();
-        if (Engine::textureMap.find(texturePath) != Engine::textureMap.end()) {
+        if (Engine::textureMap.count(texturePath) != 0) {
             Engine::objectIdsByTexture[texturePath].push_back(this->id);
             this->textureVecIndex=Engine::objectIdsByTexture[texturePath].size()-1;
 
@@ -32,20 +32,24 @@ namespace Prometheus{
         }
         Engine::textureMutex.unlock();
 
-        if(Engine::meshMap.find(modelPath) == Engine::meshMap.end()){
+        Engine::meshMutex.lock();
+
+        if(Engine::meshMap.count(modelPath) == 0){
+
             ModelManager::loadModel(modelPath); //Also inserts the mesh into meshMap
         }
 
+        Engine::meshMutex.unlock();
+
         Engine::gameObjectMutex.lock();
 
-        Engine::objectsByMesh[modelPath][this->id]=this;
         Engine::gameObjects.push_back(this);
         Engine::gameObjectMap.insert({this->id,this});
+        Engine::objectsByMesh[modelPath][this->id]=this;
 
         Engine::gameObjectMutex.unlock();
 
         Engine::recreateInstanceBuffer=true;
-        Engine::recreateDescriptors=true;
     }
 
     GameObject::~GameObject(){
@@ -54,18 +58,22 @@ namespace Prometheus{
     void GameObject::terminate(VkDevice& device){ //Used for object deletion
         Engine::textureMutex.lock();
 
-        auto it = Engine::textureMap.find(this->texturePath);
-        it->second.count--;
-        if (it != Engine::textureMap.end() && it->second.count==0) {
-
-            //it->second.terminate(device);
+        if (Engine::textureMap.count(texturePath)!=0) {
+            Engine::textureMap[texturePath].count--;
+            if(Engine::textureMap[texturePath].count==0){
+                
+                Engine::textureQueuedMutex.lock();
+                Engine::texturesQueuedForDeletion[texturePath] = Engine::textureMap[texturePath];
+                Engine::framesSinceTextureQueuedForDeletion[texturePath] = 1;
+                Engine::textureQueuedMutex.unlock();
+                
+                Engine::textureMap.erase(texturePath);
+                //it->second.terminate(device);
+            } 
         }
-        Engine::objectIdsByTexture[this->texturePath].erase(Engine::objectIdsByTexture[this->texturePath].begin()+this->textureVecIndex);
+        Engine::objectIdsByTexture[texturePath].erase(Engine::objectIdsByTexture[texturePath].begin()+textureVecIndex);
 
         Engine::textureMutex.unlock();
-
-        Engine::objectsByMesh[meshPath].erase(this->id);
-        Engine::gameObjectMap.erase(id);
 
     }
 

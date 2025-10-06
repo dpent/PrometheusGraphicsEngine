@@ -53,6 +53,7 @@ namespace Prometheus{
         Engine::descriptorSets.resize(Engine::meshBatches.size());
         uint32_t i=0;
         for (auto &batch : Engine::meshBatches) {
+
             VkDescriptorSetAllocateInfo allocInfo{};
             allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
             allocInfo.descriptorPool = Engine::descriptorPool;
@@ -68,8 +69,8 @@ namespace Prometheus{
 
             for (auto tex : batch.textures) {
                 VkDescriptorImageInfo info{};
-                info.sampler     = tex.textureSampler;
-                info.imageView   = tex.textureImageView;
+                info.sampler     = (*tex).textureSampler;
+                info.imageView   = (*tex).textureImageView;
                 info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
                 imageInfos.push_back(info);
             }
@@ -87,6 +88,7 @@ namespace Prometheus{
 
             i++;
         }
+
     }
 
     void DescriptorManager::recreateDescriptors(VkDevice& device){
@@ -101,7 +103,14 @@ namespace Prometheus{
             vkDestroyDescriptorPool(device, Engine::descriptorPool, nullptr);
         }
 
+        Engine::meshMutex.lock();
+        if(Engine::meshBatches.size()==0){
+            return;
+        }
+        Engine::meshMutex.unlock();
+
         DescriptorManager::createDescriptorPool(device);
         DescriptorManager::createDescriptorSets(device);
+
     }
 }

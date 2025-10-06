@@ -84,8 +84,10 @@ namespace Prometheus{
         static std::vector<VkFence> inFlightFences;
         static std::mutex gameObjectMutex;
         static std::mutex textureMutex;
+        static std::mutex textureQueuedMutex;
         static std::mutex graphicsQueueMutex;
         static std::mutex commandPoolMutex;
+        static std::mutex meshMutex;
 
         static const int MAX_FRAMES_IN_FLIGHT = 2;
         static uint32_t currentFrame;
@@ -123,9 +125,12 @@ namespace Prometheus{
         static VkPhysicalDeviceFeatures physicalDeviceFeatures;
         static std::unordered_map<std::string, Texture> textureMap;
         static std::unordered_map<std::string,std::vector<uint64_t>> objectIdsByTexture;
+        static std::unordered_map<std::string, Texture> texturesQueuedForDeletion;
+        static std::unordered_map<std::string, int> framesSinceTextureQueuedForDeletion;
 
         static std::unordered_map<std::string,Mesh> meshMap;
-        static std::map<std::string,std::map<uint64_t,GameObject*>> objectsByMesh;
+        static std::unordered_map<std::string,std::unordered_map<uint64_t,GameObject*>> objectsByMesh;
+        static std::vector<std::string> describedMeshes;
         static std::vector<MeshBatch> meshBatches;
 
         static VkImage depthImage;
@@ -147,6 +152,7 @@ namespace Prometheus{
         static std::queue<Job> deferredJobQueue;
         static std::mutex queueMutex;
         static sem_t workInQueueSemaphore;
+        static uint64_t frameCount;
 
         //static uint32_t frameCounter;
 

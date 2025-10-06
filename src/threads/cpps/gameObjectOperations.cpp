@@ -16,12 +16,30 @@ namespace Prometheus{
     }
 
     void deleteObject(uint64_t id,VkDevice& device){
+        GameObject* object = nullptr;
+    
         Engine::gameObjectMutex.lock();
 
-        GameObject* gaOb = Engine::gameObjectMap[id];
-        gaOb->terminate(device);
+        if(Engine::gameObjectMap.count(id)!=0){
+            object=Engine::gameObjectMap[id];
 
-        delete gaOb;
+            std::string meshPath = object->meshPath;
+            Engine::gameObjectMap.erase(id);
+
+            if(Engine::objectsByMesh.count(meshPath)!=0){
+                Engine::objectsByMesh[meshPath].erase(id);
+
+                if(Engine::objectsByMesh[meshPath].size()==0){
+                    Engine::objectsByMesh.erase(meshPath);
+                }
+            }
+        }
+
         Engine::gameObjectMutex.unlock();
+        
+        if (object != nullptr) {
+            object->terminate(device);
+            delete object;
+        }
     }
 }

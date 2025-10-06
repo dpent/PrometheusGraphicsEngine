@@ -56,7 +56,9 @@ namespace Prometheus{
                 indices.push_back(uniqueVertices[vertex]);
             }
         }
+        //Engine::meshMutex.lock();
         Engine::meshMap[modelPath]=Mesh(modelPath,vertices,indices);
+        //Engine::meshMutex.unlock();
         Engine::recreateVertexIndexBuffer=true;
     }
 }

@@ -50,6 +50,8 @@ namespace Prometheus{
         Engine::commandBuffers.resize(Engine::MAX_FRAMES_IN_FLIGHT);
         VkCommandBufferAllocateInfo allocInfo{};
         allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+        
+        Engine::commandPoolMutex.lock();
         allocInfo.commandPool = Engine::commandPool;
         allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;/*
                                                             -- VK_COMMAND_BUFFER_LEVEL_PRIMARY: Can be submitted to a queue for execution,
@@ -59,8 +61,6 @@ namespace Prometheus{
                                                         */
         allocInfo.commandBufferCount = (uint32_t) Engine::commandBuffers.size();
 
-
-        Engine::commandPoolMutex.lock();
         if (vkAllocateCommandBuffers(device, &allocInfo, Engine::commandBuffers.data()) != VK_SUCCESS) {
             throw std::runtime_error("failed to allocate command buffers!");
         }
@@ -158,6 +158,7 @@ namespace Prometheus{
         );
 
         uint32_t instanceCount=0;
+        Engine::meshMutex.lock();
         for(uint32_t i=0; i<Engine::meshBatches.size(); i++){
 
             vkCmdBindDescriptorSets(
@@ -170,10 +171,11 @@ namespace Prometheus{
                 0,
                 nullptr
             );
-
-            Engine::gameObjectMap[Engine::meshBatches[i].ids[0]]->draw(commandBuffer,Engine::meshBatches[i].instances.size(),instanceCount);
+            
+            Engine::meshBatches[i].objects[0]->draw(commandBuffer,Engine::meshBatches[i].instances.size(),instanceCount);
             instanceCount+=Engine::meshBatches[i].instances.size();
         }
+        Engine::meshMutex.unlock();
 
         vkCmdEndRenderPass(commandBuffer);
 
@@ -182,7 +184,6 @@ namespace Prometheus{
         }
 
         delete cameraPushConstants;
-        Engine::meshBatches.clear();
     }
 
     void BufferManager::createIndexVertexBuffer(VkDevice& device, VkPhysicalDevice& physicalDevice, VkQueue& graphicsQueue){
@@ -342,19 +343,20 @@ namespace Prometheus{
         VkCommandBufferAllocateInfo allocInfo{};
         allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
         allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+        
+        Engine::commandPoolMutex.lock();
         allocInfo.commandPool = Engine::commandPool;
         allocInfo.commandBufferCount = 1;
 
         VkCommandBuffer commandBuffer;
-        Engine::commandPoolMutex.lock();
         vkAllocateCommandBuffers(device, &allocInfo, &commandBuffer);
-        Engine::commandPoolMutex.unlock();
 
         VkCommandBufferBeginInfo beginInfo{};
         beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
         beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
 
         vkBeginCommandBuffer(commandBuffer, &beginInfo);
+        Engine::commandPoolMutex.unlock();
 
         return commandBuffer;
     }

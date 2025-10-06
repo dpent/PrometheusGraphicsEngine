@@ -11,6 +11,7 @@
 #include <iomanip>
 #include <vector>
 #include "../../engine/headers/textureManager.h"
+#include "../../objects/headers/gameObject.h"
 
 
 namespace Prometheus{
@@ -39,8 +40,8 @@ namespace Prometheus{
     struct MeshBatch{
         std::string meshPath;
         std::vector<InstanceInfo> instances;
-        std::vector<uint64_t> ids;
-        std::vector<Texture> textures;
+        std::vector<GameObject*> objects;
+        std::vector<Texture*> textures;
 
         MeshBatch(std::string path);
     };
