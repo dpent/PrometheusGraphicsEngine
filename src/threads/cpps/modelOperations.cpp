@@ -24,12 +24,6 @@ namespace Prometheus{
                 it = Engine::objectsByMesh.erase(it);
 
                 Engine::recreateVertexIndexBuffer=true;
-                /*if((sizeof(Engine::vertices[0]) * Engine::vertices.size())
-                +(sizeof(Engine::indices[0]) * Engine::indices.size())
-                >Engine::indexVertexBufferSize)
-                {
-                    Engine::recreateVertexIndexBuffer=true;
-                }*/
 
             } else {
                 it++;

@@ -86,6 +86,8 @@ namespace Prometheus{
         static std::vector<VkFence> inFlightFences;
         static sem_t descriptorsReadySemaphore;
         static sem_t safeToMakeInstanceBuffer;
+        static sem_t verIndBufferComplete;
+        static sem_t instanceBufferReady;
         static std::mutex gameObjectMutex;
         static std::mutex canDeleteObjectMutex;
         static std::mutex textureMutex;
@@ -200,5 +202,7 @@ namespace Prometheus{
         void updateMeshDataStructures();
         void createUpdateDescriptorQueueJob();
         void createUpdateObjDescrJob();
+        void createVertexIndexBufferUpdateJob();
+        void createInstanceBufferRemakeJob();
     };
 }

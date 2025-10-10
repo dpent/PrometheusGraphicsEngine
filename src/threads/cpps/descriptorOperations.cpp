@@ -32,7 +32,7 @@ namespace Prometheus{
         Engine::descriptorQueuedMutex.unlock();
     }
 
-    void recreateDescriptors(VkDevice& device, sem_t* jobDoneSem){
+    void recreateDescriptorSetsAndPool(VkDevice& device, sem_t* jobDoneSem){
 
         Engine::graphicsQueueMutex.lock();
 

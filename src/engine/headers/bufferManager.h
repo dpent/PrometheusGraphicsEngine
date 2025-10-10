@@ -22,7 +22,9 @@ namespace Prometheus{
             VkDevice& device, VkPhysicalDevice& physicalDevice);
 
         static void createIndexVertexBuffer(VkDevice& device, VkPhysicalDevice& physicalDevice, VkQueue& graphicsQueue);
-        static void recreateVerIndBuffer(VkDevice& device, VkPhysicalDevice& physicalDevice, VkQueue& graphicsQueue);
+        static void updateIndexVertexBuffer(VkDevice& device, VkPhysicalDevice& physicalDevice, VkQueue& graphicsQueue);
+
+        static uint64_t remakeVertexIndexVectors(VkDevice& device);
 
         static uint32_t findMemoryType(uint32_t& typeFilter, VkMemoryPropertyFlags properties, VkPhysicalDevice& physicalDevice);
 

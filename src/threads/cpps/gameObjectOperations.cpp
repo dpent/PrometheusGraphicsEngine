@@ -37,6 +37,8 @@ namespace Prometheus{
                 Engine::meshMap.erase(meshPath);
                 Engine::objectsByMesh.erase(meshPath);
                 Engine::meshMutex.unlock();
+
+                Engine::recreateVertexIndexBuffer=true;
             }
 
             Engine::gameObjectMutex.unlock();
@@ -122,13 +124,11 @@ namespace Prometheus{
 
         if(availableThreads<2){
 
-            //Engine::meshMutex.lock();
             Engine::updateGameObjects();
-            //Engine::meshMutex.unlock();
 
             if(Engine::meshBatches.size()!=Engine::descriptorSets.size() || Engine::recreateDescriptors){
 
-                recreateDescriptors(device,jobDoneSem);
+                recreateDescriptorSetsAndPool(device,jobDoneSem);
             }else{
                 sem_post(&Engine::descriptorsReadySemaphore);
             }
@@ -157,7 +157,6 @@ namespace Prometheus{
         splitObjectsAndCreateJobs(objectsPerThread,objectPieces,*latch,batchPieces);
 
         latch->wait();
-        //Engine::meshMutex.unlock();
         delete latch;      
         
         mergeAllThreadBatches(batchPieces);
@@ -166,7 +165,7 @@ namespace Prometheus{
 
         if(Engine::meshBatches.size()!=Engine::descriptorSets.size() || Engine::recreateDescriptors){
 
-            recreateDescriptors(device,jobDoneSem);
+            recreateDescriptorSetsAndPool(device,jobDoneSem);
         }else{
             sem_post(&Engine::descriptorsReadySemaphore);
         }
@@ -178,11 +177,8 @@ namespace Prometheus{
     {
         int thread = 0;
         uint64_t totalObjects = 0;
-        //Engine::meshMutex.lock();
         
         Engine::meshBatches.clear();
-
-        //std::cout<<"Used "<<objectPieces.size()<<" threads for this update"<<std::endl;
 
         for (auto& [meshName, innerMap] : Engine::objectsByMesh) {
 
@@ -249,12 +245,9 @@ namespace Prometheus{
             }
         }
 
-        //Engine::meshMutex.lock();
         VkDeviceSize bufferSize=0;
 
-        //std::cout<<"Mesh paths included in meshBatches"<<std::endl;
         for (auto& [meshName, data] : batchBuffer){
-            //std::cout<<meshName<<std::endl;
             Engine::meshBatches.push_back(data);
             bufferSize+=sizeof(InstanceInfo) * data.instances.size();
         }
@@ -263,6 +256,5 @@ namespace Prometheus{
             Engine::recreateInstanceBuffer=true;
         }
 
-        //Engine::meshMutex.unlock();
     }
 }

@@ -97,9 +97,7 @@ namespace Prometheus{
         j.data.emplace_back(std::in_place_type<VkDevice*>, &device);
         j.data.emplace_back(std::in_place_type<sem_t*>,&Engine::descriptorsReadySemaphore);
 
-        Engine::queueMutex.lock();
         Engine::jobQueue.push(j);
-        Engine::queueMutex.unlock();
 
         sem_post(&Engine::workInQueueSemaphore);
 

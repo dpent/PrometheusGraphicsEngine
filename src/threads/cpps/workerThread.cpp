@@ -2,6 +2,7 @@
 #include "../headers/gameObjectOperations.h"
 #include "../headers/descriptorOperations.h"
 #include "../headers/modelOperations.h"
+#include "../headers/bufferOperations.h"
 #include "../../engine/headers/engine.h"
 
 
@@ -91,7 +92,7 @@ namespace Prometheus{
                 break;
 
             case RECREATE_DESCRIPTORS:
-                recreateDescriptors(*std::get<VkDevice*>(job->data[0]),
+                recreateDescriptorSetsAndPool(*std::get<VkDevice*>(job->data[0]),
                     std::get<sem_t*>(job->data[1]));
                 break;
 
@@ -110,7 +111,25 @@ namespace Prometheus{
                     std::get<sem_t*>(job->data[2])
                 );
                 break;
+
+            case UPDATE_VERTEX_INDEX_BUFFER:
+                updateVertexIndexBuffer(*std::get<VkDevice*>(job->data[0]),
+                    *std::get<VkPhysicalDevice*>(job->data[1]), 
+                    *std::get<VkQueue*>(job->data[2]),
+                    std::get<sem_t*>(job->data[3])
+                );
+                break;
+
+            case UPDATE_INSTANCE_BUFFER:
+                break;
                 
+            case MAKE_INSTANCE_BUFFER:
+                recreateInstanceBuffers(*std::get<VkDevice*>(job->data[0]),
+                    *std::get<VkPhysicalDevice*>(job->data[1]),
+                    std::get<sem_t*>(job->data[2])
+                );
+                break;
+
             default:
                 break;
         }

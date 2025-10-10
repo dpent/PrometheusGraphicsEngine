@@ -51,12 +51,6 @@ namespace Prometheus{
             
 
             Engine::recreateVertexIndexBuffer=true;
-            /*if((sizeof(Engine::vertices[0]) * Engine::vertices.size())
-            +(sizeof(Engine::indices[0]) * Engine::indices.size())
-            >Engine::indexVertexBufferSize)
-            {
-                Engine::recreateVertexIndexBuffer=true;
-            }*/
 
             delete meshLoadSemaphore;
         }
@@ -69,8 +63,6 @@ namespace Prometheus{
         Engine::objectsByMesh[modelPath][this->id]=this;
 
         Engine::gameObjectMutex.unlock();
-
-        //Engine::recreateInstanceBuffer=true;
     }
 
     GameObject::~GameObject(){
