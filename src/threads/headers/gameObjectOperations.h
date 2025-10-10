@@ -4,7 +4,13 @@
 #include <GLFW/glfw3.h>
 #include <string>
 #include <semaphore.h>
+#include <algorithm>
 #include "../../engine/headers/modelManager.h"
+#include "../../engine/headers/descriptorManager.h"
+#include <unordered_map>
+#include "../../objects/headers/gameObject.h"
+#include "../../objects/headers/mesh.h"
+#include "../../engine/headers/latch.h"
 
 
 namespace Prometheus
@@ -16,7 +22,12 @@ namespace Prometheus
 
     void updateTextureDeleteQueue(VkDevice& device);
 
-    void loadModel(std::string modelPath, sem_t& meshLoadSemaphore);
+    void updateGameObjects(std::unordered_map<std::string,std::unordered_map<uint64_t,GameObject*>>& objectsByMesh,
+        std::unordered_map<std::string,MeshBatch>& batchBuffer, Latch& latch);
 
-    void removeUnusedMeshes();
+    void updateObjectsAndDescriptors(VkDevice& device, sem_t* jobDoneSem, sem_t* safeToMakeInstanceBuffer);
+    void splitObjectsAndCreateJobs(uint64_t& objectsPerThread,
+        std::vector<std::unordered_map<std::string,std::unordered_map<uint64_t,GameObject*>>>& objectPieces,
+        Latch& latch, std::vector<std::unordered_map<std::string,MeshBatch>>& batchPieces);
+    void mergeAllThreadBatches(std::vector<std::unordered_map<std::string,MeshBatch>>& batchPieces);
 }

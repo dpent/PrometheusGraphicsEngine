@@ -5,9 +5,11 @@
 #include "../headers/renderPassManager.h"
 #include "../headers/bufferManager.h"
 #include "../headers/syncManager.h"
+#include <semaphore.h>
 #include <stdexcept>
 #include <vulkan/vulkan_core.h>
 #include "../headers/descriptorManager.h"
+#include <chrono>
 
 using namespace Prometheus;
 
@@ -34,12 +36,17 @@ std::vector<VkFramebuffer> Engine::swapChainFramebuffers;
 std::vector<VkSemaphore> Engine::imageAvailableSemaphores;
 std::vector<VkSemaphore> Engine::renderFinishedSemaphores;
 std::vector<VkFence> Engine::inFlightFences;
+sem_t Engine::descriptorsReadySemaphore;
+sem_t Engine::safeToMakeInstanceBuffer;
 std::mutex Engine::gameObjectMutex;
+std::mutex Engine::canDeleteObjectMutex;
 std::mutex Engine::textureMutex;
 std::mutex Engine::textureQueuedMutex;
 std::mutex Engine::graphicsQueueMutex;
 std::mutex Engine::commandPoolMutex;
 std::mutex Engine::meshMutex;
+std::mutex Engine::descriptorQueuedMutex;
+
 
 uint32_t Engine::currentFrame = 0;
 
@@ -50,10 +57,12 @@ std::vector<uint32_t> Engine::indices;
 
 VkBuffer Engine::indexVertexBuffer= nullptr;
 VkDeviceMemory Engine::indexVertexBufferMemory= nullptr;
+uint64_t Engine::indexVertexBufferSize = 0;
 
 std::vector<VkBuffer> Engine::instanceBuffers;
 std::vector<VkDeviceMemory> Engine::instanceBufferMemories;
 std::vector<void*> Engine::instanceBuffersMapped;
+uint64_t Engine::instanceBufferSize = 0;
 
 VkDeviceSize Engine::indexOffset=0;
 
@@ -63,14 +72,14 @@ std::vector<void*> Engine::uniformBuffersMapped;
 
 VkDescriptorPool Engine::descriptorPool;
 std::vector<VkDescriptorSet> Engine::descriptorSets;
+std::list<VkDescriptorPool> Engine::descriptorDeleteQueue;
+std::list<int> Engine::framesSinceDescriptorQueuedForDeletion;
 
 glm::mat4 Engine::model;
 glm::mat4 Engine::view;
 glm::mat4 Engine::proj;
 
-std::vector<GameObject*> Engine::gameObjects;
 std::unordered_map<uint64_t,GameObject*> Engine::gameObjectMap;
-std::unordered_map<uint64_t,bool> Engine::gameObjectIdsToRemove;
 
 VkPhysicalDeviceProperties Engine::physicalDeviceProperties;
 VkPhysicalDeviceFeatures Engine::physicalDeviceFeatures;
@@ -81,6 +90,7 @@ std::unordered_map<std::string, std::vector<Texture>> Engine::texturesQueuedForD
 std::unordered_map<std::string, std::vector<int>> Engine::framesSinceTextureQueuedForDeletion;
 
 std::unordered_map<std::string,Mesh> Engine::meshMap;
+std::unordered_map<std::string,bool> Engine::meshesLoading;
 std::unordered_map<std::string,std::unordered_map<uint64_t,GameObject*>> Engine::objectsByMesh;
 std::vector<MeshBatch> Engine::meshBatches;
 
@@ -105,6 +115,7 @@ sem_t Engine::workInQueueSemaphore;
 
 uint64_t Engine::frameCount=0;
 
+SafeUint16_t Engine::threadsAvailable = SafeUint16_t(std::thread::hardware_concurrency()-1);
 
 namespace Prometheus{
     void Engine::run() {
@@ -125,6 +136,9 @@ namespace Prometheus{
     }
 
     void Engine::initVulkan() {
+
+        sem_init(&Engine::descriptorsReadySemaphore,0,0);
+        sem_init(&Engine::safeToMakeInstanceBuffer,0,0);
 
         Engine::initThreadPool(std::thread::hardware_concurrency()-1);
 
@@ -154,7 +168,7 @@ namespace Prometheus{
         BufferManager::createCommandPool(this->physicalDevice, this->surface,this->device);
         BufferManager::createCommandBuffers(this->device);
 
-        for(int i=0; i<4; i++){
+        for(int i=0; i<10; i++){
             GameObject::createObjectThreaded("../textures/statue.jpg", 
                 "../models/stanford_sphere.obj", 
                 device, 
@@ -188,15 +202,47 @@ namespace Prometheus{
     }
 
     void Engine::mainLoop() {
+        auto frameZeroTime = std::chrono::high_resolution_clock::now();
         while (!glfwWindowShouldClose(Engine::window)) {
             glfwPollEvents();
             drawFrame();
 
-            if(Engine::frameCount%60==0 && Engine::frameCount>0){
+            for(int i=0; i<40; i++){
+                GameObject::createObjectThreaded("../textures/statue.jpg", 
+                    "../models/stanford_sphere.obj", 
+                    device, 
+                    physicalDevice, 
+                    graphicsQueue
+                );
 
+                GameObject::createObjectThreaded("../textures/angel.jpg", 
+                    "../models/cube.obj", 
+                    device, 
+                    physicalDevice, 
+                    graphicsQueue
+                );
+
+                GameObject::createObjectThreaded("../textures/viking_room.png", 
+                    "../models/viking_room.obj", 
+                    device, 
+                    physicalDevice, 
+                    graphicsQueue
+                );
+            }
+
+            if(Engine::frameCount%1300==0 && Engine::frameCount>0){
+                std::cout<<"====== FRAME "<<Engine::frameCount<<" ======"<<std::endl;
                 Engine::gameObjectMutex.lock();
+                std::cout<<Engine::gameObjectMap.size()<<" objects loaded"<<std::endl;
+                Engine::gameObjectMutex.unlock();
 
-                if(Engine::gameObjectMap.size()>3){
+                auto finalTime = std::chrono::high_resolution_clock::now();
+                std::chrono::duration<double> deltaSec = finalTime - frameZeroTime;
+                std::chrono::duration<double, std::milli> deltaMs = finalTime - frameZeroTime;
+
+                std::cout << "Delta time: " << deltaSec.count() << " seconds\n";
+                std::cout << "Delta time: " << deltaMs.count() << " milliseconds\n";
+                /*if(Engine::gameObjectMap.size()>3){
 
                     int count=0;
                     for (const auto& pair : Engine::gameObjectMap) {
@@ -206,10 +252,10 @@ namespace Prometheus{
                             break;
                         }
                     }
-
                     Engine::gameObjectMutex.unlock();
                 }else{
 
+                    Engine::gameObjectMutex.unlock();
                     for(int i=0; i<4; i++){
                         GameObject::createObjectThreaded("../textures/statue.jpg", 
                             "../models/stanford_sphere.obj", 
@@ -225,22 +271,19 @@ namespace Prometheus{
                             graphicsQueue
                         );
 
+                        GameObject::createObjectThreaded("../textures/viking_room.png", 
+                            "../models/viking_room.obj", 
+                            device, 
+                            physicalDevice, 
+                            graphicsQueue
+                        );
                           
                     }
-
-                    GameObject::createObjectThreaded("../textures/viking_room.png", 
-                        "../models/viking_room.obj", 
-                        device, 
-                        physicalDevice, 
-                        graphicsQueue
-                    );
-
-                    Engine::gameObjectMutex.unlock();
-                }
+                }*/
             }
             
             createUpdateTextureQueueJob();
-            updateMeshDataStructures();
+            createUpdateDescriptorQueueJob();
         }
 
         Engine::graphicsQueueMutex.lock();
@@ -258,9 +301,8 @@ namespace Prometheus{
 
     void Engine::cleanup() {
 
-        for(size_t i=0; i<Engine::gameObjects.size(); i++){
-            Engine::gameObjects[i]->terminate(device);
-            delete Engine::gameObjects[i];
+        for(auto& [id, objptr]:Engine::gameObjectMap){
+            delete objptr;
         }
 
         for (const auto& pair : Engine::threadPool) {
@@ -365,50 +407,72 @@ namespace Prometheus{
 
         Engine::commandPoolMutex.unlock();
 
+        Engine::canDeleteObjectMutex.lock();
         Engine::gameObjectMutex.lock();
+        Engine::meshMutex.lock();
 
         if(Engine::gameObjectMap.size()!=0){
-            if(Engine::recreateVertexIndexBuffer){
+            Engine::queueMutex.lock();
 
-                BufferManager::recreateVerIndBuffer(this->device,this->physicalDevice,this->graphicsQueue);
+            if(Engine::threadsAvailable.getValue()>1 && Engine::jobQueue.size()<Engine::threadsAvailable.getValue()){
 
-                Engine::meshMutex.lock();
-                Engine::updateGameObjects();
-                Engine::meshMutex.unlock();
-
-                Engine::recreateVertexIndexBuffer=false;
-
-                if(Engine::recreateInstanceBuffer){
-                    BufferManager::recreateInstanceBuffers(this->device,this->physicalDevice);
-                    Engine::recreateInstanceBuffer=false;
-                }
-
-            }else if(Engine::recreateInstanceBuffer){
-
-                Engine::meshMutex.lock();
-                Engine::updateGameObjects();
-                Engine::meshMutex.unlock();
-
-                BufferManager::recreateInstanceBuffers(this->device,this->physicalDevice);
-                Engine::recreateInstanceBuffer=false;
+                createUpdateObjDescrJob();
+                Engine::queueMutex.unlock();
 
             }else{
-                Engine::meshMutex.lock();
+
+                Engine::queueMutex.unlock();
+                //Engine::meshMutex.lock();
                 Engine::updateGameObjects();
-                Engine::meshMutex.unlock();
+                //Engine::meshMutex.unlock();
+
+                if(Engine::meshBatches.size()!=Engine::descriptorSets.size() || Engine::recreateDescriptors){
+                    DescriptorManager::recreateDescriptors(this->device);
+                    Engine::recreateDescriptors=false;
+                }else{
+                    sem_post(&Engine::descriptorsReadySemaphore);
+                }
+            }
+
+            Engine::recreateVertexIndexBuffer=true;
+
+            //std::cout<<"==== FRAME "<<Engine::frameCount<<" ===="<<std::endl;
+            if(Engine::recreateVertexIndexBuffer){
+                //Engine::meshMutex.lock();
+                BufferManager::recreateVerIndBuffer(this->device,this->physicalDevice,this->graphicsQueue);
+                //Engine::meshMutex.unlock();
+                Engine::recreateVertexIndexBuffer=false;
+            }
+
+
+            sem_wait(&Engine::safeToMakeInstanceBuffer);
+
+            if(Engine::recreateInstanceBuffer){
+                //std::cout<<"Preparing to make instance buffer"<<std::endl;
+
+                //Engine::meshMutex.lock();
+                BufferManager::recreateInstanceBuffers(this->device,this->physicalDevice);
+                //Engine::meshMutex.unlock();
+
+                Engine::recreateInstanceBuffer=false;
+
             }
             
-            if(Engine::meshBatches.size()!=Engine::descriptorSets.size()){
-                DescriptorManager::recreateDescriptors(this->device);
-            }
+        }else{
+
+            sem_post(&Engine::descriptorsReadySemaphore);
         }
+
+        Engine::meshMutex.unlock();
+        Engine::gameObjectMutex.unlock();
+        sem_wait(&Engine::descriptorsReadySemaphore);
 
         Engine::commandPoolMutex.lock();
         BufferManager::recordCommandBuffer(Engine::commandBuffers[Engine::currentFrame], imageIndex,device,
         physicalDevice);
         Engine::commandPoolMutex.unlock();
+        Engine::canDeleteObjectMutex.unlock();
 
-        Engine::gameObjectMutex.unlock();
 
         //BufferManager::updateUniformBuffer(Engine::currentFrame);
 
@@ -473,8 +537,8 @@ namespace Prometheus{
 
         Engine::meshBatches.clear();
 
-        Engine::textureMutex.lock();
         int i=0;
+        VkDeviceSize bufferSize=0;
         for (auto& [meshName, innerMap] : Engine::objectsByMesh) {
 
             uint64_t currIndex=0;
@@ -483,28 +547,31 @@ namespace Prometheus{
 
             for (auto& [id, objPtr] : innerMap) {
 
+                Engine::textureMutex.lock();
                 if (textureIndices.find(objPtr->texturePath) == textureIndices.end()) {
-                    Engine::meshBatches[Engine::meshBatches.size()-1].textures.push_back(&Engine::textureMap[objPtr->texturePath]);
+                    Engine::meshBatches[Engine::meshBatches.size()-1].textures.push_back(&Engine::textureMap.at(objPtr->texturePath));
                     textureIndices[objPtr->texturePath] = currIndex;
                     currIndex++; 
                 }
+                Engine::textureMutex.unlock();
 
-                if(Engine::gameObjectIdsToRemove.count(objPtr->id)>0){
-                    Engine::gameObjects.erase(Engine::gameObjects.begin()+i);
-                }else{
-                    Engine::meshBatches[Engine::meshBatches.size()-1].instances.push_back(
-                        InstanceInfo(objPtr->animateCircularMotion(0.0f,0.0f,0.0f,5.0f,2.0f,i*0.25f),textureIndices.at(objPtr->texturePath))
-                    );
-                    Engine::meshBatches[Engine::meshBatches.size()-1].objects.push_back(objPtr);
-                    i++;
-                }
+                Engine::meshBatches[Engine::meshBatches.size()-1].instances.push_back(
+                    InstanceInfo(objPtr->animateCircularMotion(0.0f,0.0f,0.0f,5.0f,2.0f,i*0.25f),textureIndices.at(objPtr->texturePath))
+                );
+                Engine::meshBatches[Engine::meshBatches.size()-1].objects.push_back(objPtr);
+                i++;
             }
             if(Engine::meshBatches[Engine::meshBatches.size()-1].objects.size()==0){
                 Engine::meshBatches.pop_back();
             }
+            bufferSize+=sizeof(InstanceInfo) * Engine::meshBatches[Engine::meshBatches.size()-1].instances.size();
         }
-        Engine::gameObjectIdsToRemove.clear();
-        Engine::textureMutex.unlock();
+
+        if(bufferSize>Engine::instanceBufferSize){
+            Engine::recreateInstanceBuffer=true;
+        }
+
+        sem_post(&Engine::safeToMakeInstanceBuffer);
     }
 
     VkSampleCountFlagBits Engine::getMaxUsableSampleCount(VkPhysicalDevice& physicalDevice){
@@ -598,5 +665,31 @@ namespace Prometheus{
         Engine::queueMutex.unlock();
 
         sem_post(&(Engine::workInQueueSemaphore));
+    }
+
+    void Engine::createUpdateDescriptorQueueJob(){
+
+        Job j = Job(UPDATE_DESCRIPTOR_DELETE_QUEUE);
+        j.data.emplace_back(std::in_place_type<VkDevice*>, &device);
+
+        Engine::queueMutex.lock();
+        Engine::jobQueue.push(j);
+        Engine::queueMutex.unlock();
+
+        sem_post(&(Engine::workInQueueSemaphore));
+    }
+
+    void Engine::createUpdateObjDescrJob(){
+
+        Job j = Job(UPDATE_OBJECTS_AND_DESCRIPTORS);
+        j.data.emplace_back(std::in_place_type<VkDevice*>, &device);
+        j.data.emplace_back(std::in_place_type<sem_t*>,&Engine::descriptorsReadySemaphore);
+        j.data.emplace_back(std::in_place_type<sem_t*>,&Engine::safeToMakeInstanceBuffer);
+
+        Engine::jobQueue.push(j);
+
+        sem_post(&Engine::workInQueueSemaphore);
+
+        //std::cout<<"Sent the job"<<std::endl;
     }
 }

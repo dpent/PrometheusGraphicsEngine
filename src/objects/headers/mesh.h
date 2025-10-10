@@ -44,5 +44,6 @@ namespace Prometheus{
         std::vector<Texture*> textures;
 
         MeshBatch(std::string path);
+        MeshBatch();
     };
 }

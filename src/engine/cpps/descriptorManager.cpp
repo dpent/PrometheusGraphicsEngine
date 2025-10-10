@@ -93,24 +93,15 @@ namespace Prometheus{
 
     void DescriptorManager::recreateDescriptors(VkDevice& device){
 
-        Engine::graphicsQueueMutex.lock();
+        Job j = Job(RECREATE_DESCRIPTORS);
+        j.data.emplace_back(std::in_place_type<VkDevice*>, &device);
+        j.data.emplace_back(std::in_place_type<sem_t*>,&Engine::descriptorsReadySemaphore);
 
-        vkDeviceWaitIdle(device);
+        Engine::queueMutex.lock();
+        Engine::jobQueue.push(j);
+        Engine::queueMutex.unlock();
 
-        Engine::graphicsQueueMutex.unlock();
-
-        if(Engine::descriptorPool != VK_NULL_HANDLE){
-            vkDestroyDescriptorPool(device, Engine::descriptorPool, nullptr);
-        }
-
-        Engine::meshMutex.lock();
-        if(Engine::meshBatches.size()==0){
-            return;
-        }
-        Engine::meshMutex.unlock();
-
-        DescriptorManager::createDescriptorPool(device);
-        DescriptorManager::createDescriptorSets(device);
+        sem_post(&Engine::workInQueueSemaphore);
 
     }
 }

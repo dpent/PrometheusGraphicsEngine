@@ -69,7 +69,7 @@ namespace Prometheus{
 
     void BufferManager::recordCommandBuffer(VkCommandBuffer& commandBuffer, uint32_t& imageIndex,
         VkDevice& device, VkPhysicalDevice& physicalDevice){
-
+        
         VkCommandBufferBeginInfo beginInfo{};
         beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
         beginInfo.flags = 0; // Optional 
@@ -106,7 +106,8 @@ namespace Prometheus{
 
         vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, Engine::graphicsPipeline);
 
-        if(Engine::gameObjects.size()!=0){
+        Engine::gameObjectMutex.lock();
+        if(Engine::gameObjectMap.size()!=0 && Engine::instanceBufferMemories[Engine::currentFrame]!=VK_NULL_HANDLE){
             BufferManager::updateInstanceBuffer(Engine::currentFrame);
 
             VkBuffer vertexBuffers[] = {Engine::indexVertexBuffer,Engine::instanceBuffers[Engine::currentFrame]};
@@ -115,6 +116,7 @@ namespace Prometheus{
             vkCmdBindVertexBuffers(commandBuffer, 0, 2, vertexBuffers, offsets);
             vkCmdBindIndexBuffer(commandBuffer, Engine::indexVertexBuffer, Engine::indexOffset, VK_INDEX_TYPE_UINT32);
         }
+        Engine::gameObjectMutex.unlock();
 
         VkViewport viewport{}; //Viewport and Scissor was set to dynamic in createGraphicsPipeline (graphicsPipeline.cpp)
         viewport.x = 0.0f;
@@ -158,7 +160,6 @@ namespace Prometheus{
         );
 
         uint32_t instanceCount=0;
-        Engine::meshMutex.lock();
         for(uint32_t i=0; i<Engine::meshBatches.size(); i++){
 
             vkCmdBindDescriptorSets(
@@ -171,11 +172,9 @@ namespace Prometheus{
                 0,
                 nullptr
             );
-            
             Engine::meshBatches[i].objects[0]->draw(commandBuffer,Engine::meshBatches[i].instances.size(),instanceCount);
             instanceCount+=Engine::meshBatches[i].instances.size();
         }
-        Engine::meshMutex.unlock();
 
         vkCmdEndRenderPass(commandBuffer);
 
@@ -189,6 +188,9 @@ namespace Prometheus{
     void BufferManager::createIndexVertexBuffer(VkDevice& device, VkPhysicalDevice& physicalDevice, VkQueue& graphicsQueue){
 
         VkDeviceSize bufferSize = (sizeof(Engine::vertices[0]) * Engine::vertices.size())+(sizeof(Engine::indices[0]) * Engine::indices.size());
+        bufferSize = bufferSize<<1;
+        Engine::indexVertexBufferSize = bufferSize;
+        
         VkBuffer stagingBuffer;
         VkDeviceMemory stagingBufferMemory;
         BufferManager::createJointBuffer(sizeof(Engine::vertices[0]) * Engine::vertices.size(), 
@@ -212,10 +214,15 @@ namespace Prometheus{
             VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 
             Engine::indexVertexBuffer, Engine::indexVertexBufferMemory,device,physicalDevice);
 
+        //std::cout<<"Offset "<<Engine::indexOffset<<std::endl;
+        //std::cout<<"Vertices "<<Engine::vertices.size()<<std::endl;
+        //std::cout<<"Indices "<<Engine::indices.size()<<std::endl;
         copyBuffer(stagingBuffer, Engine::indexVertexBuffer, bufferSize,device,graphicsQueue);
 
         vkDestroyBuffer(device, stagingBuffer, nullptr);
         vkFreeMemory(device, stagingBufferMemory, nullptr);
+
+        //std::cout<<"Created a buffer of size "<<bufferSize/1024.0f<<" KB"<<std::endl;
     }
 
     uint32_t BufferManager::findMemoryType(uint32_t& typeFilter, VkMemoryPropertyFlags properties, VkPhysicalDevice& physicalDevice){
@@ -268,7 +275,7 @@ namespace Prometheus{
 
         VkBufferCreateInfo bufferInfo{};
         bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-        bufferInfo.size = size1 + size2;
+        bufferInfo.size = (size1 + size2)<<1;
         bufferInfo.usage = usage;
         bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
@@ -393,9 +400,15 @@ namespace Prometheus{
         Engine::instanceBuffersMapped.resize(Engine::MAX_FRAMES_IN_FLIGHT);
 
         VkDeviceSize bufferSize=0;
+        //std::cout<<"======== "<<Engine::frameCount<<" ========"<<std::endl;
+        //std::cout<<"Mesh paths are: "<<std::endl;
         for(uint32_t i=0; i<Engine::meshBatches.size(); i++){
+            //std::cout<<Engine::meshBatches[i].meshPath<<" with "<<Engine::meshBatches[i].instances.size()<<" instances"<<std::endl;
             bufferSize+=sizeof(InstanceInfo) * Engine::meshBatches[i].instances.size();
         }
+
+        bufferSize = bufferSize << 1;
+        Engine::instanceBufferSize = bufferSize;
 
         for(size_t i=0; i<Engine::MAX_FRAMES_IN_FLIGHT; i++){
             BufferManager::createBuffer(bufferSize, 
@@ -488,19 +501,21 @@ namespace Prometheus{
             vkFreeMemory(device, Engine::indexVertexBufferMemory, nullptr);
         }
 
-        for (auto& [meshName, innerMap] : Engine::objectsByMesh) {
-
-            Engine::meshMap[meshName].vertexOffset=Engine::vertices.size();
-            Engine::meshMap[meshName].indexOffset=Engine::indices.size();
-            Engine::vertices.insert(Engine::vertices.end(),Engine::meshMap[meshName].vertices.begin(),Engine::meshMap[meshName].vertices.end());
-            Engine::indices.insert(Engine::indices.end(),Engine::meshMap[meshName].indices.begin(),Engine::meshMap[meshName].indices.end());
+        //std::cout<<"==== FRAME "<<Engine::frameCount<<" ===="<<std::endl;
+        for (auto& [meshName, mesh] : Engine::meshMap) {
+            //std::cout<<"For "<<meshName<<std::endl;
+            mesh.vertexOffset=Engine::vertices.size();
+            mesh.indexOffset=Engine::indices.size();
+            Engine::vertices.insert(Engine::vertices.end(),mesh.vertices.begin(),mesh.vertices.end());
+            Engine::indices.insert(Engine::indices.end(),mesh.indices.begin(),mesh.indices.end());
+            //std::cout<<mesh.vertexOffset<<" v off "<<mesh.vertices.size()<<" v count "<<mesh.indexOffset<<" i off "<<mesh.indices.size()<<" i count"<<std::endl;
         }
 
         BufferManager::createIndexVertexBuffer(device,physicalDevice,graphicsQueue);
     }
 
     void BufferManager::recreateInstanceBuffers(VkDevice& device, VkPhysicalDevice& physicalDevice){
-
+        
         Engine::graphicsQueueMutex.lock();
 
         vkDeviceWaitIdle(device);

@@ -27,6 +27,8 @@
 #include "../../objects/headers/mesh.h"
 #include "../../threads/headers/job.h"
 #include "../../threads/headers/workerThread.h"
+#include <list>
+#include "../../threads/headers/threadSafeNumber.h"
 
 namespace Prometheus{
 
@@ -82,12 +84,16 @@ namespace Prometheus{
         static std::vector<VkSemaphore> imageAvailableSemaphores;
         static std::vector<VkSemaphore> renderFinishedSemaphores;
         static std::vector<VkFence> inFlightFences;
+        static sem_t descriptorsReadySemaphore;
+        static sem_t safeToMakeInstanceBuffer;
         static std::mutex gameObjectMutex;
+        static std::mutex canDeleteObjectMutex;
         static std::mutex textureMutex;
         static std::mutex textureQueuedMutex;
         static std::mutex graphicsQueueMutex;
         static std::mutex commandPoolMutex;
         static std::mutex meshMutex;
+        static std::mutex descriptorQueuedMutex;
 
         static const int MAX_FRAMES_IN_FLIGHT = 2;
         static uint32_t currentFrame;
@@ -99,10 +105,12 @@ namespace Prometheus{
 
         static VkBuffer indexVertexBuffer;
         static VkDeviceMemory indexVertexBufferMemory;
+        static uint64_t indexVertexBufferSize;
 
         static std::vector<VkBuffer> instanceBuffers;
         static std::vector<VkDeviceMemory> instanceBufferMemories;
         static std::vector<void*> instanceBuffersMapped;
+        static uint64_t instanceBufferSize;
 
         static VkDeviceSize indexOffset;
 
@@ -112,14 +120,14 @@ namespace Prometheus{
 
         static VkDescriptorPool descriptorPool;
         static std::vector<VkDescriptorSet> descriptorSets;
+        static std::list<VkDescriptorPool> descriptorDeleteQueue;
+        static std::list<int> framesSinceDescriptorQueuedForDeletion;
 
         static glm::mat4 model;
         static glm::mat4 view;
         static glm::mat4 proj; //Camera movement is based on these
 
-        static std::vector<GameObject*> gameObjects;
         static std::unordered_map<uint64_t,GameObject*> gameObjectMap;
-        static std::unordered_map<uint64_t,bool> gameObjectIdsToRemove;
 
         static VkPhysicalDeviceProperties physicalDeviceProperties;
         static VkPhysicalDeviceFeatures physicalDeviceFeatures;
@@ -129,6 +137,7 @@ namespace Prometheus{
         static std::unordered_map<std::string, std::vector<int>> framesSinceTextureQueuedForDeletion;
 
         static std::unordered_map<std::string,Mesh> meshMap;
+        static std::unordered_map<std::string,bool> meshesLoading;
         static std::unordered_map<std::string,std::unordered_map<uint64_t,GameObject*>> objectsByMesh;
         static std::vector<MeshBatch> meshBatches;
 
@@ -153,7 +162,7 @@ namespace Prometheus{
         static sem_t workInQueueSemaphore;
         static uint64_t frameCount;
 
-        //static uint32_t frameCounter;
+        static SafeUint16_t threadsAvailable;
 
         void run();
         static std::vector<char> readFile(const std::string& filename);
@@ -189,5 +198,7 @@ namespace Prometheus{
         void drawFrame();
         void createUpdateTextureQueueJob();
         void updateMeshDataStructures();
+        void createUpdateDescriptorQueueJob();
+        void createUpdateObjDescrJob();
     };
 }

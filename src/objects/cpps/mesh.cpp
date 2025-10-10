@@ -5,7 +5,6 @@ using namespace Prometheus;
 
 namespace Prometheus{
     Mesh::Mesh(){
-
     }
 
     Mesh::Mesh(std::string meshPath, std::vector<Vertex> vertices, std::vector<uint32_t> indices){
@@ -17,9 +16,12 @@ namespace Prometheus{
     std::string Mesh::toString(){
         std::ostringstream oss;
         oss << "Mesh { "
-            << "vertexOffset=" << vertexOffset << ", "
-            << "indexOffset=" << indexOffset << ", "
-            << "meshPath=\"" << meshPath << "\" }";
+            << "meshPath = " << meshPath << "\n "
+            << "vertexOffset = " << vertexOffset << "\n "
+            << "vertices = " << vertices.size() << "\n "
+            << "indexOffset = " << indexOffset << "\n "
+            << "indices = " << indices.size() << " }";
+            
         return oss.str();
     }
 
@@ -47,5 +49,8 @@ namespace Prometheus{
 
     MeshBatch::MeshBatch(std::string path){
         this->meshPath=path;
+    }
+
+    MeshBatch::MeshBatch(){
     }
 }

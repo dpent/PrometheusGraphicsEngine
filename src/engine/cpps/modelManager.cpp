@@ -58,9 +58,8 @@ namespace Prometheus{
         }
         Engine::meshMutex.lock();
         Engine::meshMap[modelPath]=Mesh(modelPath,vertices,indices);
+        Engine::meshesLoading.erase(modelPath);
         Engine::meshMutex.unlock();
-
-        Engine::recreateVertexIndexBuffer=true;
 
         sem_post(&meshLoadSemaphore);
     }

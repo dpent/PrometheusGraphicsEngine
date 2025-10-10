@@ -12,13 +12,17 @@ namespace Prometheus{
     GameObject::GameObject(std::string texturePath, std::string modelPath, int req_comp, VkDevice& device, VkPhysicalDevice& physicalDevice, VkQueue& graphicsQueue)
     {
 
+        Engine::gameObjectMutex.lock();
         this->id=GameObject::autoIncrementId;
         GameObject::autoIncrementId++;
+        Engine::gameObjectMutex.unlock();
+
         this->texturePath=texturePath;
         this->meshPath=modelPath;
         this->modelMatrix=glm::mat4(1.0f);
 
         Engine::textureMutex.lock();
+
         if (Engine::textureMap.count(texturePath) != 0) {
             Engine::objectIdsByTexture[texturePath].push_back(this->id);
             this->textureVecIndex=Engine::objectIdsByTexture[texturePath].size()-1;
@@ -26,19 +30,18 @@ namespace Prometheus{
             Engine::textureMap[texturePath].count++;
 
         } else {
-
             Engine::textureMap.insert(std::make_pair(texturePath, Texture(texturePath, 4, device, physicalDevice, graphicsQueue)));
 
             Engine::objectIdsByTexture[texturePath].push_back(this->id);
             this->textureVecIndex=0;
         }
+
         Engine::textureMutex.unlock();
 
         Engine::meshMutex.lock();
+        if(Engine::meshMap.count(modelPath) == 0 && Engine::meshesLoading.count(modelPath) == 0){
 
-        if(Engine::meshMap.count(modelPath) == 0){
-
-            Engine::meshMap[modelPath] = Mesh();
+            Engine::meshesLoading[modelPath] = true;
             Engine::meshMutex.unlock();
 
             sem_t* meshLoadSemaphore = new sem_t(); //In case i use them sometime
@@ -46,20 +49,28 @@ namespace Prometheus{
 
             ModelManager::loadModel(modelPath,*meshLoadSemaphore); //Also inserts the mesh into meshMap
             
+
+            Engine::recreateVertexIndexBuffer=true;
+            /*if((sizeof(Engine::vertices[0]) * Engine::vertices.size())
+            +(sizeof(Engine::indices[0]) * Engine::indices.size())
+            >Engine::indexVertexBufferSize)
+            {
+                Engine::recreateVertexIndexBuffer=true;
+            }*/
+
             delete meshLoadSemaphore;
         }
-
+        
         Engine::meshMutex.unlock();
 
         Engine::gameObjectMutex.lock();
 
-        Engine::gameObjects.push_back(this);
         Engine::gameObjectMap.insert({this->id,this});
         Engine::objectsByMesh[modelPath][this->id]=this;
 
         Engine::gameObjectMutex.unlock();
 
-        Engine::recreateInstanceBuffer=true;
+        //Engine::recreateInstanceBuffer=true;
     }
 
     GameObject::~GameObject(){
@@ -78,7 +89,6 @@ namespace Prometheus{
                 Engine::textureQueuedMutex.unlock();
                 
                 Engine::textureMap.erase(texturePath);
-                //it->second.terminate(device);
             } 
         }
         Engine::objectIdsByTexture[texturePath].erase(Engine::objectIdsByTexture[texturePath].begin()+textureVecIndex);
@@ -88,8 +98,15 @@ namespace Prometheus{
     }
 
     void GameObject::draw(VkCommandBuffer& commandBuffer, uint32_t instanceCount, uint32_t firstInstance){
-        //std::cout<<Engine::meshMap[this->meshPath].toString()<<std::endl;
-
+        
+        if(Engine::meshMap[this->meshPath].indexOffset==3200171710
+            && Engine::meshMap[this->meshPath].indices.size()==0
+            && Engine::meshMap[this->meshPath].vertexOffset==3200171710
+            && Engine::meshMap[this->meshPath].vertices.size()==0)
+        {
+            //std::cout<<Engine::meshMap[this->meshPath].toString()<<std::endl;
+            return;
+        }
         vkCmdDrawIndexed(commandBuffer, Engine::meshMap[this->meshPath].indices.size(), 
             instanceCount, Engine::meshMap[this->meshPath].indexOffset, Engine::meshMap[this->meshPath].vertexOffset, firstInstance);
     }
@@ -126,11 +143,11 @@ namespace Prometheus{
         VkQueue& graphicsQueue
     ){
         Job j = Job(CREATE_OBJECT);
-        j.data.push_back(texturePath);
-        j.data.push_back(modelPath);
-        j.data.push_back(&device);
-        j.data.push_back(&physicalDevice);
-        j.data.push_back(&graphicsQueue);
+        j.data.emplace_back(std::in_place_type<std::string>, texturePath);
+        j.data.emplace_back(std::in_place_type<std::string>, modelPath);
+        j.data.emplace_back(std::in_place_type<VkDevice*>, &device);
+        j.data.emplace_back(std::in_place_type<VkPhysicalDevice*>, &physicalDevice);
+        j.data.emplace_back(std::in_place_type<VkQueue*>, &graphicsQueue);
 
         Engine::queueMutex.lock();
         Engine::jobQueue.push(j);
@@ -142,14 +159,12 @@ namespace Prometheus{
     void GameObject::deleteObjectThreaded(VkDevice &device, uint64_t id){
 
         Job j = Job(DELETE_OBJECT);
-        j.data.push_back(id);
-        j.data.push_back(&device);
+        j.data.emplace_back(std::in_place_type<uint64_t>, id);
+        j.data.emplace_back(std::in_place_type<VkDevice*>, &device);
 
         Engine::queueMutex.lock();
         Engine::jobQueue.push(j);
         Engine::queueMutex.unlock();
-
-        Engine::gameObjectIdsToRemove[id]=true;
         
         sem_post(&(Engine::workInQueueSemaphore));
     }    
