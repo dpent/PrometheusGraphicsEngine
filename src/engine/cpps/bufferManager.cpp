@@ -33,7 +33,9 @@ namespace Prometheus{
         }
     }
 
-    void BufferManager::createCommandPool(VkPhysicalDevice& physicalDevice, VkSurfaceKHR& surface, VkDevice& device){
+    void BufferManager::createCommandPool(VkPhysicalDevice& physicalDevice, 
+        VkSurfaceKHR& surface, VkDevice& device, VkCommandPool& commandPool){
+        
         QueueFamilyIndices queueFamilyIndices = findQueueFamilies(physicalDevice, surface);
 
         VkCommandPoolCreateInfo poolInfo{};
@@ -41,34 +43,35 @@ namespace Prometheus{
         poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
         poolInfo.queueFamilyIndex = queueFamilyIndices.graphicsFamily.value();
 
-        if (vkCreateCommandPool(device, &poolInfo, nullptr, &Engine::commandPool) != VK_SUCCESS) {
+        if (vkCreateCommandPool(device, &poolInfo, nullptr, &commandPool) != VK_SUCCESS) {
             throw std::runtime_error("failed to create command pool!");
         }
     }
 
-    void BufferManager::createCommandBuffers(VkDevice& device){
-        Engine::commandBuffers.resize(Engine::MAX_FRAMES_IN_FLIGHT);
+    void BufferManager::createCommandBuffers(VkDevice& device, std::vector<VkCommandBuffer>& commandBuffers, 
+        VkCommandPool& commandPool){
+        commandBuffers.resize(Engine::MAX_FRAMES_IN_FLIGHT);
         VkCommandBufferAllocateInfo allocInfo{};
         allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
         
-        Engine::commandPoolMutex.lock();
-        allocInfo.commandPool = Engine::commandPool;
+        allocInfo.commandPool = commandPool;
         allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;/*
                                                             -- VK_COMMAND_BUFFER_LEVEL_PRIMARY: Can be submitted to a queue for execution,
                                                             but cannot be called from other command buffers.
                                                             -- VK_COMMAND_BUFFER_LEVEL_SECONDARY: Cannot be submitted directly, but can
                                                             be called from primary command buffers.
                                                         */
-        allocInfo.commandBufferCount = (uint32_t) Engine::commandBuffers.size();
+        allocInfo.commandBufferCount = (uint32_t) commandBuffers.size();
 
-        if (vkAllocateCommandBuffers(device, &allocInfo, Engine::commandBuffers.data()) != VK_SUCCESS) {
+        if (vkAllocateCommandBuffers(device, &allocInfo, commandBuffers.data()) != VK_SUCCESS) {
             throw std::runtime_error("failed to allocate command buffers!");
         }
-        Engine::commandPoolMutex.unlock();
     }
 
     void BufferManager::recordCommandBuffer(VkCommandBuffer& commandBuffer, uint32_t& imageIndex,
         VkDevice& device, VkPhysicalDevice& physicalDevice){
+
+        vkResetCommandBuffer(commandBuffer,  0);
         
         VkCommandBufferBeginInfo beginInfo{};
         beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -189,7 +192,8 @@ namespace Prometheus{
         sem_post(&Engine::commandBufferRecorded);
     }
 
-    void BufferManager::createIndexVertexBuffer(VkDevice& device, VkPhysicalDevice& physicalDevice, VkQueue& graphicsQueue){
+    void BufferManager::createIndexVertexBuffer(VkDevice& device, VkPhysicalDevice& physicalDevice, 
+        VkQueue& graphicsQueue, VkCommandPool& commandPool){
 
         VkDeviceSize bufferSize = (sizeof(Engine::vertices[0]) * Engine::vertices.size())+(sizeof(Engine::indices[0]) * Engine::indices.size());
         bufferSize = bufferSize<<1;
@@ -218,13 +222,14 @@ namespace Prometheus{
             VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 
             Engine::indexVertexBuffer, Engine::indexVertexBufferMemory,device,physicalDevice);
 
-        copyBuffer(stagingBuffer, Engine::indexVertexBuffer, bufferSize,device,graphicsQueue);
+        copyBuffer(stagingBuffer, Engine::indexVertexBuffer, bufferSize,device,graphicsQueue, commandPool);
 
         vkDestroyBuffer(device, stagingBuffer, nullptr);
         vkFreeMemory(device, stagingBufferMemory, nullptr);
     }
 
-    void BufferManager::updateIndexVertexBuffer(VkDevice& device, VkPhysicalDevice& physicalDevice, VkQueue& graphicsQueue){
+    void BufferManager::updateIndexVertexBuffer(VkDevice& device, VkPhysicalDevice& physicalDevice, 
+        VkQueue& graphicsQueue, VkCommandPool& commandPool){
 
         VkDeviceSize bufferSize = (sizeof(Engine::vertices[0]) * Engine::vertices.size())+(sizeof(Engine::indices[0]) * Engine::indices.size());
 
@@ -245,7 +250,7 @@ namespace Prometheus{
         memcpy(data, Engine::indices.data(), (size_t) (sizeof(Engine::indices[0]) * Engine::indices.size()));
         vkUnmapMemory(device, stagingBufferMemory);
 
-        copyBuffer(stagingBuffer, Engine::indexVertexBuffer, bufferSize,device,graphicsQueue);
+        copyBuffer(stagingBuffer, Engine::indexVertexBuffer, bufferSize,device,graphicsQueue, commandPool);
 
         vkDestroyBuffer(device, stagingBuffer, nullptr);
         vkFreeMemory(device, stagingBufferMemory, nullptr);
@@ -327,9 +332,10 @@ namespace Prometheus{
         vkBindBufferMemory(device, buffer, bufferMemory, 0);
     }
 
-    void BufferManager::copyBuffer(VkBuffer& srcBuffer, VkBuffer& dstBuffer, VkDeviceSize size, VkDevice& device, VkQueue& graphicsQueue) {
+    void BufferManager::copyBuffer(VkBuffer& srcBuffer, VkBuffer& dstBuffer, VkDeviceSize size, 
+        VkDevice& device, VkQueue& graphicsQueue, VkCommandPool& commandPool) {
         
-        VkCommandBuffer commandBuffer = BufferManager::beginSingleTimeCommands(device);
+        VkCommandBuffer commandBuffer = BufferManager::beginSingleTimeCommands(device, commandPool);
 
         VkBufferCopy copyRegion{};
         copyRegion.srcOffset = 0; // Optional
@@ -337,7 +343,7 @@ namespace Prometheus{
         copyRegion.size = size;
         vkCmdCopyBuffer(commandBuffer, srcBuffer, dstBuffer, 1, &copyRegion);
         
-        BufferManager::endSingleTimeCommands(commandBuffer,device,graphicsQueue);
+        BufferManager::endSingleTimeCommands(commandBuffer,device,graphicsQueue, commandPool);
     }
 
     void BufferManager::createUniformBuffers(VkDevice& device, VkPhysicalDevice& physicalDevice){
@@ -373,13 +379,12 @@ namespace Prometheus{
         memcpy(Engine::uniformBuffersMapped[currentImage], &ubo, sizeof(ubo));
     }
 
-    VkCommandBuffer BufferManager::beginSingleTimeCommands(VkDevice& device) {
+    VkCommandBuffer BufferManager::beginSingleTimeCommands(VkDevice& device, VkCommandPool& commandPool) {
         VkCommandBufferAllocateInfo allocInfo{};
         allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
         allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
         
-        Engine::commandPoolMutex.lock();
-        allocInfo.commandPool = Engine::commandPool;
+        allocInfo.commandPool = commandPool;
         allocInfo.commandBufferCount = 1;
 
         VkCommandBuffer commandBuffer;
@@ -390,16 +395,14 @@ namespace Prometheus{
         beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
 
         vkBeginCommandBuffer(commandBuffer, &beginInfo);
-        Engine::commandPoolMutex.unlock();
 
         return commandBuffer;
     }
 
-    void BufferManager::endSingleTimeCommands(VkCommandBuffer& commandBuffer, VkDevice& device, VkQueue& graphicsQueue) {
+    void BufferManager::endSingleTimeCommands(VkCommandBuffer& commandBuffer, VkDevice& device, VkQueue& graphicsQueue,
+        VkCommandPool& commandPool) {
 
-        Engine::commandPoolMutex.lock();
         vkEndCommandBuffer(commandBuffer);
-        Engine::commandPoolMutex.unlock();
 
         VkSubmitInfo submitInfo{};
         submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -413,11 +416,9 @@ namespace Prometheus{
 
         Engine::graphicsQueueMutex.unlock();
 
-        Engine::commandPoolMutex.lock();
 
-        vkFreeCommandBuffers(device, Engine::commandPool, 1, &commandBuffer);
+        vkFreeCommandBuffers(device, commandPool, 1, &commandBuffer);
 
-        Engine::commandPoolMutex.unlock();
     }
 
     void BufferManager::createInstanceBuffers(VkDevice& device, VkPhysicalDevice& physicalDevice){

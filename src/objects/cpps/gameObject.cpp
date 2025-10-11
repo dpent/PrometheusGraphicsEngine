@@ -9,7 +9,8 @@ using namespace Prometheus;
 namespace Prometheus{
     uint64_t GameObject::autoIncrementId=0;
 
-    GameObject::GameObject(std::string texturePath, std::string modelPath, int req_comp, VkDevice& device, VkPhysicalDevice& physicalDevice, VkQueue& graphicsQueue)
+    GameObject::GameObject(std::string texturePath, std::string modelPath, int req_comp, VkDevice& device, 
+        VkPhysicalDevice& physicalDevice, VkQueue& graphicsQueue, VkCommandPool& commandPool)
     {
 
         Engine::gameObjectMutex.lock();
@@ -22,7 +23,6 @@ namespace Prometheus{
         this->modelMatrix=glm::mat4(1.0f);
 
         Engine::textureMutex.lock();
-
         if (Engine::textureMap.count(texturePath) != 0) {
             Engine::objectIdsByTexture[texturePath].push_back(this->id);
             this->textureVecIndex=Engine::objectIdsByTexture[texturePath].size()-1;
@@ -30,7 +30,8 @@ namespace Prometheus{
             Engine::textureMap[texturePath].count++;
 
         } else {
-            Engine::textureMap.insert(std::make_pair(texturePath, Texture(texturePath, 4, device, physicalDevice, graphicsQueue)));
+            Engine::textureMap.insert(std::make_pair(texturePath, 
+                Texture(texturePath, 4, device, physicalDevice, graphicsQueue, commandPool)));
 
             Engine::objectIdsByTexture[texturePath].push_back(this->id);
             this->textureVecIndex=0;

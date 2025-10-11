@@ -8,7 +8,7 @@
 namespace Prometheus{
 
     void updateVertexIndexBuffer(VkDevice& device, VkPhysicalDevice& physicalDevice, 
-        VkQueue& graphicsQueue);
+        VkQueue& graphicsQueue, VkCommandPool& commandPool);
 
     void recreateInstanceBuffers(VkDevice& device, VkPhysicalDevice& physicalDevice,
         sem_t* jobDoneSem);

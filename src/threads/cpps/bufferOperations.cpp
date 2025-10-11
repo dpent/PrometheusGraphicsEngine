@@ -6,15 +6,15 @@ namespace Prometheus{
 
 
     void updateVertexIndexBuffer(VkDevice& device, VkPhysicalDevice& physicalDevice, 
-        VkQueue& graphicsQueue)
+        VkQueue& graphicsQueue, VkCommandPool& commandPool)
     {
         uint64_t size = BufferManager::remakeVertexIndexVectors(device);
         if( size >=Engine::indexVertexBufferSize)
         {
-            BufferManager::createIndexVertexBuffer(device,physicalDevice,graphicsQueue);
+            BufferManager::createIndexVertexBuffer(device,physicalDevice,graphicsQueue, commandPool);
 
         }else{
-            BufferManager::updateIndexVertexBuffer(device,physicalDevice,graphicsQueue);
+            BufferManager::updateIndexVertexBuffer(device,physicalDevice,graphicsQueue, commandPool);
         }
         Engine::recreateVertexIndexBuffer=false;
 
@@ -38,7 +38,7 @@ namespace Prometheus{
         VkDevice& device, VkPhysicalDevice& physicalDevice){
 
         Engine::commandPoolMutex.lock();
-        BufferManager::recordCommandBuffer(Engine::commandBuffers[Engine::currentFrame], imageIndex,device,
+        BufferManager::recordCommandBuffer(commandBuffer, imageIndex,device,
         physicalDevice);
         Engine::commandPoolMutex.unlock();
     }

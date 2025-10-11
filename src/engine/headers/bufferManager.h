@@ -16,13 +16,17 @@ namespace Prometheus{
     class BufferManager{
     public:
         static void createFrameBuffers(VkDevice& device);
-        static void createCommandPool(VkPhysicalDevice& physicalDevice, VkSurfaceKHR& surface, VkDevice& device);
-        static void createCommandBuffers(VkDevice& device);
+        static void createCommandPool(VkPhysicalDevice& physicalDevice, 
+            VkSurfaceKHR& surface, VkDevice& device, VkCommandPool& commandPool);
+        static void createCommandBuffers(VkDevice& device, std::vector<VkCommandBuffer>& commandBuffers, 
+        VkCommandPool& commandPool);
         static void recordCommandBuffer(VkCommandBuffer& commandBuffer, uint32_t& imageIndex,
             VkDevice& device, VkPhysicalDevice& physicalDevice);
 
-        static void createIndexVertexBuffer(VkDevice& device, VkPhysicalDevice& physicalDevice, VkQueue& graphicsQueue);
-        static void updateIndexVertexBuffer(VkDevice& device, VkPhysicalDevice& physicalDevice, VkQueue& graphicsQueue);
+        static void createIndexVertexBuffer(VkDevice& device, VkPhysicalDevice& physicalDevice, 
+            VkQueue& graphicsQueue, VkCommandPool& commandPool);
+        static void updateIndexVertexBuffer(VkDevice& device, VkPhysicalDevice& physicalDevice, 
+            VkQueue& graphicsQueue, VkCommandPool& commandPool);
 
         static uint64_t remakeVertexIndexVectors(VkDevice& device);
 
@@ -48,13 +52,15 @@ namespace Prometheus{
             VkPhysicalDevice& physicalDevice
         );
 
-        static void copyBuffer(VkBuffer& srcBuffer, VkBuffer& dstBuffer, VkDeviceSize size, VkDevice& device, VkQueue& graphicsQueue);
+        static void copyBuffer(VkBuffer& srcBuffer, VkBuffer& dstBuffer, VkDeviceSize size, 
+            VkDevice& device, VkQueue& graphicsQueue, VkCommandPool& commandPool);
 
         static void createUniformBuffers(VkDevice& device, VkPhysicalDevice& physicalDevice);
         static void updateUniformBuffer(uint32_t currentImage);
 
-        static VkCommandBuffer beginSingleTimeCommands(VkDevice& device);
-        static void endSingleTimeCommands(VkCommandBuffer& commandBuffer, VkDevice& device, VkQueue& graphicsQueue);
+        static VkCommandBuffer beginSingleTimeCommands(VkDevice& device, VkCommandPool& commandPool);
+        static void endSingleTimeCommands(VkCommandBuffer& commandBuffer, VkDevice& device, 
+            VkQueue& graphicsQueue,VkCommandPool& commandPool);
 
         static void createInstanceBuffers(VkDevice& device, VkPhysicalDevice& physicalDevice);
         static void updateInstanceBuffer(uint32_t currentImage);

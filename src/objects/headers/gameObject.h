@@ -19,7 +19,9 @@ namespace Prometheus{
         std::string meshPath;
         glm::mat4 modelMatrix;
 
-        GameObject(std::string texturePath,std::string modelPath,int req_comp, VkDevice& device, VkPhysicalDevice& physicalDevice,VkQueue& graphicsQueue);
+        GameObject(std::string texturePath,std::string modelPath,int req_comp, 
+            VkDevice& device, VkPhysicalDevice& physicalDevice,VkQueue& graphicsQueue,
+            VkCommandPool& commandPool);
         GameObject();
         virtual ~GameObject();
         void terminate(VkDevice& device);

@@ -126,7 +126,6 @@ namespace Prometheus{
         static std::list<VkDescriptorPool> descriptorDeleteQueue;
         static std::list<int> framesSinceDescriptorQueuedForDeletion;
 
-        static glm::mat4 model;
         static glm::mat4 view;
         static glm::mat4 proj; //Camera movement is based on these
 
@@ -174,7 +173,8 @@ namespace Prometheus{
         static void frameBufferResizeCallback(GLFWwindow* window, int width, int height);
         static void updateGameObjects();
         static VkSampleCountFlagBits getMaxUsableSampleCount(VkPhysicalDevice& physicalDevice);
-        static void initThreadPool(uint16_t poolSize);
+        static void initThreadPool(uint16_t poolSize, VkDevice& device, VkPhysicalDevice& physicalDevice
+        , VkSurfaceKHR& surface);
         static std::vector<std::queue<Job*>> batchJobs();
         static void createInstanceBufferUpdateJob();
 

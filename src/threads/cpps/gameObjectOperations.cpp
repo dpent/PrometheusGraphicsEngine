@@ -10,11 +10,12 @@ using namespace Prometheus;
 namespace Prometheus{
 
     void createObject(std::string texturePath, std::string modelPath, 
-        VkDevice &device, VkPhysicalDevice &physicalDevice, VkQueue &graphicsQueue
+        VkDevice &device, VkPhysicalDevice &physicalDevice, VkQueue &graphicsQueue,
+        VkCommandPool& commandPool
     ){
 
         new GameObject(texturePath,modelPath,STBI_rgb_alpha,
-        device,physicalDevice,graphicsQueue);
+        device,physicalDevice,graphicsQueue, commandPool);
     }
 
     void deleteObject(uint64_t id,VkDevice& device){

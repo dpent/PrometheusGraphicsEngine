@@ -11,9 +11,11 @@ using namespace Prometheus;
 
 namespace Prometheus{
 
-    WorkerThread::WorkerThread(){
+    WorkerThread::WorkerThread(VkDevice& device, VkPhysicalDevice& physicalDevice, VkSurfaceKHR& surface){
         this->thread = std::thread(&WorkerThread::workerLoop, this);
         id=thread.get_id();
+
+        createPoolAndBuffers(device,physicalDevice,surface);
     }
 
     void WorkerThread::workerLoop(){
@@ -65,7 +67,8 @@ namespace Prometheus{
                     std::get<std::string>(job->data[1]), 
                     *std::get<VkDevice*>(job->data[2]), 
                     *std::get<VkPhysicalDevice*>(job->data[3]), 
-                    *std::get<VkQueue*>(job->data[4])
+                    *std::get<VkQueue*>(job->data[4]),
+                    commandPool
                 );
                 break;
             
@@ -116,7 +119,8 @@ namespace Prometheus{
             case UPDATE_VERTEX_INDEX_BUFFER:
                 updateVertexIndexBuffer(*std::get<VkDevice*>(job->data[0]),
                     *std::get<VkPhysicalDevice*>(job->data[1]), 
-                    *std::get<VkQueue*>(job->data[2])
+                    *std::get<VkQueue*>(job->data[2]),
+                    commandPool
                 );
                 break;
 
@@ -145,10 +149,14 @@ namespace Prometheus{
 
         Engine::threadsAvailable.add(1);
 
-        //std::cout<<"=== Completed the job === "<<"Job code was "<<job->opId<<std::endl;
     }
 
     void WorkerThread::detach(){
         thread.detach();
+    }
+
+    void WorkerThread::createPoolAndBuffers(VkDevice& device, VkPhysicalDevice& physicalDevice, VkSurfaceKHR& surface){
+        BufferManager::createCommandPool(physicalDevice, surface,device,commandPool);
+        BufferManager::createCommandBuffers(device, commandBuffers, commandPool);
     }
 }

@@ -9,7 +9,7 @@ namespace Prometheus{
     class TextureManager{
     public:
         static uint32_t createTextureImage(std::string filename, int req_comp, VkDevice& device, VkPhysicalDevice& physicalDevice,
-        VkImage& image, VkDeviceMemory& imageMemory, VkQueue& graphicsQueue);
+        VkImage& image, VkDeviceMemory& imageMemory, VkQueue& graphicsQueue, VkCommandPool& commandPool);
 
         static void createImage(uint32_t width, uint32_t height, VkFormat format, 
             VkImageTiling tiling, VkImageUsageFlags usage, 
@@ -22,10 +22,10 @@ namespace Prometheus{
         );
         
         static void transitionImageLayout(VkImage& image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout,
-        VkDevice& device, VkQueue& graphicsQueue, uint32_t mipLevels);
+        VkDevice& device, VkQueue& graphicsQueue, uint32_t mipLevels, VkCommandPool& commandPool);
 
         static void copyBufferToImage(VkBuffer& buffer, VkImage& image, const uint32_t& width, const uint32_t& height,
-        VkDevice& device, VkQueue& graphicsQueue);
+        VkDevice& device, VkQueue& graphicsQueue, VkCommandPool& commandPool);
 
         static void createTextureImageView(VkDevice& device, VkImage& image, VkImageView& imageView, uint32_t mipLevels);
 
@@ -34,7 +34,8 @@ namespace Prometheus{
         static void generateMipMaps(VkImage& image, int32_t& texWidth, 
             int32_t& texHeight, uint32_t& mipLevels, 
             VkDevice& device, VkQueue& graphicsQueue,
-            VkFormat imageFormat, VkPhysicalDevice& physicalDevice
+            VkFormat imageFormat, VkPhysicalDevice& physicalDevice,
+            VkCommandPool& commandPool
         );
     };
 
@@ -47,7 +48,8 @@ namespace Prometheus{
         uint64_t descriptorIndex;
         uint32_t mipLevels;
 
-        Texture(std::string filepath,int req_comp, VkDevice& device, VkPhysicalDevice& physicalDevice, VkQueue& graphicsQueue);
+        Texture(std::string filepath,int req_comp, VkDevice& device, VkPhysicalDevice& physicalDevice, 
+            VkQueue& graphicsQueue, VkCommandPool& commandPool);
         Texture();
         void terminate(VkDevice& device);
     };

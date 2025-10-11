@@ -1,13 +1,14 @@
 #include "../headers/engine.h"
 #include "../headers/bufferManager.h"
 #include "../headers/swapChainManager.h"
+#include <vulkan/vulkan_core.h>
 
 
 using namespace Prometheus;
 
 namespace Prometheus{
     uint32_t TextureManager::createTextureImage(std::string filename, int req_comp, VkDevice& device, VkPhysicalDevice& physicalDevice, 
-        VkImage& image, VkDeviceMemory& imageMemory, VkQueue& graphicsQueue){
+        VkImage& image, VkDeviceMemory& imageMemory, VkQueue& graphicsQueue, VkCommandPool& commandPool){
         int texWidth, texHeight, texChannels;
         stbi_uc* pixels = stbi_load(filename.c_str(), &texWidth, &texHeight, &texChannels, req_comp);
         VkDeviceSize imageSize = texWidth * texHeight * 4;
@@ -56,11 +57,13 @@ namespace Prometheus{
         );
 
         transitionImageLayout(image, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED, 
-            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, device, graphicsQueue, mipLevels);
+            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, device, graphicsQueue, mipLevels, commandPool);
 
-        copyBufferToImage(stagingBuffer, image, static_cast<uint32_t>(texWidth), static_cast<uint32_t>(texHeight),device,graphicsQueue);
+        copyBufferToImage(stagingBuffer, image, static_cast<uint32_t>(texWidth), static_cast<uint32_t>(texHeight),
+            device,graphicsQueue, commandPool);
 
-        TextureManager::generateMipMaps(image, texWidth, texHeight, mipLevels,device,graphicsQueue,VK_FORMAT_R8G8B8A8_SRGB,physicalDevice);
+        TextureManager::generateMipMaps(image, texWidth, texHeight, mipLevels,device,graphicsQueue,
+            VK_FORMAT_R8G8B8A8_SRGB,physicalDevice, commandPool);
 
         vkDestroyBuffer(device, stagingBuffer, nullptr);
         vkFreeMemory(device, stagingBufferMemory, nullptr);
@@ -112,9 +115,9 @@ namespace Prometheus{
     }
 
     void TextureManager::transitionImageLayout(VkImage& image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout,
-        VkDevice& device, VkQueue& graphicsQueue, uint32_t mipLevels) 
+        VkDevice& device, VkQueue& graphicsQueue, uint32_t mipLevels, VkCommandPool& commandPool) 
     {
-        VkCommandBuffer commandBuffer = BufferManager::beginSingleTimeCommands(device);
+        VkCommandBuffer commandBuffer = BufferManager::beginSingleTimeCommands(device, commandPool);
 
         VkImageMemoryBarrier barrier{};
         barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
@@ -149,8 +152,6 @@ namespace Prometheus{
         } else {
             throw std::invalid_argument("unsupported layout transition!");
         }
-        
-        Engine::commandPoolMutex.lock();
 
         vkCmdPipelineBarrier(
             commandBuffer,
@@ -161,14 +162,12 @@ namespace Prometheus{
             1, &barrier
         );
 
-        Engine::commandPoolMutex.unlock();
-
-        BufferManager::endSingleTimeCommands(commandBuffer, device, graphicsQueue);
+        BufferManager::endSingleTimeCommands(commandBuffer, device, graphicsQueue,commandPool);
     }
 
     void TextureManager::copyBufferToImage(VkBuffer& buffer, VkImage& image, const uint32_t& width, const uint32_t& height,
-        VkDevice& device, VkQueue& graphicsQueue){
-        VkCommandBuffer commandBuffer = BufferManager::beginSingleTimeCommands(device);
+        VkDevice& device, VkQueue& graphicsQueue, VkCommandPool& commandPool){
+        VkCommandBuffer commandBuffer = BufferManager::beginSingleTimeCommands(device, commandPool);
         
         VkBufferImageCopy region{};
         region.bufferOffset = 0;
@@ -196,7 +195,7 @@ namespace Prometheus{
             &region
         );
 
-        BufferManager::endSingleTimeCommands(commandBuffer,device,graphicsQueue);
+        BufferManager::endSingleTimeCommands(commandBuffer,device,graphicsQueue, commandPool);
     }
 
     void TextureManager::createTextureImageView(VkDevice& device, VkImage& image, VkImageView& imageView, uint32_t mipLevels){
@@ -240,10 +239,11 @@ namespace Prometheus{
         }
     }
 
-    Texture::Texture(std::string filpath,int req_comp, VkDevice& device, VkPhysicalDevice& physicalDevice, VkQueue& graphicsQueue){
+    Texture::Texture(std::string filpath,int req_comp, VkDevice& device, VkPhysicalDevice& physicalDevice, 
+        VkQueue& graphicsQueue, VkCommandPool& commandPool){
 
         mipLevels=TextureManager::createTextureImage(filpath, req_comp, device, physicalDevice,
-        this->textureImage,this->textureImageMemory,graphicsQueue);
+        this->textureImage,this->textureImageMemory,graphicsQueue, commandPool);
 
         TextureManager::createTextureImageView(device,this->textureImage,this->textureImageView, mipLevels);
 
@@ -266,7 +266,8 @@ namespace Prometheus{
     void TextureManager::generateMipMaps(VkImage& image, int32_t& texWidth, 
         int32_t& texHeight, uint32_t& mipLevels, 
         VkDevice& device, VkQueue& graphicsQueue,
-        VkFormat imageFormat, VkPhysicalDevice& physicalDevice){
+        VkFormat imageFormat, VkPhysicalDevice& physicalDevice,
+        VkCommandPool& commandPool){
 
         VkFormatProperties formatProperties;
         vkGetPhysicalDeviceFormatProperties(physicalDevice, imageFormat, &formatProperties);
@@ -275,7 +276,7 @@ namespace Prometheus{
             throw std::runtime_error("texture image format does not support linear blitting!");
         }
 
-        VkCommandBuffer commandBuffer = BufferManager::beginSingleTimeCommands(device);
+        VkCommandBuffer commandBuffer = BufferManager::beginSingleTimeCommands(device, commandPool);
 
         VkImageMemoryBarrier barrier{};
         barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
@@ -289,8 +290,6 @@ namespace Prometheus{
 
         int32_t mipWidth = texWidth;
         int32_t mipHeight = texHeight;
-
-        Engine::commandPoolMutex.lock();
 
         for (uint32_t i = 1; i < mipLevels; i++) {
             barrier.subresourceRange.baseMipLevel = i - 1;
@@ -357,8 +356,6 @@ namespace Prometheus{
             1, &barrier
         );
 
-        Engine::commandPoolMutex.unlock();
-
-        BufferManager::endSingleTimeCommands(commandBuffer,device,graphicsQueue);
+        BufferManager::endSingleTimeCommands(commandBuffer,device,graphicsQueue, commandPool);
     }
 }
