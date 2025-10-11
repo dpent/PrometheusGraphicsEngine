@@ -13,5 +13,5 @@ namespace Prometheus{
     void recreateInstanceBuffers(VkDevice& device, VkPhysicalDevice& physicalDevice,
         sem_t* jobDoneSem);
 
-    void updateInstanceBuffers();
+    void updateInstanceBuffer(uint32_t currentImage);
 }

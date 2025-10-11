@@ -107,9 +107,9 @@ namespace Prometheus{
         vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, Engine::graphicsPipeline);
 
         sem_wait(&Engine::instanceBufferReady);
-
         Engine::gameObjectMutex.lock();
         if(Engine::gameObjectMap.size()!=0 && Engine::instanceBufferMemories[Engine::currentFrame]!=VK_NULL_HANDLE){
+
             BufferManager::updateInstanceBuffer(Engine::currentFrame);
 
             VkBuffer vertexBuffers[] = {Engine::indexVertexBuffer,Engine::instanceBuffers[Engine::currentFrame]};

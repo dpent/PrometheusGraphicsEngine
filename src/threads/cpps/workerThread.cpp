@@ -121,6 +121,7 @@ namespace Prometheus{
                 break;
 
             case UPDATE_INSTANCE_BUFFER:
+                updateInstanceBuffer(std::get<uint64_t>(job->data[0]));
                 break;
                 
             case MAKE_INSTANCE_BUFFER:

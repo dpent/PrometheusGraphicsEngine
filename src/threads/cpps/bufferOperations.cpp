@@ -29,4 +29,9 @@ namespace Prometheus{
         Engine::recreateInstanceBuffer=false;
         sem_post(jobDoneSem);
     }
+
+    void updateInstanceBuffer(uint32_t currentImage){
+
+        BufferManager::updateInstanceBuffer(currentImage);
+    }
 }

@@ -206,12 +206,12 @@ namespace Prometheus{
     }
 
     void Engine::mainLoop() {
-        //auto frameZeroTime = std::chrono::high_resolution_clock::now();
+        auto frameZeroTime = std::chrono::high_resolution_clock::now();
         while (!glfwWindowShouldClose(Engine::window)) {
             glfwPollEvents();
             drawFrame();
 
-            /*for(int i=0; i<40; i++){
+            for(int i=0; i<40; i++){
                 GameObject::createObjectThreaded("../textures/statue.jpg", 
                     "../models/stanford_sphere.obj", 
                     device, 
@@ -232,20 +232,20 @@ namespace Prometheus{
                     physicalDevice, 
                     graphicsQueue
                 );
-            }*/
+            }
 
-            if(Engine::frameCount%1==0 && Engine::frameCount>0){
-                //std::cout<<"====== FRAME "<<Engine::frameCount<<" ======"<<std::endl;
+            if(Engine::frameCount%1300==0 && Engine::frameCount>0){
+                std::cout<<"====== FRAME "<<Engine::frameCount<<" ======"<<std::endl;
                 Engine::gameObjectMutex.lock();
-                //std::cout<<Engine::gameObjectMap.size()<<" objects loaded"<<std::endl;
+                std::cout<<Engine::gameObjectMap.size()<<" objects loaded"<<std::endl;
 
-                /*auto finalTime = std::chrono::high_resolution_clock::now();
+                auto finalTime = std::chrono::high_resolution_clock::now();
                 std::chrono::duration<double> deltaSec = finalTime - frameZeroTime;
                 std::chrono::duration<double, std::milli> deltaMs = finalTime - frameZeroTime;
 
                 std::cout << "Delta time: " << deltaSec.count() << " seconds\n";
-                std::cout << "Delta time: " << deltaMs.count() << " milliseconds\n";*/
-                if(Engine::gameObjectMap.size()>3){
+                std::cout << "Delta time: " << deltaMs.count() << " milliseconds\n";
+                /*if(Engine::gameObjectMap.size()>3){
 
                     int count=0;
                     for (const auto& pair : Engine::gameObjectMap) {
@@ -282,7 +282,7 @@ namespace Prometheus{
                         );
                           
                     }
-                }
+                }*/
             }
             
             createUpdateTextureQueueJob();
@@ -474,22 +474,9 @@ namespace Prometheus{
 
             if(Engine::recreateInstanceBuffer){
 
-                Engine::queueMutex.lock();
-
-                if(Engine::threadsAvailable.getValue()!=0 && Engine::jobQueue.size()<Engine::threadsAvailable.getValue()){
-                    
-                    createInstanceBufferRemakeJob();
-                    Engine::queueMutex.unlock();
-
-                }else{
-                    Engine::queueMutex.unlock();
-                    BufferManager::recreateInstanceBuffers(this->device,this->physicalDevice);
-
-                }
-
-                Engine::recreateInstanceBuffer=false;
+                BufferManager::recreateInstanceBuffers(this->device,this->physicalDevice);
+                
             }else{
-
                 sem_post(&Engine::instanceBufferReady);
             }
             
@@ -748,6 +735,15 @@ namespace Prometheus{
         j.data.emplace_back(std::in_place_type<VkDevice*>, &device);
         j.data.emplace_back(std::in_place_type<VkPhysicalDevice*>, &physicalDevice);
         j.data.emplace_back(std::in_place_type<sem_t*>,&Engine::instanceBufferReady);
+
+        Engine::jobQueue.push(j);
+
+        sem_post(&Engine::workInQueueSemaphore);
+    }
+
+    void Engine::createInstanceBufferUpdateJob(){
+        Job j = Job(UPDATE_INSTANCE_BUFFER);
+        j.data.emplace_back((uint64_t)&Engine::currentFrame);
 
         Engine::jobQueue.push(j);
 

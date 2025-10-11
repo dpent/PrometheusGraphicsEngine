@@ -173,6 +173,7 @@ namespace Prometheus{
         static VkSampleCountFlagBits getMaxUsableSampleCount(VkPhysicalDevice& physicalDevice);
         static void initThreadPool(uint16_t poolSize);
         static std::vector<std::queue<Job*>> batchJobs();
+        static void createInstanceBufferUpdateJob();
 
     private:
         //Window variables
