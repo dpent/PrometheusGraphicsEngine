@@ -4,6 +4,7 @@
 #include "../headers/modelOperations.h"
 #include "../headers/bufferOperations.h"
 #include "../../engine/headers/engine.h"
+#include <vulkan/vulkan_core.h>
 
 
 using namespace Prometheus;
@@ -115,8 +116,7 @@ namespace Prometheus{
             case UPDATE_VERTEX_INDEX_BUFFER:
                 updateVertexIndexBuffer(*std::get<VkDevice*>(job->data[0]),
                     *std::get<VkPhysicalDevice*>(job->data[1]), 
-                    *std::get<VkQueue*>(job->data[2]),
-                    std::get<sem_t*>(job->data[3])
+                    *std::get<VkQueue*>(job->data[2])
                 );
                 break;
 
@@ -128,6 +128,14 @@ namespace Prometheus{
                 recreateInstanceBuffers(*std::get<VkDevice*>(job->data[0]),
                     *std::get<VkPhysicalDevice*>(job->data[1]),
                     std::get<sem_t*>(job->data[2])
+                );
+                break;
+            
+            case RECORD_COMMAND_BUFFER:
+                recordCommandBuffer(*std::get<VkCommandBuffer*>(job->data[0]),
+                    std::get<uint32_t>(job->data[1]),
+                    *std::get<VkDevice*>(job->data[2]),
+                    *std::get<VkPhysicalDevice*>(job->data[3])
                 );
                 break;
 

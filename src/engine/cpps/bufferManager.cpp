@@ -106,23 +106,6 @@ namespace Prometheus{
 
         vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, Engine::graphicsPipeline);
 
-        sem_wait(&Engine::instanceBufferReady);
-        Engine::gameObjectMutex.lock();
-        if(Engine::gameObjectMap.size()!=0 ){
-            
-            Engine::gameObjectMutex.unlock();
-
-            BufferManager::updateInstanceBuffer(Engine::currentFrame);
-
-            VkBuffer vertexBuffers[] = {Engine::indexVertexBuffer,Engine::instanceBuffers[Engine::currentFrame]};
-            VkDeviceSize offsets[] = {0,0};
-
-            vkCmdBindVertexBuffers(commandBuffer, 0, 2, vertexBuffers, offsets);
-            vkCmdBindIndexBuffer(commandBuffer, Engine::indexVertexBuffer, Engine::indexOffset, VK_INDEX_TYPE_UINT32);
-        }else{
-            Engine::gameObjectMutex.unlock();
-        }
-
         VkViewport viewport{}; //Viewport and Scissor was set to dynamic in createGraphicsPipeline (graphicsPipeline.cpp)
         viewport.x = 0.0f;
         viewport.y = 0.0f;
@@ -164,6 +147,20 @@ namespace Prometheus{
             cameraPushConstants
         );
 
+        sem_wait(&Engine::descriptorsReadySemaphore);
+        sem_wait(&Engine::instanceBufferReady);
+
+        if(Engine::gameObjectMap.size()!=0 ){
+
+            BufferManager::updateInstanceBuffer(Engine::currentFrame);
+
+            VkBuffer vertexBuffers[] = {Engine::indexVertexBuffer,Engine::instanceBuffers[Engine::currentFrame]};
+            VkDeviceSize offsets[] = {0,0};
+
+            vkCmdBindVertexBuffers(commandBuffer, 0, 2, vertexBuffers, offsets);
+            vkCmdBindIndexBuffer(commandBuffer, Engine::indexVertexBuffer, Engine::indexOffset, VK_INDEX_TYPE_UINT32);
+        }
+
         uint32_t instanceCount=0;
         for(uint32_t i=0; i<Engine::meshBatches.size(); i++){
 
@@ -188,6 +185,8 @@ namespace Prometheus{
         }
 
         delete cameraPushConstants;
+
+        sem_post(&Engine::commandBufferRecorded);
     }
 
     void BufferManager::createIndexVertexBuffer(VkDevice& device, VkPhysicalDevice& physicalDevice, VkQueue& graphicsQueue){
@@ -226,7 +225,7 @@ namespace Prometheus{
     }
 
     void BufferManager::updateIndexVertexBuffer(VkDevice& device, VkPhysicalDevice& physicalDevice, VkQueue& graphicsQueue){
-        
+
         VkDeviceSize bufferSize = (sizeof(Engine::vertices[0]) * Engine::vertices.size())+(sizeof(Engine::indices[0]) * Engine::indices.size());
 
         VkBuffer stagingBuffer;

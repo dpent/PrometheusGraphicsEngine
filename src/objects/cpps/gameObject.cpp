@@ -96,9 +96,9 @@ namespace Prometheus{
             && Engine::meshMap[this->meshPath].vertexOffset==3200171710
             && Engine::meshMap[this->meshPath].vertices.size()==0)
         {
-            //std::cout<<Engine::meshMap[this->meshPath].toString()<<std::endl;
             return;
         }
+        //std::cout<<Engine::meshMap[this->meshPath].toString()<<std::endl;
         vkCmdDrawIndexed(commandBuffer, Engine::meshMap[this->meshPath].indices.size(), 
             instanceCount, Engine::meshMap[this->meshPath].indexOffset, Engine::meshMap[this->meshPath].vertexOffset, firstInstance);
     }

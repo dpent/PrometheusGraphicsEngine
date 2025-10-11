@@ -6,10 +6,9 @@ namespace Prometheus{
 
 
     void updateVertexIndexBuffer(VkDevice& device, VkPhysicalDevice& physicalDevice, 
-        VkQueue& graphicsQueue,sem_t* jobDoneSem)
+        VkQueue& graphicsQueue)
     {
         uint64_t size = BufferManager::remakeVertexIndexVectors(device);
-
         if( size >=Engine::indexVertexBufferSize)
         {
             BufferManager::createIndexVertexBuffer(device,physicalDevice,graphicsQueue);
@@ -19,7 +18,7 @@ namespace Prometheus{
         }
         Engine::recreateVertexIndexBuffer=false;
 
-        sem_post(jobDoneSem);
+        sem_post(&Engine::verIndBufferComplete);
     }
 
     void recreateInstanceBuffers(VkDevice& device, VkPhysicalDevice& physicalDevice,sem_t* jobDoneSem){
@@ -33,5 +32,14 @@ namespace Prometheus{
     void updateInstanceBuffer(uint32_t currentImage){
 
         BufferManager::updateInstanceBuffer(currentImage);
+    }
+
+    void recordCommandBuffer(VkCommandBuffer& commandBuffer, uint32_t& imageIndex,
+        VkDevice& device, VkPhysicalDevice& physicalDevice){
+
+        Engine::commandPoolMutex.lock();
+        BufferManager::recordCommandBuffer(Engine::commandBuffers[Engine::currentFrame], imageIndex,device,
+        physicalDevice);
+        Engine::commandPoolMutex.unlock();
     }
 }

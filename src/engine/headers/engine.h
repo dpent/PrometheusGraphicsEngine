@@ -88,6 +88,7 @@ namespace Prometheus{
         static sem_t safeToMakeInstanceBuffer;
         static sem_t verIndBufferComplete;
         static sem_t instanceBufferReady;
+        static sem_t commandBufferRecorded;
         static std::mutex gameObjectMutex;
         static std::mutex canDeleteObjectMutex;
         static std::mutex textureMutex;
@@ -166,6 +167,8 @@ namespace Prometheus{
 
         static SafeUint16_t threadsAvailable;
 
+        static bool wasPlacedInThread;
+
         void run();
         static std::vector<char> readFile(const std::string& filename);
         static void frameBufferResizeCallback(GLFWwindow* window, int width, int height);
@@ -205,5 +208,12 @@ namespace Prometheus{
         void createUpdateObjDescrJob();
         void createVertexIndexBufferUpdateJob();
         void createInstanceBufferRemakeJob();
+        void updateVertexIndexBuffer();
+        void updateDescriptors();
+        void checkInstanceBufferForUpdates();
+        void createRecordCommandBufferJob(uint32_t imageIndex);
+        void handleCommandBufferRecording(uint32_t imageIndex);
+
+        void objectLoadingTest(std::chrono::_V2::system_clock::time_point frameZeroTime);
     };
 }

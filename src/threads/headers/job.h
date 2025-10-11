@@ -1,5 +1,6 @@
 #pragma once
 
+#include <vulkan/vulkan_core.h>
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 #include <vector>
@@ -43,7 +44,9 @@ namespace Prometheus{
         sem_t*,
         std::unordered_map<std::string,std::unordered_map<uint64_t,GameObject*>>*,
         std::unordered_map<std::string,MeshBatch>*, 
-        Latch*>> data;
+        Latch*,
+        uint32_t,
+        VkCommandBuffer*>> data;
 
         Job(operationId opId);
     };
