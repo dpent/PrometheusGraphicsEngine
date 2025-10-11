@@ -212,12 +212,13 @@ namespace Prometheus{
     }
 
     void Engine::mainLoop() {
-        auto frameZeroTime = std::chrono::high_resolution_clock::now();
+
+        //auto frameZeroTime = std::chrono::high_resolution_clock::now();
         while (!glfwWindowShouldClose(Engine::window)) {
             glfwPollEvents();
             drawFrame();
 
-            objectLoadingTest(frameZeroTime);
+            //objectLoadingTest(frameZeroTime);
             
             createUpdateTextureQueueJob();
             createUpdateDescriptorQueueJob();
@@ -238,20 +239,25 @@ namespace Prometheus{
 
     void Engine::cleanup() {
 
-        for(auto& [id, objptr]:Engine::gameObjectMap){
-            delete objptr;
-        }
+        killThreads();
 
-        for (const auto& pair : Engine::threadPool) {
-            pair.second->alive=false;
-            sem_post(&(Engine::workInQueueSemaphore));
-            if (pair.second->thread.joinable()) {
-                pair.second->thread.join();
+        Engine::meshBatches.clear();
+
+        for(auto& [id, object]:Engine::gameObjectMap){
+
+            if (object != nullptr) {
+                object->terminate(device);
+                delete object;
             }
-            delete pair.second;
         }
 
-        Engine::threadPool.clear();
+        for (auto& [path, texVec] : Engine::texturesQueuedForDeletion) {
+            for (int i = static_cast<int>(texVec.size()) - 1; i >= 0; --i) {
+
+                auto& tex = texVec[i];
+                tex.terminate(device);
+            }
+        }
 
         SwapChainManager::cleanupSwapChain(device);
 
@@ -770,6 +776,48 @@ namespace Prometheus{
 
             std::cout << "Delta time: " << deltaSec.count() << " seconds\n";
             std::cout << "Delta time: " << deltaMs.count() << " milliseconds\n";
+        }
+    }
+
+    void Engine::killThreads(){
+
+        Engine::queueMutex.lock();
+
+        while(!Engine::jobQueue.empty()){
+            Engine::jobQueue.pop();
+        }
+
+        while(!Engine::deferredJobQueue.empty()){
+            Engine::deferredJobQueue.pop();
+        }
+
+        for(size_t i=0; i<Engine::threadPool.size(); i++){
+            Job j = Job(PREPARE_FOR_JOIN);
+            j.data.emplace_back(std::in_place_type<VkDevice*>, &device);
+
+            Engine::jobQueue.push(j);
+        }
+        
+        Engine::queueMutex.unlock();
+
+        for (const auto& pair : Engine::threadPool) {
+            pair.second->alive = false;
+        }
+        
+        for (size_t i=0; i<Engine::threadPool.size(); i++) {
+            sem_post(&(Engine::workInQueueSemaphore));
+        }
+        
+        int j=0;
+        for (const auto& pair : Engine::threadPool) {
+            if (pair.second->thread.joinable()) {
+                j++;
+                pair.second->thread.join();
+            }
+        }
+        
+        for (const auto& pair : Engine::threadPool) {
+            delete pair.second;
         }
     }
 }

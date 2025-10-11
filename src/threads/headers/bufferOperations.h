@@ -1,5 +1,6 @@
 #pragma once
 
+#include <vulkan/vulkan_core.h>
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 #include "../../engine/headers/bufferManager.h"
@@ -17,4 +18,6 @@ namespace Prometheus{
 
     void recordCommandBuffer(VkCommandBuffer& commandBuffer, uint32_t& imageIndex,
         VkDevice& device, VkPhysicalDevice& physicalDevice);
+    
+    void cleanup(VkDevice& device, VkCommandPool& commandPool);
 }

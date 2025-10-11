@@ -42,4 +42,9 @@ namespace Prometheus{
         physicalDevice);
         Engine::commandPoolMutex.unlock();
     }
+
+    void cleanup(VkDevice& device, VkCommandPool& commandPool){
+
+        vkDestroyCommandPool(device, commandPool, nullptr);
+    }
 }

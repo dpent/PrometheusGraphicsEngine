@@ -25,7 +25,7 @@ namespace Prometheus{
             if(!(jobs.empty())){
                 jobsMutex.lock();
 
-                Job job = jobs.front();
+                Job job = std::move(jobs.front());
                 jobs.pop();
 
                 jobsMutex.unlock();
@@ -39,11 +39,9 @@ namespace Prometheus{
 
                 Engine::threadsAvailable.add(-1);
 
-                jobs.push(Engine::jobQueue.front());
+                jobs.push(std::move(Engine::jobQueue.front()));
                 
-                //std::cout<<"Got a "<<jobs.front().opId<<" job."<<std::endl;
                 Engine::jobQueue.pop();
-                //std::cout<<Engine::jobQueue.size()<<" More jobs in queue."<<std::endl;
 
                 Engine::queueMutex.unlock();
                 jobsMutex.unlock();
@@ -54,6 +52,11 @@ namespace Prometheus{
         while(!jobs.empty()){
 
             jobsMutex.lock();
+
+            if(jobs.front().opId == PREPARE_FOR_JOIN){
+                doWork(&jobs.front());
+            }
+
             jobs.pop();
             jobsMutex.unlock();
         }
@@ -143,6 +146,15 @@ namespace Prometheus{
                 );
                 break;
 
+            case DUMMY_JOB:
+                std::cout<<"Dummy job executed at thread: "<<id<<std::endl;
+                break;
+
+            case PREPARE_FOR_JOIN:
+                cleanup(*std::get<VkDevice*>(job->data[0]),
+                    commandPool
+                );
+                break;
             default:
                 break;
         }

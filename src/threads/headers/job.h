@@ -28,7 +28,9 @@ namespace Prometheus{
         RECREATE_DESCRIPTORS = 11,
         UPDATE_GAME_OBJECTS = 12,
         UPDATE_OBJECTS_AND_DESCRIPTORS = 13,
-        RECORD_COMMAND_BUFFER = 14
+        RECORD_COMMAND_BUFFER = 14,
+        DUMMY_JOB = 15,
+        PREPARE_FOR_JOIN = 16
     };
 
     struct Job{

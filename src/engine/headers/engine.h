@@ -213,6 +213,7 @@ namespace Prometheus{
         void checkInstanceBufferForUpdates();
         void createRecordCommandBufferJob(uint32_t imageIndex);
         void handleCommandBufferRecording(uint32_t imageIndex);
+        void killThreads();
 
         void objectLoadingTest(std::chrono::_V2::system_clock::time_point frameZeroTime);
     };
