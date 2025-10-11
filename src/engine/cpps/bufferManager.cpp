@@ -108,7 +108,9 @@ namespace Prometheus{
 
         sem_wait(&Engine::instanceBufferReady);
         Engine::gameObjectMutex.lock();
-        if(Engine::gameObjectMap.size()!=0 && Engine::instanceBufferMemories[Engine::currentFrame]!=VK_NULL_HANDLE){
+        if(Engine::gameObjectMap.size()!=0 ){
+            
+            Engine::gameObjectMutex.unlock();
 
             BufferManager::updateInstanceBuffer(Engine::currentFrame);
 
@@ -117,8 +119,9 @@ namespace Prometheus{
 
             vkCmdBindVertexBuffers(commandBuffer, 0, 2, vertexBuffers, offsets);
             vkCmdBindIndexBuffer(commandBuffer, Engine::indexVertexBuffer, Engine::indexOffset, VK_INDEX_TYPE_UINT32);
+        }else{
+            Engine::gameObjectMutex.unlock();
         }
-        Engine::gameObjectMutex.unlock();
 
         VkViewport viewport{}; //Viewport and Scissor was set to dynamic in createGraphicsPipeline (graphicsPipeline.cpp)
         viewport.x = 0.0f;
@@ -188,19 +191,6 @@ namespace Prometheus{
     }
 
     void BufferManager::createIndexVertexBuffer(VkDevice& device, VkPhysicalDevice& physicalDevice, VkQueue& graphicsQueue){
-
-        Engine::graphicsQueueMutex.lock();
-
-        vkDeviceWaitIdle(device);
-
-        Engine::graphicsQueueMutex.unlock();
-
-        if (Engine::indexVertexBuffer != VK_NULL_HANDLE) {
-            vkDestroyBuffer(device, Engine::indexVertexBuffer, nullptr);
-        }
-        if (Engine::indexVertexBufferMemory != VK_NULL_HANDLE) {
-            vkFreeMemory(device, Engine::indexVertexBufferMemory, nullptr);
-        }
 
         VkDeviceSize bufferSize = (sizeof(Engine::vertices[0]) * Engine::vertices.size())+(sizeof(Engine::indices[0]) * Engine::indices.size());
         bufferSize = bufferSize<<1;
@@ -534,7 +524,19 @@ namespace Prometheus{
             Engine::indices.insert(Engine::indices.end(),mesh.indices.begin(),mesh.indices.end());
         }
 
-        return (sizeof(Engine::vertices[0]) * Engine::vertices.size())+(sizeof(Engine::indices[0]) * Engine::indices.size());
+        uint64_t size = (sizeof(Engine::vertices[0]) * Engine::vertices.size())+(sizeof(Engine::indices[0]) * Engine::indices.size());
+        
+        if( size >=Engine::indexVertexBufferSize){
+            
+            if (Engine::indexVertexBuffer != VK_NULL_HANDLE) {
+                vkDestroyBuffer(device, Engine::indexVertexBuffer, nullptr);
+            }
+            if (Engine::indexVertexBufferMemory != VK_NULL_HANDLE) {
+                vkFreeMemory(device, Engine::indexVertexBufferMemory, nullptr);
+            }
+        }
+
+        return size;
     }
 
     void BufferManager::recreateInstanceBuffers(VkDevice& device, VkPhysicalDevice& physicalDevice){

@@ -475,7 +475,9 @@ namespace Prometheus{
             if(Engine::recreateInstanceBuffer){
 
                 BufferManager::recreateInstanceBuffers(this->device,this->physicalDevice);
-                
+
+                recreateInstanceBuffer=false;
+
             }else{
                 sem_post(&Engine::instanceBufferReady);
             }
