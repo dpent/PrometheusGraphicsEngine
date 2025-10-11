@@ -9,7 +9,12 @@
 #include <stdexcept>
 #include <vulkan/vulkan_core.h>
 #include "../headers/descriptorManager.h"
-//#include <chrono>
+#include <fstream>
+#include <filesystem>
+#include <cstdlib>
+#include <unistd.h> 
+#include <string.h>
+#include <chrono>
 #include "../../threads/headers/descriptorOperations.h"
 
 using namespace Prometheus;
@@ -122,8 +127,15 @@ SafeUint16_t Engine::threadsAvailable = SafeUint16_t(std::thread::hardware_concu
 
 bool Engine::wasPlacedInThread=false;
 
+std::filesystem::path Engine::exeDir = std::filesystem::canonical("/proc/self/exe").parent_path();
+
 namespace Prometheus{
-    void Engine::run() {
+    void Engine::run(int argc, char** argv) {
+
+        #ifdef __linux__
+            createLinuxDesktopEntry(argv[0]);
+        #endif
+
         initWindow();
         initVulkan();
         mainLoop();
@@ -308,7 +320,8 @@ namespace Prometheus{
     }
 
     std::vector<char> Engine::readFile(const std::string& filename) {
-        std::ifstream file(filename, std::ios::ate | std::ios::binary);
+        std::ifstream file((Engine::exeDir / filename).lexically_normal().string(), 
+        std::ios::ate | std::ios::binary);
 
         if (!file.is_open()) {
             throw std::runtime_error("failed to open file!");
@@ -819,5 +832,49 @@ namespace Prometheus{
         for (const auto& pair : Engine::threadPool) {
             delete pair.second;
         }
+    }
+
+    int Engine::createLinuxDesktopEntry(const char* argv0){
+        const char* home = std::getenv("HOME");
+        if (!home) return 1;
+
+        std::string desktopDir = std::string(home) + "/.local/share/applications/";
+        std::filesystem::create_directories(desktopDir);
+
+        // Get full executable path
+        char exePath[PATH_MAX];
+        ssize_t len = readlink("/proc/self/exe", exePath, sizeof(exePath) - 1);
+        if (len != -1) exePath[len] = '\0';
+        else std::strncpy(exePath, argv0, sizeof(exePath));
+        exePath[sizeof(exePath) - 1] = '\0';
+
+        // Build absolute paths
+        std::string execPath = std::filesystem::absolute(exePath).string();
+        std::string iconPath = (Engine::exeDir / "../textures/logo/logo-144.png").lexically_normal().c_str();
+
+        if (!std::filesystem::exists(iconPath)) {
+            std::cerr << "Warning: icon file not found at " << iconPath << std::endl;
+            return 2;
+        }
+
+        // Create desktop entry
+        std::ofstream file(desktopDir + "prometheus.desktop");
+        if (!file.is_open()) {
+            std::cerr << "Failed to create desktop entry!" << std::endl;
+            return 3;
+        }
+
+        file << "[Desktop Entry]\n"
+            << "Name=Prometheus\n"
+            << "Exec=" << execPath << "\n"
+            << "Icon=" << iconPath << "\n"
+            << "Type=Application\n"
+            << "StartupWMClass=Prometheus\n"
+            << "Terminal=false\n"
+            << "Categories=Development;Game;\n";
+        file.close();
+
+        // Refresh desktop database (optional)
+        return system(("update-desktop-database " + desktopDir).c_str());
     }
 }

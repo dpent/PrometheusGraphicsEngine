@@ -242,7 +242,7 @@ namespace Prometheus{
     Texture::Texture(std::string filpath,int req_comp, VkDevice& device, VkPhysicalDevice& physicalDevice, 
         VkQueue& graphicsQueue, VkCommandPool& commandPool){
 
-        mipLevels=TextureManager::createTextureImage(filpath, req_comp, device, physicalDevice,
+        mipLevels=TextureManager::createTextureImage((Engine::exeDir / filpath).lexically_normal().string(), req_comp, device, physicalDevice,
         this->textureImage,this->textureImageMemory,graphicsQueue, commandPool);
 
         TextureManager::createTextureImageView(device,this->textureImage,this->textureImageView, mipLevels);

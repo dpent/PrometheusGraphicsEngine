@@ -14,7 +14,8 @@ namespace Prometheus{
         std::string warn;
         std::string err;
 
-        if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, modelPath.c_str())) {
+        if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, 
+            (Engine::exeDir / modelPath).lexically_normal().c_str())) {
             throw std::runtime_error(err);
         }
 

@@ -5,10 +5,10 @@
 
 using namespace Prometheus;
 
-int main(){
+int main(int argc, char** argv){
     Engine app;
     try{
-        app.run();
+        app.run(argc, argv);
     }catch( const std::exception& e){
         std::cerr << e.what() << std::endl;
         return EXIT_FAILURE;

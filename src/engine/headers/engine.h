@@ -29,6 +29,11 @@
 #include "../../threads/headers/workerThread.h"
 #include <list>
 #include "../../threads/headers/threadSafeNumber.h"
+#include <fstream>
+#include <filesystem>
+#include <cstdlib>
+#include <unistd.h> 
+#include <string.h>
 
 namespace Prometheus{
 
@@ -168,7 +173,9 @@ namespace Prometheus{
 
         static bool wasPlacedInThread;
 
-        void run();
+        static std::filesystem::path exeDir;
+
+        void run(int argc, char** argv);
         static std::vector<char> readFile(const std::string& filename);
         static void frameBufferResizeCallback(GLFWwindow* window, int width, int height);
         static void updateGameObjects();
@@ -216,5 +223,7 @@ namespace Prometheus{
         void killThreads();
 
         void objectLoadingTest(std::chrono::_V2::system_clock::time_point frameZeroTime);
+        
+        int createLinuxDesktopEntry(const char* argv0);
     };
 }
