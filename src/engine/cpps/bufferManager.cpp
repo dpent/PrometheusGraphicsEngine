@@ -124,21 +124,9 @@ namespace Prometheus{
 
         vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
-        Engine::view = glm::lookAt(
-            glm::vec3(15.0f, 10.0f, 15.0f),
-            glm::vec3(0.0f, 0.0f, 0.0f),
-            glm::vec3(0.0f, 0.0f, 1.0f)
-        );
-        Engine::proj=glm::perspective(
-            glm::radians(45.0f),
-            Engine::swapChainExtent.width / 
-            (float) Engine::swapChainExtent.height, 0.1f, 100.0f
-        );
-        Engine::proj[1][1] *= -1;
-
         CameraObject* cameraPushConstants= new CameraObject();
-        cameraPushConstants->view=Engine::view;
-        cameraPushConstants->proj=Engine::proj;
+        cameraPushConstants->view=Engine::camera.getViewMatrix();
+        cameraPushConstants->proj=Engine::camera.getProjectionMatrix();
 
 
         vkCmdPushConstants(

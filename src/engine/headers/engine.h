@@ -34,6 +34,8 @@
 #include <cstdlib>
 #include <unistd.h> 
 #include <string.h>
+#include "../headers/inputManager.h"
+#include "../../objects/headers/camera.h"
 
 namespace Prometheus{
 
@@ -42,6 +44,8 @@ namespace Prometheus{
         inline static const std::vector<const char*> deviceExtensions = {
             VK_KHR_SWAPCHAIN_EXTENSION_NAME
         };
+
+        inline static const glm::vec3 worldUp = glm::vec3(0.0f,0.1f,0.0f);
 
         static VkPresentModeKHR presentMode; 
         /*
@@ -69,6 +73,7 @@ namespace Prometheus{
 
         //Window variable
         static GLFWwindow* window;
+        static GLFWcursor* cursor;
 
         static std::vector<VkImage> swapChainImages;
         static std::vector<VkImageView> swapChainImageViews;
@@ -131,9 +136,6 @@ namespace Prometheus{
         static std::list<VkDescriptorPool> descriptorDeleteQueue;
         static std::list<int> framesSinceDescriptorQueuedForDeletion;
 
-        static glm::mat4 view;
-        static glm::mat4 proj; //Camera movement is based on these
-
         static std::unordered_map<uint64_t,GameObject*> gameObjectMap;
 
         static VkPhysicalDeviceProperties physicalDeviceProperties;
@@ -184,6 +186,12 @@ namespace Prometheus{
         , VkSurfaceKHR& surface);
         static std::vector<std::queue<Job*>> batchJobs();
         static void createInstanceBufferUpdateJob();
+
+        static Camera camera;
+
+        static std::pair<double,double> lastKnownMousePos;
+        static bool rightMouseFirstPress;
+        static bool rightMousePressedLastFrame;
 
     private:
         //Window variables

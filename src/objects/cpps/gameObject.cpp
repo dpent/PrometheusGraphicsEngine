@@ -18,9 +18,9 @@ namespace Prometheus{
         GameObject::autoIncrementId++;
         Engine::gameObjectMutex.unlock();
 
+        this->transform=Transform();
         this->texturePath=texturePath;
         this->meshPath=modelPath;
-        this->modelMatrix=glm::mat4(1.0f);
 
         Engine::textureMutex.lock();
         if (Engine::textureMap.count(texturePath) != 0) {
@@ -127,7 +127,9 @@ namespace Prometheus{
         float y = centerY;             // keep same height
         float z = centerZ + radius * sin(time * speed);
 
-        glm::mat4 model = glm::translate(glm::mat4(1.0f), glm::vec3(x, y, z));
+        transform.position = glm::vec3(x,y,z);
+
+        glm::mat4 model = transform.getModelMatrix();
         return model;
     }
 

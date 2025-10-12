@@ -21,6 +21,7 @@ using namespace Prometheus;
 
 //DEFINE STATIC VARIABLES BEFORE VULKAN INIT
 GLFWwindow* Engine::window = nullptr;
+GLFWcursor* Engine::cursor = nullptr;
 VkPresentModeKHR Engine::presentMode=VK_PRESENT_MODE_MAILBOX_KHR;
 
 std::vector<VkImage> Engine::swapChainImages;
@@ -84,9 +85,6 @@ std::vector<VkDescriptorSet> Engine::descriptorSets;
 std::list<VkDescriptorPool> Engine::descriptorDeleteQueue;
 std::list<int> Engine::framesSinceDescriptorQueuedForDeletion;
 
-glm::mat4 Engine::view;
-glm::mat4 Engine::proj;
-
 std::unordered_map<uint64_t,GameObject*> Engine::gameObjectMap;
 
 VkPhysicalDeviceProperties Engine::physicalDeviceProperties;
@@ -129,12 +127,20 @@ bool Engine::wasPlacedInThread=false;
 
 std::filesystem::path Engine::exeDir = std::filesystem::canonical("/proc/self/exe").parent_path();
 
+Camera Engine::camera = Camera();
+
+std::pair<double,double> Engine::lastKnownMousePos;
+bool Engine::rightMouseFirstPress;
+bool Engine::rightMousePressedLastFrame;
+
 namespace Prometheus{
     void Engine::run(int argc, char** argv) {
 
         #ifdef __linux__
             createLinuxDesktopEntry(argv[0]);
         #endif
+
+        Engine::camera.setVelocity(0.2f);
 
         initWindow();
         initVulkan();
@@ -150,6 +156,13 @@ namespace Prometheus{
         Engine::window = glfwCreateWindow(WIDTH, HEIGHT, "Prometheus", nullptr, nullptr);
         glfwSetWindowUserPointer(Engine::window, this);
         glfwSetFramebufferSizeCallback(Engine::window, frameBufferResizeCallback);
+
+        Engine::cursor = glfwCreateStandardCursor(GLFW_HRESIZE_CURSOR);
+        glfwSetCursor(Engine::window, Engine::cursor);
+
+        Engine::lastKnownMousePos = std::pair<double,double>(0.0f,0.0f);
+        Engine::rightMouseFirstPress = true;
+        Engine::rightMousePressedLastFrame = false;
     }
 
     void Engine::initVulkan() {
@@ -224,6 +237,14 @@ namespace Prometheus{
     }
 
     void Engine::mainLoop() {
+
+        InputManager::initInputMode(false,false,false,false,false,Engine::window);
+
+        glfwSetKeyCallback(Engine::window, InputManager::keyCallBack);
+        glfwSetCursorEnterCallback(Engine::window, InputManager::mouseEnterCallBack);
+        glfwSetMouseButtonCallback(Engine::window, InputManager::mouseButtonCallBack);
+        glfwSetScrollCallback(Engine::window, InputManager::mouseScrollCallBack);
+        glfwSetCursorPosCallback(Engine::window, InputManager::cursorPosCallBack);
 
         //auto frameZeroTime = std::chrono::high_resolution_clock::now();
         while (!glfwWindowShouldClose(Engine::window)) {
@@ -315,7 +336,7 @@ namespace Prometheus{
         vkDestroyInstance(instance, nullptr);
 
         glfwDestroyWindow(Engine::window);
-
+        glfwDestroyCursor(Engine::cursor);
         glfwTerminate();
     }
 
@@ -840,6 +861,12 @@ namespace Prometheus{
 
         std::string desktopDir = std::string(home) + "/.local/share/applications/";
         std::filesystem::create_directories(desktopDir);
+
+        std::string desktopFile = desktopDir + "prometheus.desktop";
+        if (std::filesystem::exists(desktopFile)) {
+            std::cout << "Desktop entry already exists, skipping creation.\n";
+            return 0;
+        }
 
         // Get full executable path
         char exePath[PATH_MAX];
