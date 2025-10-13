@@ -64,6 +64,8 @@ namespace Prometheus{
         Engine::objectsByMesh[modelPath][this->id]=this;
 
         Engine::gameObjectMutex.unlock();
+
+        this->start();
     }
 
     GameObject::~GameObject(){
@@ -119,7 +121,7 @@ namespace Prometheus{
         return oss.str();
     }
 
-    glm::mat4 GameObject::animateCircularMotion(float centerX, float centerY, float centerZ, float radius, float speed, float offset){
+    void GameObject::animateCircularMotion(float centerX, float centerY, float centerZ, float radius, float speed, float offset){
         float time   = glfwGetTime(); // or your own frame timer
         time+=offset;
 
@@ -128,9 +130,6 @@ namespace Prometheus{
         float z = centerZ + radius * sin(time * speed);
 
         transform.position = glm::vec3(x,y,z);
-
-        glm::mat4 model = transform.getModelMatrix();
-        return model;
     }
 
     void GameObject::createObjectThreaded(std::string texturePath,std::string modelPath, 
@@ -162,6 +161,14 @@ namespace Prometheus{
         Engine::queueMutex.unlock();
         
         sem_post(&(Engine::workInQueueSemaphore));
-    }    
+    }
+
+    void GameObject::start(){
+        this->transform.scale*=15.0f;
+    }
+
+    void GameObject::update(){
+        //animateCircularMotion(0.0f,0.0f,0.0f,5.0f,2.0f,0.25f);
+    }
 }
 

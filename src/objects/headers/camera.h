@@ -28,7 +28,7 @@ namespace Prometheus{
         float yaw = 0.0f,
         float pitch = 0.0f,
         float roll = 0.0f,
-        float velocity = 1.0f,
+        float velocity = 0.2f,
         float sensitivity = 0.1f);
 
         void updateCameraVectors();

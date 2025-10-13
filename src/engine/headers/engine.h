@@ -177,6 +177,9 @@ namespace Prometheus{
 
         static std::filesystem::path exeDir;
 
+        static double updateTime;
+        static std::chrono::system_clock::time_point lastFrameTime;
+
         void run(int argc, char** argv);
         static std::vector<char> readFile(const std::string& filename);
         static void frameBufferResizeCallback(GLFWwindow* window, int width, int height);

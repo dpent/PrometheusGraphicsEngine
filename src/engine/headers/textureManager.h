@@ -4,6 +4,7 @@
 #include <GLFW/glfw3.h>
 #include <iostream>
 #include "../../engine/headers/vertex.h"
+#include "../headers/stb_image_write.h"
 
 namespace Prometheus{
     class TextureManager{
@@ -37,6 +38,8 @@ namespace Prometheus{
             VkFormat imageFormat, VkPhysicalDevice& physicalDevice,
             VkCommandPool& commandPool
         );
+
+        static void createSolidColorTextureFile(std::string filename, unsigned char r, unsigned char g, unsigned char b);
     };
 
     struct Texture{

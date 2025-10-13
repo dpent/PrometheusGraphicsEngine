@@ -1,5 +1,6 @@
 #include "../headers/inputManager.h"
 #include "../headers/engine.h"
+#include <glm/common.hpp>
 
 
 using namespace Prometheus;
@@ -109,7 +110,7 @@ namespace Prometheus
     void InputManager::mouseScrollCallBack(GLFWwindow* window, double xoffset, double yoffset){
         
         if(yoffset!=0){
-            Engine::camera.setVelocity(Engine::camera.velocity+=(0.1)*yoffset);
+            Engine::camera.setVelocity(Engine::camera.velocity+=(20.0f)*yoffset);
         }
     }
 
@@ -121,14 +122,11 @@ namespace Prometheus
 
             Engine::lastKnownMousePos.first = xpos;
             Engine::lastKnownMousePos.second = ypos;
+    
+            glm::clamp(Engine::camera.pitch,-89.0f,89.0f);
 
-            if (Engine::camera.pitch > 89.0f)
-                Engine::camera.pitch = 89.0f;
-            if (Engine::camera.pitch < -89.0f)
-                Engine::camera.pitch = -89.0f;
-
-            
             Engine::updateCameraVectors = true;
+
         }else{
 
             Engine::lastKnownMousePos.first = xpos;

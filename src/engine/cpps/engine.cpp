@@ -134,6 +134,8 @@ bool Engine::rightMouseFirstPress;
 bool Engine::rightMousePressedLastFrame;
 
 bool Engine::updateCameraVectors;
+double Engine::updateTime = 1.0/60.0;
+std::chrono::system_clock::time_point Engine::lastFrameTime = std::chrono::system_clock::now();
 
 namespace Prometheus{
     void Engine::run(int argc, char** argv) {
@@ -141,8 +143,6 @@ namespace Prometheus{
         #ifdef __linux__
             createLinuxDesktopEntry(argv[0]);
         #endif
-
-        Engine::camera.setVelocity(0.2f);
 
         initWindow();
         initVulkan();
@@ -205,28 +205,14 @@ namespace Prometheus{
         BufferManager::createCommandBuffers(this->device, 
             Engine::commandBuffers, Engine::commandPool);
 
-        for(int i=0; i<4; i++){
-            GameObject::createObjectThreaded("../textures/statue.jpg", 
-                "../models/stanford_sphere.obj", 
-                device, 
-                physicalDevice, 
-                graphicsQueue
-            );
+        TextureManager::createSolidColorTextureFile("../textures/babyBlue.png",137,207,240);
 
-            GameObject::createObjectThreaded("../textures/angel.jpg", 
-                "../models/cube.obj", 
-                device, 
-                physicalDevice, 
-                graphicsQueue
-            );
-
-            GameObject::createObjectThreaded("../textures/viking_room.png", 
-                "../models/viking_room.obj", 
-                device, 
-                physicalDevice, 
-                graphicsQueue
-            );
-        }
+        GameObject::createObjectThreaded("../textures/babyBlue.png", 
+            "../models/stanford_dragon.obj", 
+            device, 
+            physicalDevice, 
+            graphicsQueue
+        );
 
         //BufferManager::createUniformBuffers(this->device,this->physicalDevice);
 
@@ -386,6 +372,11 @@ namespace Prometheus{
 
         vkResetFences(device, 1, &Engine::inFlightFences[Engine::currentFrame]);
 
+        std::chrono::system_clock::time_point currentTime = std::chrono::system_clock::now();
+        std::chrono::duration<double> delta = currentTime - Engine::lastFrameTime;
+
+        std::this_thread::sleep_for(std::chrono::duration<double>(Engine::updateTime) - delta);
+
         Engine::canDeleteObjectMutex.lock();
         Engine::gameObjectMutex.lock();
         Engine::meshMutex.lock();
@@ -484,6 +475,7 @@ namespace Prometheus{
 
         Engine::currentFrame = (Engine::currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
         Engine::frameCount++;
+        Engine::lastFrameTime = std::chrono::system_clock::now();
     }
 
     void Engine::frameBufferResizeCallback(GLFWwindow* window, int width, int height){
@@ -513,8 +505,10 @@ namespace Prometheus{
                 }
                 Engine::textureMutex.unlock();
 
+                objPtr->update();
+
                 Engine::meshBatches[Engine::meshBatches.size()-1].instances.push_back(
-                    InstanceInfo(objPtr->animateCircularMotion(0.0f,0.0f,0.0f,5.0f,2.0f,i*0.25f),textureIndices.at(objPtr->texturePath))
+                    InstanceInfo(objPtr->transform.getModelMatrix(),textureIndices.at(objPtr->texturePath))
                 );
                 Engine::meshBatches[Engine::meshBatches.size()-1].objects.push_back(objPtr);
                 i++;

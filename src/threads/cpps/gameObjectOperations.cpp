@@ -97,8 +97,10 @@ namespace Prometheus{
                     currIndex++; 
                 }
 
+                objPtr->update();
+                
                 batchBuffer[meshName].instances.push_back(
-                    InstanceInfo(objPtr->animateCircularMotion(0.0f,0.0f,0.0f,5.0f,2.0f,i*0.25f),textureIndices.at(objPtr->texturePath))
+                    InstanceInfo(objPtr->transform.getModelMatrix(),textureIndices.at(objPtr->texturePath))
                 );
                 batchBuffer[meshName].objects.push_back(objPtr);
                 i++;

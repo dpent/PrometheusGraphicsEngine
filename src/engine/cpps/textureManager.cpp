@@ -358,4 +358,11 @@ namespace Prometheus{
 
         BufferManager::endSingleTimeCommands(commandBuffer,device,graphicsQueue, commandPool);
     }
+
+    void TextureManager::createSolidColorTextureFile(std::string filename, 
+        unsigned char r, unsigned char g, unsigned char b)
+    {
+        unsigned char pixel[3] = { r, g, b };
+        stbi_write_png(filename.c_str(), 1, 1, 3, pixel, 3);
+    }
 }
