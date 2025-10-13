@@ -8,7 +8,7 @@ namespace Prometheus{
 
     Camera::Camera(glm::vec3 position, glm::vec3 front,
         glm::vec3 up, glm::vec3 right, glm::quat orientation, 
-        float yaw, float pitch, float velocity,
+        float yaw, float pitch, float roll, float velocity,
         float sensitivity)
     {
         this->position = position;
@@ -17,7 +17,8 @@ namespace Prometheus{
         this->right = right;
         this->orientation = orientation;
         this->yaw = yaw;
-        this->pitch = pitch;    
+        this->pitch = pitch;   
+        this->roll = roll; 
         this->velocity = velocity;
         this->sensitivity = sensitivity;
     }
@@ -30,8 +31,10 @@ namespace Prometheus{
         front.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
         this->front = glm::normalize(front);
 
-        right = glm::normalize(glm::cross(front, Engine::worldUp));
-        up = glm::normalize(glm::cross(right, front));
+        glm::mat4 roll_mat = glm::rotate(glm::mat4(1.0f), glm::radians(roll), this->front);
+
+        right = glm::normalize(glm::cross(front, Engine::worldUp));//glm::mat3(roll_mat) * right;
+        up = glm::mat3(roll_mat) * glm::normalize(glm::cross(right, this->front));
     }
 
     glm::mat4 Camera::getViewMatrix(){
@@ -58,6 +61,7 @@ namespace Prometheus{
     const glm::vec3& Camera::getRight() const { return right; }
     float Camera::getYaw() const { return yaw; }
     float Camera::getPitch() const { return pitch; }
+    float Camera::getRoll() const { return roll; }
     float Camera::getVelocity() const { return velocity; }
     float Camera::getSensitivity() const { return sensitivity; }
 
@@ -68,6 +72,7 @@ namespace Prometheus{
     void Camera::setRight(const glm::vec3& r) { right = glm::normalize(r); }
     void Camera::setYaw(float y) { yaw = y;}
     void Camera::setPitch(float p) { pitch = p;}
+    void Camera::setRoll(float s) { roll = s;}
     void Camera::setVelocity(float v) { velocity = std::max(v,0.0f);}
     void Camera::setSensitivity(float s) { sensitivity = s;}
 }

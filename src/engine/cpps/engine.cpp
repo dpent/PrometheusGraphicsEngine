@@ -133,6 +133,8 @@ std::pair<double,double> Engine::lastKnownMousePos;
 bool Engine::rightMouseFirstPress;
 bool Engine::rightMousePressedLastFrame;
 
+bool Engine::updateCameraVectors;
+
 namespace Prometheus{
     void Engine::run(int argc, char** argv) {
 
@@ -249,6 +251,12 @@ namespace Prometheus{
         //auto frameZeroTime = std::chrono::high_resolution_clock::now();
         while (!glfwWindowShouldClose(Engine::window)) {
             glfwPollEvents();
+
+            if(Engine::updateCameraVectors){
+                Engine::camera.updateCameraVectors();
+                Engine::updateCameraVectors = false;
+            }
+            
             drawFrame();
 
             //objectLoadingTest(frameZeroTime);
@@ -382,7 +390,7 @@ namespace Prometheus{
         Engine::gameObjectMutex.lock();
         Engine::meshMutex.lock();
 
-        if(Engine::meshMap.size()!=0){
+        if(Engine::recreateVertexIndexBuffer && Engine::meshMap.size()!=0){
 
             Engine::updateVertexIndexBuffer();
             
@@ -676,35 +684,31 @@ namespace Prometheus{
     }
 
     void Engine::updateVertexIndexBuffer(){
-        if(Engine::recreateVertexIndexBuffer){
 
-            Engine::queueMutex.lock();
+        Engine::queueMutex.lock();
 
-            if(Engine::threadsAvailable.getValue()!=0 && Engine::jobQueue.size()<Engine::threadsAvailable.getValue()){
+        if(Engine::threadsAvailable.getValue()!=0 && Engine::jobQueue.size()<Engine::threadsAvailable.getValue()){
 
-                createVertexIndexBufferUpdateJob();
+            createVertexIndexBufferUpdateJob();
 
-                Engine::queueMutex.unlock();
-            }else{
-
-                Engine::queueMutex.unlock();
-
-                uint64_t size = BufferManager::remakeVertexIndexVectors(this->device);
-
-                if( size >=Engine::indexVertexBufferSize)
-                {
-                    BufferManager::createIndexVertexBuffer(this->device,this->physicalDevice,
-                        this->graphicsQueue, Engine::commandPool);
-
-                }else{
-                    BufferManager::updateIndexVertexBuffer(this->device,this->physicalDevice,
-                        this->graphicsQueue, Engine::commandPool);
-                }
-
-                Engine::recreateVertexIndexBuffer=false;
-                sem_post(&Engine::verIndBufferComplete);
-            }
+            Engine::queueMutex.unlock();
         }else{
+
+            Engine::queueMutex.unlock();
+
+            uint64_t size = BufferManager::remakeVertexIndexVectors(this->device);
+
+            if( size >=Engine::indexVertexBufferSize)
+            {
+                BufferManager::createIndexVertexBuffer(this->device,this->physicalDevice,
+                    this->graphicsQueue, Engine::commandPool);
+
+            }else{
+                BufferManager::updateIndexVertexBuffer(this->device,this->physicalDevice,
+                    this->graphicsQueue, Engine::commandPool);
+            }
+
+            Engine::recreateVertexIndexBuffer=false;
             sem_post(&Engine::verIndBufferComplete);
         }
     }

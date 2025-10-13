@@ -16,6 +16,7 @@ namespace Prometheus{
 
         float yaw;
         float pitch;
+        float roll;
         float velocity;
         float sensitivity;
 
@@ -26,6 +27,7 @@ namespace Prometheus{
         glm::quat orientation = glm::quat(1.0, 0.0, 0.0, 0.0),
         float yaw = 0.0f,
         float pitch = 0.0f,
+        float roll = 0.0f,
         float velocity = 1.0f,
         float sensitivity = 0.1f);
 
@@ -41,6 +43,7 @@ namespace Prometheus{
         const glm::vec3& getRight() const;
         float getYaw() const;
         float getPitch() const;
+        float getRoll() const;
         float getVelocity() const;
         float getSensitivity() const;
 
@@ -51,6 +54,7 @@ namespace Prometheus{
         void setRight(const glm::vec3& r);
         void setYaw(float y);
         void setPitch(float p);
+        void setRoll(float r);
         void setVelocity(float v);
         void setSensitivity(float s);
     };

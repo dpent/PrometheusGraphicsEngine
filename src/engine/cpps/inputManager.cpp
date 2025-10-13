@@ -10,6 +10,7 @@ namespace Prometheus
     void InputManager::keyCallBack(GLFWwindow* window, int key, int scancode, int action, int mods){
 
         glm::vec3 cameraPosChange = glm::vec3(0.0f);
+        float rollChange = 0.0f;
 
         if (key == GLFW_KEY_W && (action == GLFW_PRESS || action == GLFW_REPEAT)){
             cameraPosChange += Engine::camera.front * Engine::camera.velocity;
@@ -34,8 +35,21 @@ namespace Prometheus
         if (key == GLFW_KEY_F && (action == GLFW_PRESS || action == GLFW_REPEAT)){
             cameraPosChange -= Engine::camera.up * Engine::camera.velocity;
         }
+        
+        if (key == GLFW_KEY_Q && (action == GLFW_PRESS || action == GLFW_REPEAT)){
+            rollChange += 1.0f;
+        }
+
+        if (key == GLFW_KEY_E && (action == GLFW_PRESS || action == GLFW_REPEAT)){
+            rollChange -= 1.0f;
+        }
 
         Engine::camera.position+=cameraPosChange;
+        Engine::camera.roll+=rollChange;
+
+        if(rollChange!=0){
+            Engine::updateCameraVectors = true;
+        }
     }   
 
     void InputManager::initInputMode(bool sticky, bool lockKeys, bool disableCursor, bool hiddenCursor,
@@ -119,6 +133,6 @@ namespace Prometheus
             Engine::lastKnownMousePos.second = ypos;
         }
         
-        Engine::camera.updateCameraVectors();
+        Engine::updateCameraVectors = true;
     }
 }

@@ -193,6 +193,8 @@ namespace Prometheus{
         static bool rightMouseFirstPress;
         static bool rightMousePressedLastFrame;
 
+        static bool updateCameraVectors;
+
     private:
         //Window variables
         const uint32_t WIDTH = 800;

@@ -141,7 +141,7 @@ namespace Prometheus{
         sem_wait(&Engine::descriptorsReadySemaphore);
         sem_wait(&Engine::instanceBufferReady);
 
-        if(Engine::gameObjectMap.size()!=0 ){
+        if(Engine::indexVertexBuffer!=VK_NULL_HANDLE && Engine::gameObjectMap.size()!=0){
 
             BufferManager::updateInstanceBuffer(Engine::currentFrame);
 
@@ -150,23 +150,23 @@ namespace Prometheus{
 
             vkCmdBindVertexBuffers(commandBuffer, 0, 2, vertexBuffers, offsets);
             vkCmdBindIndexBuffer(commandBuffer, Engine::indexVertexBuffer, Engine::indexOffset, VK_INDEX_TYPE_UINT32);
-        }
 
-        uint32_t instanceCount=0;
-        for(uint32_t i=0; i<Engine::meshBatches.size(); i++){
+            uint32_t instanceCount=0;
+            for(uint32_t i=0; i<Engine::meshBatches.size(); i++){
 
-            vkCmdBindDescriptorSets(
-                commandBuffer,
-                VK_PIPELINE_BIND_POINT_GRAPHICS,
-                Engine::pipelineLayout,
-                0,                              // first set
-                1,                              // number of sets
-                &Engine::descriptorSets[i],     // pointer to descriptor set
-                0,
-                nullptr
-            );
-            Engine::meshBatches[i].objects[0]->draw(commandBuffer,Engine::meshBatches[i].instances.size(),instanceCount);
-            instanceCount+=Engine::meshBatches[i].instances.size();
+                vkCmdBindDescriptorSets(
+                    commandBuffer,
+                    VK_PIPELINE_BIND_POINT_GRAPHICS,
+                    Engine::pipelineLayout,
+                    0,                              // first set
+                    1,                              // number of sets
+                    &Engine::descriptorSets[i],     // pointer to descriptor set
+                    0,
+                    nullptr
+                );
+                Engine::meshBatches[i].objects[0]->draw(commandBuffer,Engine::meshBatches[i].instances.size(),instanceCount);
+                instanceCount+=Engine::meshBatches[i].instances.size();
+            }
         }
 
         vkCmdEndRenderPass(commandBuffer);
