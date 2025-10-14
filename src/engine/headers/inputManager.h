@@ -22,5 +22,7 @@ namespace Prometheus {
         static void mouseButtonCallBack(GLFWwindow* window, int button, int action, int mods);
         static void mouseScrollCallBack(GLFWwindow* window, double xoffset, double yoffset);
         static void cursorPosCallBack(GLFWwindow* window, double xpos, double ypos);
+
+        static void consumeInput(GLFWwindow* window);
     };
 }

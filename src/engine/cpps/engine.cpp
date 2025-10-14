@@ -137,6 +137,9 @@ bool Engine::updateCameraVectors;
 double Engine::updateTime = 1.0/60.0;
 std::chrono::system_clock::time_point Engine::lastFrameTime = std::chrono::system_clock::now();
 
+std::vector<bool> Engine::pressed;
+glm::vec3 Engine::cameraChangePos = glm::vec3(0.0f);
+
 namespace Prometheus{
     void Engine::run(int argc, char** argv) {
 
@@ -173,6 +176,8 @@ namespace Prometheus{
         sem_init(&Engine::safeToMakeInstanceBuffer,0,0);
         sem_init(&Engine::verIndBufferComplete,0,0);
         sem_init (&Engine::commandBufferRecorded,0,0);
+
+        Engine::pressed.resize(349, false);
 
         InstanceManager::createInstance(this->instance);
         InstanceManager::setupDebugMessenger(this->instance,this->debugMessenger);
@@ -237,6 +242,8 @@ namespace Prometheus{
         //auto frameZeroTime = std::chrono::high_resolution_clock::now();
         while (!glfwWindowShouldClose(Engine::window)) {
             glfwPollEvents();
+
+            InputManager::consumeInput(Engine::window);
 
             if(Engine::updateCameraVectors){
                 Engine::camera.updateCameraVectors();

@@ -23,12 +23,12 @@ namespace Prometheus{
         Camera(glm::vec3 position = glm::vec3(0.0f), 
         glm::vec3 front = glm::vec3(0.0f,0.0f,1.0f),
         glm::vec3 up = glm::vec3(0.0f,1.0f,0.0f),
-        glm::vec3 right = glm::vec3(1.0f,0.0f,0.0f),
+        glm::vec3 right = glm::vec3(-1.0f,0.0f,0.0f),
         glm::quat orientation = glm::quat(1.0, 0.0, 0.0, 0.0),
         float yaw = 0.0f,
         float pitch = 0.0f,
         float roll = 0.0f,
-        float velocity = 0.2f,
+        float velocity = 0.1f,
         float sensitivity = 0.1f);
 
         void updateCameraVectors();

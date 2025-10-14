@@ -198,6 +198,9 @@ namespace Prometheus{
 
         static bool updateCameraVectors;
 
+        static std::vector<bool> pressed;
+        static glm::vec3 cameraChangePos;
+
     private:
         //Window variables
         const uint32_t WIDTH = 800;

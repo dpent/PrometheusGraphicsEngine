@@ -10,10 +10,19 @@ namespace Prometheus
     
     void InputManager::keyCallBack(GLFWwindow* window, int key, int scancode, int action, int mods){
 
-        glm::vec3 cameraPosChange = glm::vec3(0.0f);
+        if(key>348){
+            return ;
+        }
+
+        if (action == GLFW_PRESS)
+            Engine::pressed[key] = true;
+        else if (action == GLFW_RELEASE)
+            Engine::pressed[key] = false;
+
+        //glm::vec3 cameraPosChange = glm::vec3(0.0f);
         //float rollChange = 0.0f;
 
-        if (key == GLFW_KEY_W && (action == GLFW_PRESS || action == GLFW_REPEAT)){
+        /*if (key == GLFW_KEY_W && (action == GLFW_PRESS || action == GLFW_REPEAT)){
             cameraPosChange += Engine::camera.front * Engine::camera.velocity;
         }
 
@@ -35,7 +44,7 @@ namespace Prometheus
 
         if (key == GLFW_KEY_F && (action == GLFW_PRESS || action == GLFW_REPEAT)){
             cameraPosChange -= Engine::camera.up * Engine::camera.velocity;
-        }
+        }*/
         
         /*if (key == GLFW_KEY_Q && (action == GLFW_PRESS || action == GLFW_REPEAT)){
             rollChange += 1.0f;
@@ -45,7 +54,7 @@ namespace Prometheus
             rollChange -= 1.0f;
         }*/
 
-        Engine::camera.position+=cameraPosChange;
+        //Engine::camera.position+=cameraPosChange;
         //Engine::camera.roll+=rollChange;
 
         //if(rollChange!=0){
@@ -93,7 +102,21 @@ namespace Prometheus
     }
 
     void InputManager::mouseButtonCallBack(GLFWwindow* window, int button, int action, int mods){
-        if (button == GLFW_MOUSE_BUTTON_RIGHT && action == GLFW_PRESS){
+
+        if(button > 348){
+            return;
+        }
+
+        if (action == GLFW_PRESS){
+            Engine::pressed[button] = true;
+        }else if (action == GLFW_RELEASE){
+            Engine::pressed[button] = false;
+
+            if(button == GLFW_MOUSE_BUTTON_RIGHT){
+                Engine::rightMouseFirstPress=true;
+            }
+        }   
+        /*if (button == GLFW_MOUSE_BUTTON_RIGHT && action == GLFW_PRESS){
 
             if(Engine::rightMouseFirstPress){
 
@@ -104,13 +127,13 @@ namespace Prometheus
 
         if(button == GLFW_MOUSE_BUTTON_RIGHT && action == GLFW_RELEASE){
             Engine::rightMouseFirstPress=true;
-        }
+        }*/
     }
 
     void InputManager::mouseScrollCallBack(GLFWwindow* window, double xoffset, double yoffset){
         
         if(yoffset!=0){
-            Engine::camera.setVelocity(Engine::camera.velocity+=(20.0f)*yoffset);
+            Engine::camera.setVelocity(Engine::camera.velocity+=(0.05f)*yoffset);
         }
     }
 
@@ -132,5 +155,46 @@ namespace Prometheus
             Engine::lastKnownMousePos.first = xpos;
             Engine::lastKnownMousePos.second = ypos;
         }
+    }
+
+    void InputManager::consumeInput(GLFWwindow* window){
+
+        Engine::cameraChangePos.x = 0.0f;
+        Engine::cameraChangePos.y = 0.0f;
+        Engine::cameraChangePos.z = 0.0f;
+
+        for (int i = 0; i < (int)Engine::pressed.size(); i++) {
+
+            if(!Engine::pressed[i]) continue;
+            
+            switch(i) {
+                case GLFW_KEY_W:
+                    Engine::cameraChangePos += Engine::camera.front * Engine::camera.velocity;
+                    break;
+                case GLFW_KEY_S:
+                    Engine::cameraChangePos -= Engine::camera.front * Engine::camera.velocity;
+                    break;
+                case GLFW_KEY_A:
+                    Engine::cameraChangePos -= Engine::camera.right * Engine::camera.velocity;
+                    break;
+                case GLFW_KEY_D:
+                    Engine::cameraChangePos += Engine::camera.right * Engine::camera.velocity;
+                    break;
+                case GLFW_KEY_R:
+                    Engine::cameraChangePos += Engine::camera.up * Engine::camera.velocity;
+                    break;
+                case GLFW_KEY_F:
+                    Engine::cameraChangePos -= Engine::camera.up * Engine::camera.velocity;
+                    break;
+                case GLFW_MOUSE_BUTTON_RIGHT:
+                    if(Engine::rightMouseFirstPress){
+                        Engine::rightMouseFirstPress=false;
+                    }
+                    break;
+                
+            }
+        }
+
+        Engine::camera.position += Engine::cameraChangePos;
     }
 }
