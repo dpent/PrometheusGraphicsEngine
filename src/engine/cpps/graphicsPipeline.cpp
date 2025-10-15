@@ -7,8 +7,8 @@ using namespace Prometheus;
 namespace Prometheus{
 
     void GraphicsPipelineManager::createGraphicsPipeline(VkDevice& device){
-        auto vertShaderCode = Engine::readFile("../build/vert.spv");
-        auto fragShaderCode = Engine::readFile("../build/frag.spv");
+        auto vertShaderCode = Engine::readFile("../build/graphicsVert.spv");
+        auto fragShaderCode = Engine::readFile("../build/graphicsFrag.spv");
 
         VkShaderModule vertShaderModule = GraphicsPipelineManager::createShaderModule(vertShaderCode, device);
         VkShaderModule fragShaderModule = GraphicsPipelineManager::createShaderModule(fragShaderCode, device);
@@ -373,7 +373,7 @@ namespace Prometheus{
 
         VkPipelineDepthStencilStateCreateInfo depthStencil{};
         depthStencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
-        depthStencil.depthTestEnable = VK_TRUE;
+        depthStencil.depthTestEnable = VK_FALSE;
         depthStencil.depthWriteEnable = VK_FALSE;
         depthStencil.depthCompareOp = VK_COMPARE_OP_LESS;
         /*The depthCompareOp field specifies the comparison that is performed 

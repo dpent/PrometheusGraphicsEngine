@@ -46,7 +46,7 @@ namespace Prometheus{
         glm::mat4 proj = glm::perspective(
             glm::radians(45.0f),
             Engine::swapChainExtent.width / 
-            (float) Engine::swapChainExtent.height, 0.1f, 100.0f
+            (float) Engine::swapChainExtent.height, 0.01f, 200.0f
             );
 
         proj[1][1] *= -1;
