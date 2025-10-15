@@ -389,7 +389,7 @@ namespace Prometheus{
         VkPushConstantRange pushConstantRange{};
         pushConstantRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT; // accessible in vertex shader
         pushConstantRange.offset = 0;
-        pushConstantRange.size = sizeof(glm::mat4) * 2 + sizeof(glm::vec3) + sizeof(float)*2;
+        pushConstantRange.size = sizeof(glm::mat4) * 2 + sizeof(glm::vec3) + sizeof(float);
 
         VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
         pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;

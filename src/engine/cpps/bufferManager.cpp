@@ -133,7 +133,6 @@ namespace Prometheus{
             gridPushConstants->projection = projMatrix;
             gridPushConstants->cameraPos = Engine::camera.position;
             gridPushConstants->gridSize = 1.0f;
-            gridPushConstants->gridMinPixelsBetweenCells = 2.0f;
 
             vkCmdPushConstants(
                 commandBuffer,

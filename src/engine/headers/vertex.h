@@ -35,7 +35,6 @@ namespace Prometheus{
         glm::mat4 projection;   
         glm::vec3 cameraPos;
         float gridSize;
-        float gridMinPixelsBetweenCells;
     };
     
 

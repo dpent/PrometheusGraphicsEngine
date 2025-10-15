@@ -8,7 +8,6 @@ layout(push_constant) uniform CameraObject {
     mat4 projection;
     vec3 cameraPos;
     float gridSize;
-    float gridMinPixelsBetweenCells;
     
 } camera;
 

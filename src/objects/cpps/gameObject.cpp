@@ -168,7 +168,7 @@ namespace Prometheus{
     }
 
     void GameObject::update(){
-        //animateCircularMotion(0.0f,0.0f,0.0f,5.0f,2.0f,0.25f);
+        //animateCircularMotion(0.0f,0.0f,0.0f,50.0f,2.0f,0.0f);
     }
 }
 

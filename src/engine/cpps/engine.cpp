@@ -181,6 +181,7 @@ namespace Prometheus{
         sem_init (&Engine::commandBufferRecorded,0,0);
 
         Engine::pressed.resize(349, false);
+        Engine::camera.updateCameraVectors();
 
         InstanceManager::createInstance(this->instance);
         InstanceManager::setupDebugMessenger(this->instance,this->debugMessenger);

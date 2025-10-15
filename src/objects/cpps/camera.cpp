@@ -9,7 +9,7 @@ namespace Prometheus{
     Camera::Camera(glm::vec3 position, glm::vec3 front,
         glm::vec3 up, glm::vec3 right, glm::quat orientation, 
         float yaw, float pitch, float roll, float velocity,
-        float sensitivity)
+        float sensitivity, float fov)
     {
         this->position = position;
         this->front = front;
@@ -21,6 +21,7 @@ namespace Prometheus{
         this->roll = roll; 
         this->velocity = velocity;
         this->sensitivity = sensitivity;
+        this->fov = fov;
     }
 
     void Camera::updateCameraVectors(){
@@ -44,7 +45,7 @@ namespace Prometheus{
     glm::mat4 Camera::getProjectionMatrix(){
 
         glm::mat4 proj = glm::perspective(
-            glm::radians(45.0f),
+            glm::radians(fov),
             Engine::swapChainExtent.width / 
             (float) Engine::swapChainExtent.height, 0.01f, 200.0f
             );
@@ -64,6 +65,7 @@ namespace Prometheus{
     float Camera::getRoll() const { return roll; }
     float Camera::getVelocity() const { return velocity; }
     float Camera::getSensitivity() const { return sensitivity; }
+    float Camera::getFOV() const { return fov; }
 
     // --- Setters ---
     void Camera::setPosition(const glm::vec3& pos) { position = pos; }
@@ -75,4 +77,5 @@ namespace Prometheus{
     void Camera::setRoll(float s) { roll = s;}
     void Camera::setVelocity(float v) { velocity = std::max(v,0.0f);}
     void Camera::setSensitivity(float s) { sensitivity = s;}
+    void Camera::setFOV(float fov) { this->fov = fov;}
 }
