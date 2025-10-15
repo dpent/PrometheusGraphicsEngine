@@ -28,6 +28,15 @@ namespace Prometheus{
         glm::mat4 view;
         glm::mat4 proj;   
     };
+
+    struct GridInfoObject
+    {
+        glm::mat4 view;
+        glm::mat4 projection;   
+        glm::vec3 cameraPos;
+        float gridSize;
+        float gridMinPixelsBetweenCells;
+    };
     
 
     struct UniformBufferObject {

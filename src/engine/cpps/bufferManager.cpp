@@ -107,8 +107,6 @@ namespace Prometheus{
         -- VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS: The render pass commands will be executed from secondary command buffers.
         */
 
-        vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, Engine::graphicsPipeline);
-
         VkViewport viewport{}; //Viewport and Scissor was set to dynamic in createGraphicsPipeline (graphicsPipeline.cpp)
         viewport.x = 0.0f;
         viewport.y = 0.0f;
@@ -124,9 +122,37 @@ namespace Prometheus{
 
         vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
+        glm::mat4 viewMatrix = Engine::camera.getViewMatrix();
+        glm::mat4 projMatrix = Engine::camera.getProjectionMatrix();
+
+        #ifdef EDITOR
+            vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, Engine::preGraphicsPipeline);
+
+            GridInfoObject* gridPushConstants = new GridInfoObject();
+            gridPushConstants->view = viewMatrix;
+            gridPushConstants->projection = projMatrix;
+            gridPushConstants->cameraPos = Engine::camera.position;
+            gridPushConstants->gridSize = 1.0f;
+            gridPushConstants->gridMinPixelsBetweenCells = 2.0f;
+
+            vkCmdPushConstants(
+                commandBuffer,
+                Engine::preGraphicsLayout,
+                VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
+                0,
+                sizeof(*gridPushConstants),
+                gridPushConstants
+            );
+
+
+            vkCmdDraw(commandBuffer, 3, 1, 0, 0);
+        #endif
+
+        vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, Engine::graphicsPipeline);
+
         CameraObject* cameraPushConstants= new CameraObject();
-        cameraPushConstants->view=Engine::camera.getViewMatrix();
-        cameraPushConstants->proj=Engine::camera.getProjectionMatrix();
+        cameraPushConstants->view=viewMatrix;
+        cameraPushConstants->proj=projMatrix;
 
 
         vkCmdPushConstants(
@@ -176,6 +202,7 @@ namespace Prometheus{
         }
 
         delete cameraPushConstants;
+        delete gridPushConstants;
 
         sem_post(&Engine::commandBufferRecorded);
     }

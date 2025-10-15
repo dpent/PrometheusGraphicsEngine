@@ -16,5 +16,7 @@ namespace Prometheus{
         const char* pName,
         const VkSpecializationInfo* pSpecializationInfo
         );
+
+        static void createEditorPreGraphicsPipeline(VkDevice& device);
     };
 }

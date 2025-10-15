@@ -34,6 +34,9 @@ VkDescriptorSetLayout Engine::descriptorSetLayout;
 VkPipelineLayout Engine::pipelineLayout;
 VkRenderPass Engine::renderPass;
 VkPipeline Engine::graphicsPipeline;
+VkPipeline Engine::preGraphicsPipeline;
+VkPipelineLayout Engine::preGraphicsLayout;
+
 
 VkCommandPool Engine::commandPool;
 std::vector<VkCommandBuffer> Engine::commandBuffers;
@@ -202,6 +205,10 @@ namespace Prometheus{
 
         GraphicsPipelineManager::createGraphicsPipeline(this->device);
 
+        #ifdef EDITOR
+            GraphicsPipelineManager::createEditorPreGraphicsPipeline(this->device);
+        #endif
+
         BufferManager::createColorResources(this->device,this->physicalDevice);
         BufferManager::createDepthResources(this->device,this->physicalDevice);
         BufferManager::createFrameBuffers(this->device);
@@ -323,6 +330,8 @@ namespace Prometheus{
 
         vkDestroyPipeline(device, graphicsPipeline, nullptr);
         vkDestroyPipelineLayout(device, pipelineLayout, nullptr);
+        vkDestroyPipeline(device, preGraphicsPipeline, nullptr);
+        vkDestroyPipelineLayout(device, preGraphicsLayout, nullptr);
 
         vkDestroyRenderPass(device, renderPass, nullptr);
 

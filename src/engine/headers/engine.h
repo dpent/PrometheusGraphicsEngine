@@ -37,6 +37,8 @@
 #include "../headers/inputManager.h"
 #include "../../objects/headers/camera.h"
 
+#define EDITOR //Enables editor specific features like grid plane
+
 namespace Prometheus{
 
     class Engine{
@@ -85,6 +87,8 @@ namespace Prometheus{
         static VkPipelineLayout pipelineLayout;
         static VkRenderPass renderPass;
         static VkPipeline graphicsPipeline;
+        static VkPipeline preGraphicsPipeline;
+        static VkPipelineLayout preGraphicsLayout;
 
         static std::vector<VkFramebuffer> swapChainFramebuffers;
 
