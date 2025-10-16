@@ -20,7 +20,7 @@ In this project, i am using [Dear ImGui](https://github.com/ocornut/imgui) (Copy
 | C++    | 23     |
 | Make    | Any recent version is ok     |
 | Vulkan packages | Get all the packages for linux using sudo apt install |
-| Dear ImGui | 1.92.3 |
+| Dear ImGui | 1.92.4 |
 
 ## Installation
 I used a tutorial to set up this project so it will be a lot more convinient for you to do the same by following this link 

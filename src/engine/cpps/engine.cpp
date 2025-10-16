@@ -269,7 +269,7 @@ namespace Prometheus{
             ImGui_ImplVulkan_NewFrame();
             ImGui_ImplGlfw_NewFrame();
             ImGui::NewFrame();
-            
+
             drawFrame();
 
             //objectLoadingTest(frameZeroTime);
@@ -970,6 +970,8 @@ namespace Prometheus{
         ImGuiIO& io = ImGui::GetIO();
         io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
         io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;
+        io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+        io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
         ImGui::StyleColorsDark();
 
         io.Fonts->AddFontDefault();
@@ -989,9 +991,9 @@ namespace Prometheus{
         init_info.ImageCount = Engine::swapChainImages.size();
         init_info.Allocator = nullptr;
         init_info.CheckVkResultFn = checkVkResult;
-        init_info.RenderPass = Engine::renderPass;
-        init_info.Subpass = 0;
-        init_info.MSAASamples = Engine::msaaSamples;
+        init_info.PipelineInfoMain.RenderPass = Engine::renderPass;
+        init_info.PipelineInfoMain.Subpass = 0;
+        init_info.PipelineInfoMain.MSAASamples = Engine::msaaSamples;
         init_info.UseDynamicRendering = false;
         init_info.MinAllocationSize = 1024 * 1024;
 
