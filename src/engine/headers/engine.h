@@ -36,6 +36,10 @@
 #include <string.h>
 #include "../headers/inputManager.h"
 #include "../../objects/headers/camera.h"
+#include "../../imgui/imgui.h"
+#include "../../imgui/imgui_stdlib.h"
+#include "../../imgui/imgui_impl_vulkan.h"
+#include "../../imgui/imgui_impl_glfw.h"
 
 #define EDITOR //Enables editor specific features like grid plane
 
@@ -136,6 +140,7 @@ namespace Prometheus{
         static std::vector<void*> uniformBuffersMapped;
 
         static VkDescriptorPool descriptorPool;
+        static VkDescriptorPool imGUIPool;
         static std::vector<VkDescriptorSet> descriptorSets;
         static std::list<VkDescriptorPool> descriptorDeleteQueue;
         static std::list<int> framesSinceDescriptorQueuedForDeletion;
@@ -184,16 +189,6 @@ namespace Prometheus{
         static double updateTime;
         static std::chrono::system_clock::time_point lastFrameTime;
 
-        void run(int argc, char** argv);
-        static std::vector<char> readFile(const std::string& filename);
-        static void frameBufferResizeCallback(GLFWwindow* window, int width, int height);
-        static void updateGameObjects();
-        static VkSampleCountFlagBits getMaxUsableSampleCount(VkPhysicalDevice& physicalDevice);
-        static void initThreadPool(uint16_t poolSize, VkDevice& device, VkPhysicalDevice& physicalDevice
-        , VkSurfaceKHR& surface);
-        static std::vector<std::queue<Job*>> batchJobs();
-        static void createInstanceBufferUpdateJob();
-
         static Camera camera;
 
         static std::pair<double,double> lastKnownMousePos;
@@ -205,10 +200,26 @@ namespace Prometheus{
         static std::vector<bool> pressed;
         static glm::vec3 cameraChangePos;
 
+        static uint32_t graphicsFamilyIndex;
+
+        void run(int argc, char** argv);
+        static std::vector<char> readFile(const std::string& filename);
+        static void frameBufferResizeCallback(GLFWwindow* window, int width, int height);
+        static void updateGameObjects();
+        static VkSampleCountFlagBits getMaxUsableSampleCount(VkPhysicalDevice& physicalDevice);
+        static void initThreadPool(uint16_t poolSize, VkDevice& device, VkPhysicalDevice& physicalDevice
+        , VkSurfaceKHR& surface);
+        static std::vector<std::queue<Job*>> batchJobs();
+        static void createInstanceBufferUpdateJob();
+        static void initGUI(VkInstance& instance, VkQueue& graphicsQueue,
+            VkDevice& device, VkPhysicalDevice& physicalDevice
+        );
+        static void checkVkResult(VkResult err);
+
     private:
         //Window variables
-        const uint32_t WIDTH = 800;
-        const uint32_t HEIGHT = 600;
+        const uint32_t WIDTH = 1920;
+        const uint32_t HEIGHT = 1080;
 
         //Hardware and debug variables
         VkInstance instance;

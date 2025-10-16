@@ -1,6 +1,7 @@
 # Prometheus Graphics Engine
 
 This is a graphics engine i made using libraries and tools mentioned in the tech stack section below. This is entirely free to use.
+In this project, i am using [Dear ImGui](https://github.com/ocornut/imgui) (Copyright (c) 2014-2025 Omar Cornut) for some of the ui elements like helper windows in the editor.
 
 ## Features (And planned)
 - ✅ Linux support
@@ -11,7 +12,7 @@ This is a graphics engine i made using libraries and tools mentioned in the tech
 - ⏳ Rendering scenes
 - ⏳ Game engine features like adding objects and editing a scene
 - ⏳ Fluid simulation
-- ⏳ Multithreaded implementation
+- ✅ Multithreaded implementation
 
 ## Tech Stack
 | Name | Version |
@@ -19,6 +20,7 @@ This is a graphics engine i made using libraries and tools mentioned in the tech
 | C++    | 23     |
 | Make    | Any recent version is ok     |
 | Vulkan packages | Get all the packages for linux using sudo apt install |
+| Dear ImGui | 1.92.3 |
 
 ## Installation
 I used a tutorial to set up this project so it will be a lot more convinient for you to do the same by following this link 
@@ -72,3 +74,6 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+# Dear ImGui license
+Copyright (c) 2014-2025 Omar Cornut

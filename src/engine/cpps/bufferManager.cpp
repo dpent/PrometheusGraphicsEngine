@@ -194,6 +194,9 @@ namespace Prometheus{
             }
         }
 
+        ImGui::Render();
+        ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), Engine::commandBuffers[Engine::currentFrame]);
+
         vkCmdEndRenderPass(commandBuffer);
 
         if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS) {

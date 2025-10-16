@@ -23,6 +23,7 @@ namespace Prometheus{
 
             if (queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT) {
                 indices.graphicsFamily = i;
+                Engine::graphicsFamilyIndex = i;
             }
             if (indices.isComplete()) {
                 break;
