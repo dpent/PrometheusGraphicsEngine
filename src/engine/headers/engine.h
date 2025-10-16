@@ -36,10 +36,7 @@
 #include <string.h>
 #include "../headers/inputManager.h"
 #include "../../objects/headers/camera.h"
-#include "../../imgui/imgui.h"
-#include "../../imgui/imgui_stdlib.h"
-#include "../../imgui/imgui_impl_vulkan.h"
-#include "../../imgui/imgui_impl_glfw.h"
+#include "../../imgui/windowManager.h"
 
 #define EDITOR //Enables editor specific features like grid plane
 
@@ -211,10 +208,6 @@ namespace Prometheus{
         , VkSurfaceKHR& surface);
         static std::vector<std::queue<Job*>> batchJobs();
         static void createInstanceBufferUpdateJob();
-        static void initGUI(VkInstance& instance, VkQueue& graphicsQueue,
-            VkDevice& device, VkPhysicalDevice& physicalDevice
-        );
-        static void checkVkResult(VkResult err);
 
     private:
         //Window variables

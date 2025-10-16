@@ -194,11 +194,7 @@ namespace Prometheus{
             }
         }
 
-        ImGui::ShowDemoWindow();
-        ImGui::Render();
-        ImGui::UpdatePlatformWindows();
-        ImGui::RenderPlatformWindowsDefault();
-        ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), Engine::commandBuffers[Engine::currentFrame]);
+        WindowManager::renderWindows();
 
         vkCmdEndRenderPass(commandBuffer);
 
