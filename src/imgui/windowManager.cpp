@@ -128,6 +128,10 @@ namespace Prometheus{
     void WindowManager::renderGeneralInfoWIndow(){
         ImGui::SetNextWindowSize(ImVec2(300, 100), ImGuiCond_FirstUseEver);
         ImGui::Begin("Info");
+
+        ImGui::Text("Frame time %.2f ms", (Engine::frameTime * 1000) );
+        ImGui::Checkbox("Cap FPS", &Engine::capFPS);
+        ImGui::SliderInt("Set fps cap", &Engine::fpsCap, 1, 300);
         ImGui::DragFloat("Camera speed", &Engine::camera.velocity,0.1f, 0.0f, FLT_MAX);
         ImGui::DragFloat("FOV", &Engine::camera.fov, 1.0f, 0.0f, FLT_MAX);
 

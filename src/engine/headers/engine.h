@@ -184,7 +184,12 @@ namespace Prometheus{
         static std::filesystem::path exeDir;
 
         static double updateTime;
+        static std::chrono::system_clock::time_point lastUpdateTime;
+
         static std::chrono::system_clock::time_point lastFrameTime;
+        static bool capFPS;
+        static int fpsCap;
+        static double frameTime;
 
         static Camera camera;
 

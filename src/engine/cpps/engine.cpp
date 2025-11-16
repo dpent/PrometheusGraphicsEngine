@@ -144,8 +144,13 @@ std::chrono::system_clock::time_point Engine::lastFrameTime = std::chrono::syste
 std::vector<bool> Engine::pressed;
 glm::vec3 Engine::cameraChangePos = glm::vec3(0.0f);
 
-
 uint32_t Engine::graphicsFamilyIndex;
+
+std::chrono::system_clock::time_point Engine::lastUpdateTime = std::chrono::system_clock::now();
+
+bool Engine::capFPS = true;
+int Engine::fpsCap = 60;
+double Engine::frameTime = 0.0;
 
 namespace Prometheus{
     void Engine::run(int argc, char** argv) {
@@ -403,10 +408,18 @@ namespace Prometheus{
 
         vkResetFences(device, 1, &Engine::inFlightFences[Engine::currentFrame]);
 
+        double timeBetweenDraws = 1.0f/Engine::fpsCap;
+
         std::chrono::system_clock::time_point currentTime = std::chrono::system_clock::now();
         std::chrono::duration<double> delta = currentTime - Engine::lastFrameTime;
 
-        std::this_thread::sleep_for(std::chrono::duration<double>(Engine::updateTime) - delta);
+        auto sleepTime = timeBetweenDraws - delta.count();
+
+        Engine::frameTime = delta.count();
+
+        if (sleepTime > 0.0 && Engine::capFPS) {
+            std::this_thread::sleep_for(std::chrono::duration<double>(timeBetweenDraws) - delta);
+        }
 
         Engine::canDeleteObjectMutex.lock();
         Engine::gameObjectMutex.lock();
@@ -426,13 +439,25 @@ namespace Prometheus{
 
         if(Engine::gameObjectMap.size()!=0){
 
-            Engine::updateGameObjects();
+            std::chrono::system_clock::time_point currentTime = std::chrono::system_clock::now();
+            std::chrono::duration<double> delta = currentTime - Engine::lastUpdateTime;
 
-            Engine::updateDescriptors();
+            auto timeToUpdate = Engine::updateTime - delta.count();
 
-            sem_wait(&Engine::safeToMakeInstanceBuffer);
+            if(timeToUpdate <= 0.0){
 
-            Engine::checkInstanceBufferForUpdates();
+                Engine::updateGameObjects();
+    
+                Engine::updateDescriptors();
+    
+                sem_wait(&Engine::safeToMakeInstanceBuffer);
+    
+                Engine::checkInstanceBufferForUpdates();
+            }else{
+                sem_post(&Engine::descriptorsReadySemaphore);
+                sem_post(&Engine::instanceBufferReady);
+            }
+
             
         }else{
 
