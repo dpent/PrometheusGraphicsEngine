@@ -76,7 +76,7 @@ namespace Prometheus{
                 break;
             
             case DELETE_OBJECT:
-                deleteObject(std::get<uint64_t>(job->data[0]),
+                deleteObject(std::get<GameObject*>(job->data[0]),
                     *std::get<VkDevice*>(job->data[1])
                 );
                 break;

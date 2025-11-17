@@ -18,32 +18,31 @@ namespace Prometheus{
         device,physicalDevice,graphicsQueue, commandPool);
     }
 
-    void deleteObject(uint64_t id,VkDevice& device){
-        GameObject* object = nullptr;
+    void deleteObject(GameObject* object,VkDevice& device){
     
         Engine::canDeleteObjectMutex.lock();
 
-        if(Engine::gameObjectMap.count(id)!=0){
-            object=Engine::gameObjectMap[id];
+        uint64_t id = object->id;
 
-            Engine::gameObjectMutex.lock();
+        //if(Engine::gameObjectMap.count(id)!=0){
 
-            std::string meshPath = object->meshPath;
-            Engine::gameObjectMap.erase(id);
+        Engine::gameObjectMutex.lock();
 
-            Engine::objectsByMesh.at(meshPath).erase(id);
+        std::string meshPath = object->meshPath;
 
-            if(Engine::objectsByMesh.at(meshPath).empty()){
-                Engine::meshMutex.lock();
-                Engine::meshMap.erase(meshPath);
-                Engine::objectsByMesh.erase(meshPath);
-                Engine::meshMutex.unlock();
+        Engine::objectsByMesh.at(meshPath).erase(id);
 
-                Engine::recreateVertexIndexBuffer=true;
-            }
+        if(Engine::objectsByMesh.at(meshPath).empty()){
+            Engine::meshMutex.lock();
+            Engine::meshMap.erase(meshPath);
+            Engine::objectsByMesh.erase(meshPath);
+            Engine::meshMutex.unlock();
 
-            Engine::gameObjectMutex.unlock();
+            Engine::recreateVertexIndexBuffer=true;
         }
+
+        Engine::gameObjectMutex.unlock();
+        //}
         
         Engine::canDeleteObjectMutex.unlock();
         
@@ -140,9 +139,9 @@ namespace Prometheus{
             return;
         }
 
-        if(Engine::gameObjectMap.size()>=(availableThreads)){
+        if(Engine::objectDQueue.size>=(availableThreads)){
 
-            objectsPerThread = (Engine::gameObjectMap.size() + availableThreads - 1) / availableThreads; 
+            objectsPerThread = (Engine::objectDQueue.size + availableThreads - 1) / availableThreads; 
 
             objectPieces.resize(availableThreads);
             batchPieces.resize(availableThreads);
@@ -150,7 +149,7 @@ namespace Prometheus{
             latch = new Latch(availableThreads);
         }else{
             
-            objectsPerThread = Engine::gameObjectMap.size();
+            objectsPerThread = Engine::objectDQueue.size;
             
             objectPieces.resize(1);
             batchPieces.resize(1);

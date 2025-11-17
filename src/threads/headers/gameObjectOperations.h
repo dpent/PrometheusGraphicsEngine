@@ -19,7 +19,7 @@ namespace Prometheus
         VkDevice& device, VkPhysicalDevice& physicalDevice, VkQueue& graphicsQueue,
         VkCommandPool& commandPool);
 
-    void deleteObject(uint64_t id,VkDevice& device);
+    void deleteObject(GameObject* object,VkDevice& device);
 
     void updateTextureDeleteQueue(VkDevice& device);
 

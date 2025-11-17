@@ -166,7 +166,7 @@ namespace Prometheus{
         sem_wait(&Engine::descriptorsReadySemaphore);
         sem_wait(&Engine::instanceBufferReady);
 
-        if(Engine::indexVertexBuffer!=VK_NULL_HANDLE && Engine::gameObjectMap.size()!=0){
+        if(Engine::indexVertexBuffer!=VK_NULL_HANDLE && Engine::objectDQueue.size!=0){
 
             BufferManager::updateInstanceBuffer(Engine::currentFrame);
 

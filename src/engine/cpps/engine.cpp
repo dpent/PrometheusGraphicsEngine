@@ -89,7 +89,8 @@ std::vector<VkDescriptorSet> Engine::descriptorSets;
 std::list<VkDescriptorPool> Engine::descriptorDeleteQueue;
 std::list<int> Engine::framesSinceDescriptorQueuedForDeletion;
 
-std::unordered_map<uint64_t,GameObject*> Engine::gameObjectMap;
+//std::unordered_map<uint64_t,GameObject*> Engine::gameObjectMap;
+DoubleEndedQueue<GameObject*> Engine::objectDQueue;
 
 VkPhysicalDeviceProperties Engine::physicalDeviceProperties;
 VkPhysicalDeviceFeatures Engine::physicalDeviceFeatures;
@@ -300,11 +301,24 @@ namespace Prometheus{
 
         Engine::meshBatches.clear();
 
-        for(auto& [id, object]:Engine::gameObjectMap){
 
-            if (object != nullptr) {
+        if(Engine::objectDQueue.size!=0){
+            
+            GameObject* object = Engine::objectDQueue.head;
+            GameObject* temp = object->next;
+            object->terminate(device);
+            delete object->info;
+            delete object;
+
+            object = temp;
+
+            for(uint64_t i=1; i<Engine::objectDQueue.size; i++){
+                temp = object->next;
                 object->terminate(device);
+                delete object->info;
                 delete object;
+
+                object = temp;
             }
         }
 
@@ -437,7 +451,7 @@ namespace Prometheus{
 
         handleCommandBufferRecording(imageIndex);
 
-        if(Engine::gameObjectMap.size()!=0){
+        if(Engine::objectDQueue.size!=0){
 
             std::chrono::system_clock::time_point currentTime = std::chrono::system_clock::now();
             std::chrono::duration<double> delta = currentTime - Engine::lastUpdateTime;
@@ -859,7 +873,7 @@ namespace Prometheus{
         if(Engine::frameCount%1300==0 && Engine::frameCount>0){ //About 156.000 objects
             std::cout<<"====== FRAME "<<Engine::frameCount<<" ======"<<std::endl;
             Engine::gameObjectMutex.lock();
-            std::cout<<Engine::gameObjectMap.size()<<" objects loaded"<<std::endl;
+            std::cout<<Engine::objectDQueue.size<<" objects loaded"<<std::endl;
 
             auto finalTime = std::chrono::high_resolution_clock::now();
             std::chrono::duration<double> deltaSec = finalTime - frameZeroTime;
@@ -929,7 +943,7 @@ namespace Prometheus{
         char exePath[PATH_MAX];
         ssize_t len = readlink("/proc/self/exe", exePath, sizeof(exePath) - 1);
         if (len != -1) exePath[len] = '\0';
-        else std::strncpy(exePath, argv0, sizeof(exePath));
+        else strlcpy(exePath, argv0, sizeof(exePath));
         exePath[sizeof(exePath) - 1] = '\0';
 
         // Build absolute paths

@@ -62,8 +62,9 @@ namespace Prometheus{
 
         Engine::gameObjectMutex.lock();
 
-        Engine::gameObjectMap.insert({this->id,this});
+        //Engine::gameObjectMap.insert({this->id,this});
         Engine::objectsByMesh[modelPath][this->id]=this;
+        Engine::objectDQueue.push(this);
 
         Engine::gameObjectMutex.unlock();
 
@@ -92,6 +93,27 @@ namespace Prometheus{
 
         Engine::textureMutex.unlock();
 
+        Engine::gameObjectMutex.lock();
+
+        if(prev != nullptr){
+            if(next != nullptr){
+                this->prev->next = this->next;
+            }else{
+                this->prev->next = nullptr;
+            }
+        }
+
+        if(next != nullptr){
+            if(prev != nullptr){
+                this->next->prev = this->prev;
+            }else{
+                this->next->prev = this->next;
+            }
+        }
+
+        Engine::objectDQueue.size --;
+
+        Engine::gameObjectMutex.unlock();
     }
 
     void GameObject::draw(VkCommandBuffer& commandBuffer, uint32_t instanceCount, uint32_t firstInstance){
@@ -152,10 +174,10 @@ namespace Prometheus{
         sem_post(&(Engine::workInQueueSemaphore));
     }
 
-    void GameObject::deleteObjectThreaded(VkDevice &device, uint64_t id){
+    void GameObject::deleteObjectThreaded(VkDevice &device, GameObject* object){
 
         Job j = Job(DELETE_OBJECT);
-        j.data.emplace_back(std::in_place_type<uint64_t>, id);
+        j.data.emplace_back(std::in_place_type<GameObject*>, object);
         j.data.emplace_back(std::in_place_type<VkDevice*>, &device);
 
         Engine::queueMutex.lock();

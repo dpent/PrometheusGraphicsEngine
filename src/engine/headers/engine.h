@@ -37,6 +37,7 @@
 #include "../headers/inputManager.h"
 #include "../../objects/headers/camera.h"
 #include "../../imgui/windowManager.h"
+#include "doubleEndedQueue.h"
 
 #define EDITOR //Enables editor specific features like grid plane
 
@@ -142,7 +143,8 @@ namespace Prometheus{
         static std::list<VkDescriptorPool> descriptorDeleteQueue;
         static std::list<int> framesSinceDescriptorQueuedForDeletion;
 
-        static std::unordered_map<uint64_t,GameObject*> gameObjectMap;
+        //static std::unordered_map<uint64_t,GameObject*> gameObjectMap;
+        static DoubleEndedQueue<GameObject*> objectDQueue;
 
         static VkPhysicalDeviceProperties physicalDeviceProperties;
         static VkPhysicalDeviceFeatures physicalDeviceFeatures;

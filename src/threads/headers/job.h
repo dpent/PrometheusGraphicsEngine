@@ -48,7 +48,8 @@ namespace Prometheus{
         std::unordered_map<std::string,MeshBatch>*, 
         Latch*,
         uint32_t,
-        VkCommandBuffer*>> data;
+        VkCommandBuffer*,
+        GameObject*>> data;
 
         Job(operationId opId);
     };
