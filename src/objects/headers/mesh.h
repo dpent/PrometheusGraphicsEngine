@@ -28,15 +28,6 @@ namespace Prometheus{
         std::string toString();
     };
 
-    struct InstanceInfo{
-        glm::mat4 modelMatrix;
-        alignas(16) uint32_t textureIndex;
-
-        InstanceInfo(glm::mat4 model, uint32_t textureIndex);
-
-        std::string toString();
-    };
-
     struct MeshBatch{
         std::string meshPath;
         std::vector<InstanceInfo> instances;

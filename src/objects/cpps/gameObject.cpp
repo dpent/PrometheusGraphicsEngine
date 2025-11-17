@@ -22,6 +22,8 @@ namespace Prometheus{
         this->texturePath=texturePath;
         this->meshPath=modelPath;
 
+        this->info = new InstanceInfo();
+
         Engine::textureMutex.lock();
         if (Engine::textureMap.count(texturePath) != 0) {
             Engine::objectIdsByTexture[texturePath].push_back(this->id);
@@ -168,7 +170,36 @@ namespace Prometheus{
     }
 
     void GameObject::update(){
-        //animateCircularMotion(0.0f,0.0f,0.0f,50.0f,2.0f,0.0f);
+        //animateCircularMotion(0.0f,0.0f,0.0f,10.0f,1.0f,0.0f);
+    }
+
+    void GameObject::updateInstanceInfo(uint64_t textureIndex){
+        info->modelMatrix = transform.getModelMatrix();
+        info->textureIndex = textureIndex;
+    }
+
+    InstanceInfo::InstanceInfo(glm::mat4 model, uint32_t textureIndex){
+        this->modelMatrix=model;
+        this->textureIndex=textureIndex;
+    }
+
+    InstanceInfo::InstanceInfo(){}
+
+    std::string InstanceInfo::toString(){
+        std::ostringstream ss;
+        ss << std::fixed << std::setprecision(3); // optional formatting
+        ss<<textureIndex<<"\n";
+        // glm::mat4 is column-major
+        for (int row = 0; row < 4; ++row) {
+            ss << "[ ";
+            for (int col = 0; col < 4; ++col) {
+                ss << modelMatrix[col][row];
+                if (col < 3) ss << ", ";
+            }
+            ss << " ]\n";
+        }
+
+        return ss.str(); // <-- returns a string
     }
 }
 

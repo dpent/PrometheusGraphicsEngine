@@ -203,7 +203,10 @@ namespace Prometheus{
         }
 
         delete cameraPushConstants;
-        delete gridPushConstants;
+
+        #ifdef EDITOR
+            delete gridPushConstants;
+        #endif
 
         sem_post(&Engine::commandBufferRecorded);
     }

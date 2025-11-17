@@ -564,8 +564,10 @@ namespace Prometheus{
 
                 objPtr->update();
 
+                objPtr->updateInstanceInfo(textureIndices.at(objPtr->texturePath));
+
                 Engine::meshBatches[Engine::meshBatches.size()-1].instances.push_back(
-                    InstanceInfo(objPtr->transform.getModelMatrix(),textureIndices.at(objPtr->texturePath))
+                    *(objPtr->info)
                 );
                 Engine::meshBatches[Engine::meshBatches.size()-1].objects.push_back(objPtr);
                 i++;

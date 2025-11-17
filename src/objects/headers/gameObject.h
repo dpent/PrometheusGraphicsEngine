@@ -10,6 +10,17 @@
 #include "transform.h"
 
 namespace Prometheus{
+    
+    struct InstanceInfo{
+        glm::mat4 modelMatrix;
+        alignas(16) uint32_t textureIndex;
+    
+        InstanceInfo(glm::mat4 model, uint32_t textureIndex);
+        InstanceInfo();
+    
+        std::string toString();
+    };
+
     class GameObject{
     public:
         static uint64_t autoIncrementId;
@@ -19,6 +30,7 @@ namespace Prometheus{
         std::string texturePath;
         std::string meshPath;
         Transform transform;
+        InstanceInfo* info;
 
         GameObject(std::string texturePath,std::string modelPath,int req_comp, 
             VkDevice& device, VkPhysicalDevice& physicalDevice,VkQueue& graphicsQueue,
@@ -30,6 +42,7 @@ namespace Prometheus{
 
         virtual void start();
         virtual void update();
+        virtual void updateInstanceInfo(uint64_t textureIndex);
 
         std::string toString();
         void animateCircularMotion(float centerX, float centerY, float centerZ, float radius, float speed, float offset);
@@ -37,4 +50,6 @@ namespace Prometheus{
         static void createObjectThreaded(std::string texturePath,std::string modelPath,VkDevice& device, VkPhysicalDevice& physicalDevice,VkQueue& graphicsQueue);
         static void deleteObjectThreaded(VkDevice &device, uint64_t id);
     };
+
+
 }

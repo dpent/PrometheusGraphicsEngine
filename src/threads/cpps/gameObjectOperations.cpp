@@ -49,6 +49,7 @@ namespace Prometheus{
         
         if (object != nullptr) {
             object->terminate(device);
+            delete object->info;
             delete object;
         }
     }
