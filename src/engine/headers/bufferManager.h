@@ -28,6 +28,11 @@ namespace Prometheus{
         static void updateIndexVertexBuffer(VkDevice& device, VkPhysicalDevice& physicalDevice, 
             VkQueue& graphicsQueue, VkCommandPool& commandPool);
 
+        static void createDebugIndexVertexBuffer(VkDevice& device, VkPhysicalDevice& physicalDevice, 
+            VkQueue& graphicsQueue, VkCommandPool& commandPool);
+        static void updateDebugIndexVertexBuffer(VkDevice& device, VkPhysicalDevice& physicalDevice, 
+            VkQueue& graphicsQueue, VkCommandPool& commandPool);
+
         static uint64_t remakeVertexIndexVectors(VkDevice& device);
 
         static uint32_t findMemoryType(uint32_t& typeFilter, VkMemoryPropertyFlags properties, VkPhysicalDevice& physicalDevice);

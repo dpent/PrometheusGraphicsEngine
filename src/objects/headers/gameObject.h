@@ -24,8 +24,6 @@ namespace Prometheus{
     class GameObject{
     public:
         static uint64_t autoIncrementId;
-        
-        uint64_t textureVecIndex;
         uint64_t id;
         std::string texturePath;
         std::string meshPath;

@@ -26,17 +26,12 @@ namespace Prometheus{
 
         Engine::textureMutex.lock();
         if (Engine::textureMap.count(texturePath) != 0) {
-            Engine::objectIdsByTexture[texturePath].push_back(this->id);
-            this->textureVecIndex=Engine::objectIdsByTexture[texturePath].size()-1;
 
             Engine::textureMap[texturePath].count++;
 
         } else {
             Engine::textureMap.insert(std::make_pair(texturePath, 
                 Texture(texturePath, 4, device, physicalDevice, graphicsQueue, commandPool)));
-
-            Engine::objectIdsByTexture[texturePath].push_back(this->id);
-            this->textureVecIndex=0;
         }
 
         Engine::textureMutex.unlock();
@@ -89,8 +84,6 @@ namespace Prometheus{
                 Engine::textureMap.erase(texturePath);
             } 
         }
-        Engine::objectIdsByTexture[texturePath].erase(Engine::objectIdsByTexture[texturePath].begin()+textureVecIndex);
-
         Engine::textureMutex.unlock();
 
         Engine::gameObjectMutex.lock();
@@ -139,7 +132,6 @@ namespace Prometheus{
         oss << "GameObject { "
             << "id=" << id << ", "
             << "autoIncrementId=" << autoIncrementId << ", "
-            << "textureVecIndex=" << textureVecIndex << ", "
             << "texturePath=\"" << (texturePath=="" ? texturePath : "null") << "\", "
             << "meshPath=\"" << meshPath << "\" }";
         return oss.str();

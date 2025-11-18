@@ -18,6 +18,10 @@ namespace Prometheus{
 
         static std::array<VkVertexInputAttributeDescription, 8> getAttributeDescriptions();
 
+        static VkVertexInputBindingDescription getDebugBindingDescription();
+
+        static std::array<VkVertexInputAttributeDescription, 2> getDebugAttributeDescriptions();
+
         bool operator==(const Vertex& other) const {
             return pos == other.pos && color == other.color && texCoord == other.texCoord;
         }

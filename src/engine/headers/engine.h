@@ -38,6 +38,7 @@
 #include "../../objects/headers/camera.h"
 #include "../../imgui/windowManager.h"
 #include "doubleEndedQueue.h"
+#include "../../debug/headers/debug.h"
 
 #define EDITOR //Enables editor specific features like grid plane
 
@@ -91,6 +92,8 @@ namespace Prometheus{
         static VkPipeline graphicsPipeline;
         static VkPipeline preGraphicsPipeline;
         static VkPipelineLayout preGraphicsLayout;
+        static VkPipeline debugPipeline;
+        static VkPipelineLayout debugPipelineLayout;
 
         static std::vector<VkFramebuffer> swapChainFramebuffers;
 
@@ -122,9 +125,16 @@ namespace Prometheus{
         static std::vector<Vertex> vertices;
         static std::vector<uint32_t> indices;
 
+        static std::vector<Vertex> debugVertices;
+        static std::vector<uint32_t> debugIndices;
+
         static VkBuffer indexVertexBuffer;
         static VkDeviceMemory indexVertexBufferMemory;
         static uint64_t indexVertexBufferSize;
+
+        static VkBuffer debugIndexVertexBuffer;
+        static VkDeviceMemory debugIndexVertexBufferMemory;
+        static uint64_t debugIndexVertexBufferSize;
 
         static std::vector<VkBuffer> instanceBuffers;
         static std::vector<VkDeviceMemory> instanceBufferMemories;
@@ -132,6 +142,7 @@ namespace Prometheus{
         static uint64_t instanceBufferSize;
 
         static VkDeviceSize indexOffset;
+        static VkDeviceSize debugIndexOffset;
 
         static std::vector<VkBuffer> uniformBuffers;
         static std::vector<VkDeviceMemory> uniformBuffersMemory;
@@ -149,7 +160,6 @@ namespace Prometheus{
         static VkPhysicalDeviceProperties physicalDeviceProperties;
         static VkPhysicalDeviceFeatures physicalDeviceFeatures;
         static std::unordered_map<std::string, Texture> textureMap;
-        static std::unordered_map<std::string,std::vector<uint64_t>> objectIdsByTexture;
         static std::unordered_map<std::string, std::vector<Texture>> texturesQueuedForDeletion;
         static std::unordered_map<std::string, std::vector<int>> framesSinceTextureQueuedForDeletion;
 
@@ -246,7 +256,7 @@ namespace Prometheus{
         void createUpdateObjDescrJob();
         void createVertexIndexBufferUpdateJob();
         void createInstanceBufferRemakeJob();
-        void updateVertexIndexBuffer();
+        void updateVertexIndexBuffers();
         void updateDescriptors();
         void checkInstanceBufferForUpdates();
         void createRecordCommandBufferJob(uint32_t imageIndex);

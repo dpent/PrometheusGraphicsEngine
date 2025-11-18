@@ -125,6 +125,10 @@ namespace Prometheus{
         glm::mat4 viewMatrix = Engine::camera.getViewMatrix();
         glm::mat4 projMatrix = Engine::camera.getProjectionMatrix();
 
+        CameraObject* cameraPushConstants= new CameraObject();
+        cameraPushConstants->view=viewMatrix;
+        cameraPushConstants->proj=projMatrix;
+
         #ifdef EDITOR
             vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, Engine::preGraphicsPipeline);
 
@@ -145,14 +149,32 @@ namespace Prometheus{
 
 
             vkCmdDraw(commandBuffer, 3, 1, 0, 0);
+
+            if(Engine::debugVertices.size() != 0 && Engine::debugIndexVertexBuffer != VK_NULL_HANDLE){
+
+                vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, Engine::debugPipeline);
+                
+                vkCmdPushConstants(
+                    commandBuffer,
+                    Engine::debugPipelineLayout,
+                    VK_SHADER_STAGE_VERTEX_BIT,
+                    0,
+                    sizeof(*cameraPushConstants),
+                    cameraPushConstants
+                );
+
+                VkBuffer vertexBuffers[] = {Engine::debugIndexVertexBuffer};
+                VkDeviceSize offsets[] = {0};
+
+                vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
+                vkCmdBindIndexBuffer(commandBuffer, Engine::debugIndexVertexBuffer, Engine::debugIndexOffset, VK_INDEX_TYPE_UINT32);
+
+                vkCmdDrawIndexed(commandBuffer, Engine::debugIndices.size(), Engine::debugVertices.size()>>1, 0, 0, 0);
+            }
+
         #endif
 
         vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, Engine::graphicsPipeline);
-
-        CameraObject* cameraPushConstants= new CameraObject();
-        cameraPushConstants->view=viewMatrix;
-        cameraPushConstants->proj=projMatrix;
-
 
         vkCmdPushConstants(
             commandBuffer,
@@ -590,6 +612,75 @@ namespace Prometheus{
         physicalDevice, 1, Engine::msaaSamples);
 
     Engine::colorImageView = SwapChainManager::createImageView(device,Engine::colorImage, colorFormat, VK_IMAGE_ASPECT_COLOR_BIT, 1);
+
+    }
+
+    void BufferManager::createDebugIndexVertexBuffer(VkDevice& device, VkPhysicalDevice& physicalDevice, 
+        VkQueue& graphicsQueue, VkCommandPool& commandPool){
+
+        VkDeviceSize bufferSize = (sizeof(Engine::debugVertices[0]) * Engine::debugVertices.size())+(sizeof(Engine::debugIndices[0]) * Engine::debugIndices.size());
+        bufferSize = bufferSize<<1;
+        Engine::debugIndexVertexBufferSize = bufferSize;
+        Engine::debugIndexOffset = sizeof(Engine::debugVertices[0]) * Engine::debugVertices.size();
+
+        VkBuffer stagingBuffer;
+        VkDeviceMemory stagingBufferMemory;
+        BufferManager::createJointBuffer(sizeof(Engine::debugVertices[0]) * Engine::debugVertices.size(), 
+            sizeof(Engine::debugIndices[0]) * Engine::debugIndices.size(), Engine::debugIndexOffset,
+            VK_BUFFER_USAGE_TRANSFER_SRC_BIT, 
+            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
+            stagingBuffer, stagingBufferMemory,device,physicalDevice);
+
+        void* data;
+        vkMapMemory(device, stagingBufferMemory, 0, Engine::debugIndexOffset, 0, &data);
+        memcpy(data, Engine::debugVertices.data(), (size_t) (sizeof(Engine::debugVertices[0]) * Engine::debugVertices.size()));
+        vkUnmapMemory(device, stagingBufferMemory);
+
+        vkMapMemory(device, stagingBufferMemory, Engine::debugIndexOffset, bufferSize-Engine::debugIndexOffset, 0, &data);
+        memcpy(data, Engine::debugIndices.data(), (size_t) (sizeof(Engine::debugIndices[0]) * Engine::debugIndices.size()));
+        vkUnmapMemory(device, stagingBufferMemory);
+
+        BufferManager::createJointBuffer(sizeof(Engine::debugVertices[0]) * Engine::debugVertices.size(), 
+            sizeof(Engine::debugIndices[0]) * Engine::debugIndices.size(), Engine::debugIndexOffset,
+            VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, 
+            VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 
+            Engine::debugIndexVertexBuffer, Engine::debugIndexVertexBufferMemory,device,physicalDevice);
+
+        copyBuffer(stagingBuffer, Engine::debugIndexVertexBuffer, bufferSize,device,graphicsQueue, commandPool);
+
+        vkDestroyBuffer(device, stagingBuffer, nullptr);
+        vkFreeMemory(device, stagingBufferMemory, nullptr);
+
+        
+    }
+
+    void BufferManager::updateDebugIndexVertexBuffer(VkDevice& device, VkPhysicalDevice& physicalDevice, 
+        VkQueue& graphicsQueue, VkCommandPool& commandPool){
+
+        VkDeviceSize bufferSize = (sizeof(Engine::debugVertices[0]) * Engine::debugVertices.size())+(sizeof(Engine::debugIndices[0]) * Engine::debugIndices.size());
+        Engine::debugIndexOffset = sizeof(Engine::debugVertices[0]) * Engine::debugVertices.size();
+
+        VkBuffer stagingBuffer;
+        VkDeviceMemory stagingBufferMemory;
+        BufferManager::createJointBuffer(sizeof(Engine::debugVertices[0]) * Engine::debugVertices.size(), 
+            sizeof(Engine::debugVertices[0]) * Engine::debugVertices.size(), Engine::debugIndexOffset,
+            VK_BUFFER_USAGE_TRANSFER_SRC_BIT, 
+            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
+            stagingBuffer, stagingBufferMemory,device,physicalDevice);
+
+        void* data;
+        vkMapMemory(device, stagingBufferMemory, 0, Engine::debugIndexOffset, 0, &data);
+        memcpy(data, Engine::debugVertices.data(), (size_t) (sizeof(Engine::debugVertices[0]) * Engine::debugVertices.size()));
+        vkUnmapMemory(device, stagingBufferMemory);
+
+        vkMapMemory(device, stagingBufferMemory, Engine::debugIndexOffset, bufferSize-Engine::debugIndexOffset, 0, &data);
+        memcpy(data, Engine::debugIndices.data(), (size_t) (sizeof(Engine::debugIndices[0]) * Engine::debugIndices.size()));
+        vkUnmapMemory(device, stagingBufferMemory);
+
+        copyBuffer(stagingBuffer, Engine::debugIndexVertexBuffer, bufferSize,device,graphicsQueue, commandPool);
+
+        vkDestroyBuffer(device, stagingBuffer, nullptr);
+        vkFreeMemory(device, stagingBufferMemory, nullptr);
 
     }
 

@@ -36,7 +36,8 @@ VkRenderPass Engine::renderPass;
 VkPipeline Engine::graphicsPipeline;
 VkPipeline Engine::preGraphicsPipeline;
 VkPipelineLayout Engine::preGraphicsLayout;
-
+VkPipeline Engine::debugPipeline;
+VkPipelineLayout Engine::debugPipelineLayout;
 
 VkCommandPool Engine::commandPool;
 std::vector<VkCommandBuffer> Engine::commandBuffers;
@@ -68,9 +69,16 @@ bool Engine::framebufferResized = false;
 std::vector<Vertex> Engine::vertices;
 std::vector<uint32_t> Engine::indices;
 
+std::vector<Vertex> Engine::debugVertices;
+std::vector<uint32_t> Engine::debugIndices;
+
 VkBuffer Engine::indexVertexBuffer= nullptr;
 VkDeviceMemory Engine::indexVertexBufferMemory= nullptr;
 uint64_t Engine::indexVertexBufferSize = 0;
+
+VkBuffer Engine::debugIndexVertexBuffer = nullptr;
+VkDeviceMemory Engine::debugIndexVertexBufferMemory = nullptr;
+uint64_t Engine::debugIndexVertexBufferSize = 0;
 
 std::vector<VkBuffer> Engine::instanceBuffers;
 std::vector<VkDeviceMemory> Engine::instanceBufferMemories;
@@ -78,6 +86,7 @@ std::vector<void*> Engine::instanceBuffersMapped;
 uint64_t Engine::instanceBufferSize = 0;
 
 VkDeviceSize Engine::indexOffset=0;
+VkDeviceSize Engine::debugIndexOffset=0;
 
 std::vector<VkBuffer> Engine::uniformBuffers;
 std::vector<VkDeviceMemory> Engine::uniformBuffersMemory;
@@ -96,7 +105,6 @@ VkPhysicalDeviceProperties Engine::physicalDeviceProperties;
 VkPhysicalDeviceFeatures Engine::physicalDeviceFeatures;
 
 std::unordered_map<std::string, Texture> Engine::textureMap;
-std::unordered_map<std::string,std::vector<uint64_t>> Engine::objectIdsByTexture;
 std::unordered_map<std::string, std::vector<Texture>> Engine::texturesQueuedForDeletion;
 std::unordered_map<std::string, std::vector<int>> Engine::framesSinceTextureQueuedForDeletion;
 
@@ -218,6 +226,7 @@ namespace Prometheus{
 
         #ifdef EDITOR
             GraphicsPipelineManager::createEditorPreGraphicsPipeline(this->device);
+            GraphicsPipelineManager::createDebugPipeline(this->device);
         #endif
 
         BufferManager::createColorResources(this->device,this->physicalDevice);
@@ -274,12 +283,23 @@ namespace Prometheus{
 
             WindowManager::startNewFrame();
 
+            Debug::drawLine(glm::vec3(0.0f,0.0f,0.0f), glm::vec3(2.0f,0.0f,2.0f),
+                glm::vec3(1.0f, 0.0f, 1.0f));
+
+            Debug::drawLine(glm::vec3(2.0f,0.0f,0.0f), glm::vec3(2.0f,0.0f,2.0f),
+                glm::vec3(1.0f, 0.0f, 1.0f));
+
             drawFrame();
 
             //objectLoadingTest(frameZeroTime);
             
             createUpdateTextureQueueJob();
             createUpdateDescriptorQueueJob();
+            
+            #ifdef EDITOR
+                Engine::debugVertices.clear();
+                Engine::debugIndices.clear();
+            #endif
         }
 
         Engine::graphicsQueueMutex.lock();
@@ -287,6 +307,7 @@ namespace Prometheus{
         vkDeviceWaitIdle(device);
 
         Engine::graphicsQueueMutex.unlock();
+
     }
 
     void Engine::createSurface(){
@@ -347,12 +368,14 @@ namespace Prometheus{
 
         vkDestroyBuffer(device, Engine::indexVertexBuffer, nullptr);
         vkFreeMemory(device, Engine::indexVertexBufferMemory, nullptr);
+        
+        vkDestroyBuffer(device, Engine::debugIndexVertexBuffer, nullptr);
+        vkFreeMemory(device, Engine::debugIndexVertexBufferMemory, nullptr);
 
         for(size_t i=0; i<MAX_FRAMES_IN_FLIGHT; i++){
             vkDestroyBuffer(device, Engine::instanceBuffers[i], nullptr);
             vkFreeMemory(device, Engine::instanceBufferMemories[i], nullptr);
         }
-
 
         for (size_t i = 0; i < Engine::MAX_FRAMES_IN_FLIGHT; i++) {
             vkDestroySemaphore(device, Engine::renderFinishedSemaphores[i], nullptr);
@@ -366,6 +389,8 @@ namespace Prometheus{
         vkDestroyPipelineLayout(device, pipelineLayout, nullptr);
         vkDestroyPipeline(device, preGraphicsPipeline, nullptr);
         vkDestroyPipelineLayout(device, preGraphicsLayout, nullptr);
+        vkDestroyPipeline(device, debugPipeline, nullptr);
+        vkDestroyPipelineLayout(device, debugPipelineLayout, nullptr);
 
         vkDestroyRenderPass(device, renderPass, nullptr);
 
@@ -441,11 +466,37 @@ namespace Prometheus{
 
         if(Engine::recreateVertexIndexBuffer && Engine::meshMap.size()!=0){
 
-            Engine::updateVertexIndexBuffer();
+            Engine::updateVertexIndexBuffers();
             
         }else{
             sem_post(&Engine::verIndBufferComplete);
         }
+
+        #ifdef EDITOR
+
+        if(Engine::debugVertices.size()!=0){
+
+            uint64_t size = (sizeof(Engine::debugVertices[0]) * Engine::debugVertices.size())+(sizeof(Engine::debugIndices[0]) * Engine::debugIndices.size());
+
+            if(size >= Engine::debugIndexVertexBufferSize){
+
+                if (Engine::debugIndexVertexBuffer != VK_NULL_HANDLE) {
+                    vkDestroyBuffer(device, Engine::debugIndexVertexBuffer, nullptr);
+                }
+                if (Engine::debugIndexVertexBufferMemory != VK_NULL_HANDLE) {
+                    vkFreeMemory(device, Engine::debugIndexVertexBufferMemory, nullptr);
+                }
+
+                BufferManager::createDebugIndexVertexBuffer(this->device,this->physicalDevice,
+                this->graphicsQueue, Engine::commandPool);
+
+            }else{
+                BufferManager::updateDebugIndexVertexBuffer(this->device,this->physicalDevice,
+                    this->graphicsQueue, Engine::commandPool);
+            }
+        }
+
+        #endif
 
         sem_wait(&Engine::verIndBufferComplete);
 
@@ -750,7 +801,7 @@ namespace Prometheus{
         sem_post(&Engine::workInQueueSemaphore);
     }
 
-    void Engine::updateVertexIndexBuffer(){
+    void Engine::updateVertexIndexBuffers(){
 
         Engine::queueMutex.lock();
 
