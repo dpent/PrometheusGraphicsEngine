@@ -15,6 +15,7 @@ for shader in ./shaders/*; do
     name="${filename%.*}"
     
     # Determine output name based on shader type
+    echo ${name}
     case "$extension" in
         vert)
             output="${name}Vert.spv"
