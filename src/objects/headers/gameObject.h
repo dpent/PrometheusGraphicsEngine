@@ -8,18 +8,13 @@
 #define GLM_FORCE_DEFAULT_ALIGNED_GENTYPES //REMEMBER THIS IS SUPPOSED TO ALIGN EVERYTHING
 #include <glm/glm.hpp>  
 #include "transform.h"
+#include "mesh.h"
+#include "instanceInfo.h"
+#include "../../debug/headers/debug.h"
 
 namespace Prometheus{
     
-    struct InstanceInfo{
-        glm::mat4 modelMatrix;
-        alignas(16) uint32_t textureIndex;
     
-        InstanceInfo(glm::mat4 model, uint32_t textureIndex);
-        InstanceInfo();
-    
-        std::string toString();
-    };
 
     class GameObject{
     public:
@@ -27,6 +22,8 @@ namespace Prometheus{
         uint64_t id;
         std::string texturePath;
         std::string meshPath;
+        Mesh* mesh;
+        glm::vec3 hitboxPoints[8];
         Transform transform;
         InstanceInfo* info;
         GameObject* next = nullptr;
@@ -43,6 +40,13 @@ namespace Prometheus{
         virtual void start();
         virtual void update();
         virtual void updateInstanceInfo(uint64_t textureIndex);
+        virtual void scale(glm::vec3 scale);
+        virtual void rotate(glm::quat rotation);
+
+        void drawAABB(glm::vec3 color = COLOR_MAGENTA);
+        static glm::vec3 hsvToRgb(float h, float s, float v);
+        static glm::vec3 getColorBasedOnTime();
+        glm::vec3 updatePulse(float time);
 
         std::string toString();
         void animateCircularMotion(float centerX, float centerY, float centerZ, float radius, float speed, float offset);

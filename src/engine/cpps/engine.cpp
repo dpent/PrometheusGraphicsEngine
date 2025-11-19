@@ -16,6 +16,7 @@
 #include <string.h>
 #include <chrono>
 #include "../../threads/headers/descriptorOperations.h"
+#include "../headers/cell.h"
 
 using namespace Prometheus;
 
@@ -161,6 +162,8 @@ bool Engine::capFPS = true;
 int Engine::fpsCap = 60;
 double Engine::frameTime = 0.0;
 
+Cell* Engine::spatialHash;
+
 namespace Prometheus{
     void Engine::run(int argc, char** argv) {
 
@@ -270,6 +273,8 @@ namespace Prometheus{
         WindowManager::initGUI(instance,graphicsQueue,device,physicalDevice);
         Engine::commandPoolMutex.unlock();
 
+        Engine::spatialHash = new Cell(glm::vec3(10.0f,5.0f,10.0f),glm::vec3(30.0f,25.0f,30.0f));
+
         //auto frameZeroTime = std::chrono::high_resolution_clock::now();
         while (!glfwWindowShouldClose(Engine::window)) {
             glfwPollEvents();
@@ -282,12 +287,8 @@ namespace Prometheus{
             }
 
             WindowManager::startNewFrame();
-
-            Debug::drawLine(glm::vec3(0.0f,0.0f,0.0f), glm::vec3(2.0f,0.0f,2.0f),
-                glm::vec3(1.0f, 0.0f, 1.0f));
-
-            Debug::drawLine(glm::vec3(2.0f,0.0f,0.0f), glm::vec3(2.0f,0.0f,2.0f),
-                glm::vec3(1.0f, 0.0f, 1.0f));
+            //Debug::drawLine(glm::vec3(10.0f), glm::vec3(0.0f), COLOR_CYAN);
+            //Engine::spatialHash->drawSelf();
 
             drawFrame();
 
@@ -474,33 +475,9 @@ namespace Prometheus{
 
         #ifdef EDITOR
 
-        if(Engine::debugVertices.size()!=0){
-
-            uint64_t size = (sizeof(Engine::debugVertices[0]) * Engine::debugVertices.size())+(sizeof(Engine::debugIndices[0]) * Engine::debugIndices.size());
-
-            if(size >= Engine::debugIndexVertexBufferSize){
-
-                if (Engine::debugIndexVertexBuffer != VK_NULL_HANDLE) {
-                    vkDestroyBuffer(device, Engine::debugIndexVertexBuffer, nullptr);
-                }
-                if (Engine::debugIndexVertexBufferMemory != VK_NULL_HANDLE) {
-                    vkFreeMemory(device, Engine::debugIndexVertexBufferMemory, nullptr);
-                }
-
-                BufferManager::createDebugIndexVertexBuffer(this->device,this->physicalDevice,
-                this->graphicsQueue, Engine::commandPool);
-
-            }else{
-                BufferManager::updateDebugIndexVertexBuffer(this->device,this->physicalDevice,
-                    this->graphicsQueue, Engine::commandPool);
-            }
-        }
-
         #endif
 
         sem_wait(&Engine::verIndBufferComplete);
-
-        handleCommandBufferRecording(imageIndex);
 
         if(Engine::objectDQueue.size!=0){
 
@@ -524,16 +501,39 @@ namespace Prometheus{
             }
 
             
+            
         }else{
-
+            
             sem_post(&Engine::descriptorsReadySemaphore);
             sem_post(&Engine::instanceBufferReady);
         }
 
+        if(Engine::debugVertices.size()!=0){
+
+            uint64_t size = (sizeof(Engine::debugVertices[0]) * Engine::debugVertices.size())+(sizeof(Engine::debugIndices[0]) * Engine::debugIndices.size());
+
+            if(size >= Engine::debugIndexVertexBufferSize){
+
+                if (Engine::debugIndexVertexBuffer != VK_NULL_HANDLE) {
+                    vkDestroyBuffer(device, Engine::debugIndexVertexBuffer, nullptr);
+                }
+                if (Engine::debugIndexVertexBufferMemory != VK_NULL_HANDLE) {
+                    vkFreeMemory(device, Engine::debugIndexVertexBufferMemory, nullptr);
+                }
+
+                BufferManager::createDebugIndexVertexBuffer(this->device,this->physicalDevice,
+                this->graphicsQueue, Engine::commandPool);
+
+            }else{
+                BufferManager::updateDebugIndexVertexBuffer(this->device,this->physicalDevice,
+                    this->graphicsQueue, Engine::commandPool);
+            }
+        }
+
+        //handleCommandBufferRecording(imageIndex);
+        
         Engine::meshMutex.unlock();
-
         if(!Engine::wasPlacedInThread){
-
             Engine::commandPoolMutex.lock();
             BufferManager::recordCommandBuffer(Engine::commandBuffers[Engine::currentFrame], imageIndex,device,
             physicalDevice);

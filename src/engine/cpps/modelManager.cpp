@@ -24,6 +24,16 @@ namespace Prometheus{
 
         std::unordered_map<Vertex, uint32_t> uniqueVertices{};
 
+        glm::vec3 minCoords = glm::vec3(
+            attrib.vertices[shapes[0].mesh.indices[0].vertex_index],
+            attrib.vertices[shapes[0].mesh.indices[0].vertex_index + 1],
+            attrib.vertices[shapes[0].mesh.indices[0].vertex_index + 2]);
+
+        glm::vec3 maxCoords = glm::vec3(
+            attrib.vertices[shapes[0].mesh.indices[0].vertex_index],
+            attrib.vertices[shapes[0].mesh.indices[0].vertex_index + 1],
+            attrib.vertices[shapes[0].mesh.indices[0].vertex_index + 2]);
+
         for (const auto& shape : shapes) {
             for (const auto& index : shape.mesh.indices) {
                 Vertex vertex{};
@@ -33,6 +43,14 @@ namespace Prometheus{
                     attrib.vertices[3 * index.vertex_index + 1],
                     attrib.vertices[3 * index.vertex_index + 2]
                 };
+
+                if (vertex.pos.x < minCoords.x) minCoords.x = vertex.pos.x;
+                if (vertex.pos.y < minCoords.y) minCoords.y = vertex.pos.y;
+                if (vertex.pos.z < minCoords.z) minCoords.z = vertex.pos.z;
+
+                if (vertex.pos.x > maxCoords.x) maxCoords.x = vertex.pos.x;
+                if (vertex.pos.y > maxCoords.y) maxCoords.y = vertex.pos.y;
+                if (vertex.pos.z > maxCoords.z) maxCoords.z = vertex.pos.z;
 
                 if(
                     !attrib.texcoords.empty() && 
@@ -58,7 +76,7 @@ namespace Prometheus{
             }
         }
         Engine::meshMutex.lock();
-        Engine::meshMap[modelPath]=Mesh(modelPath,vertices,indices);
+        Engine::meshMap[modelPath]=Mesh(modelPath,vertices,indices, minCoords, maxCoords);
         Engine::meshesLoading.erase(modelPath);
         Engine::meshMutex.unlock();
 

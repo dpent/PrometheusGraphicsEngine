@@ -47,7 +47,13 @@ namespace Prometheus{
 
             ModelManager::loadModel(modelPath,*meshLoadSemaphore); //Also inserts the mesh into meshMap
             
+            glm::mat4 inverse = glm::inverse(transform.getModelMatrix());
 
+            mesh = &(Engine::meshMap[modelPath]);
+
+            for (int i = 0; i < 8; i++) {
+                hitboxPoints[i] = glm::vec3(inverse * glm::vec4(Engine::meshMap[modelPath].hitboxPoints[i], 1.0f));
+            }
             Engine::recreateVertexIndexBuffer=true;
 
             delete meshLoadSemaphore;
@@ -180,11 +186,12 @@ namespace Prometheus{
     }
 
     void GameObject::start(){
-        this->transform.scale*=15.0f;
+        scale(glm::vec3(15.0f));
     }
 
     void GameObject::update(){
-        //animateCircularMotion(0.0f,0.0f,0.0f,10.0f,1.0f,0.0f);
+        drawAABB();
+        animateCircularMotion(0.0f,0.0f,0.0f,10.0f,1.0f,0.0f);
     }
 
     void GameObject::updateInstanceInfo(uint64_t textureIndex){
@@ -192,28 +199,82 @@ namespace Prometheus{
         info->textureIndex = textureIndex;
     }
 
-    InstanceInfo::InstanceInfo(glm::mat4 model, uint32_t textureIndex){
-        this->modelMatrix=model;
-        this->textureIndex=textureIndex;
+    void GameObject::scale(glm::vec3 scale){
+        this->transform.scale = scale;
+
+        for(int i=0; i<8; i++){
+            hitboxPoints[i] = transform.rotation * (mesh->hitboxPoints[i] * transform.scale);
+        }
     }
 
-    InstanceInfo::InstanceInfo(){}
+    void GameObject::rotate(glm::quat rotation){
+        transform.rotation *= rotation;
 
-    std::string InstanceInfo::toString(){
-        std::ostringstream ss;
-        ss << std::fixed << std::setprecision(3); // optional formatting
-        ss<<textureIndex<<"\n";
-        // glm::mat4 is column-major
-        for (int row = 0; row < 4; ++row) {
-            ss << "[ ";
-            for (int col = 0; col < 4; ++col) {
-                ss << modelMatrix[col][row];
-                if (col < 3) ss << ", ";
-            }
-            ss << " ]\n";
+        for(int i=0; i<8; i++){
+            hitboxPoints[i] = rotation * hitboxPoints[i];
         }
+    }
 
-        return ss.str(); // <-- returns a string
+    void GameObject::drawAABB(glm::vec3 color){ //Magenta default
+        Debug::drawLine(transform.position + hitboxPoints[1], 
+            transform.position + hitboxPoints[3], color); //TOP PART
+        Debug::drawLine(transform.position + hitboxPoints[1], 
+            transform.position + hitboxPoints[0], color);
+        Debug::drawLine(transform.position + hitboxPoints[2], 
+            transform.position + hitboxPoints[3], color);
+        Debug::drawLine(transform.position + hitboxPoints[2], 
+            transform.position + hitboxPoints[0], color);
+
+        Debug::drawLine(transform.position + hitboxPoints[1], 
+            transform.position + hitboxPoints[5], color); //PERPENDICULAR PARTS
+        Debug::drawLine(transform.position + hitboxPoints[3], 
+            transform.position + hitboxPoints[7], color);
+        Debug::drawLine(transform.position + hitboxPoints[0], 
+            transform.position + hitboxPoints[4], color);
+        Debug::drawLine(transform.position + hitboxPoints[2], 
+            transform.position + hitboxPoints[6], color);
+
+        Debug::drawLine(transform.position + hitboxPoints[6], 
+            transform.position + hitboxPoints[4], color); //BOTTOM PART
+        Debug::drawLine(transform.position + hitboxPoints[6], 
+            transform.position + hitboxPoints[7], color);
+        Debug::drawLine(
+            transform.position + hitboxPoints[5], 
+            transform.position + hitboxPoints[4], color);
+        Debug::drawLine(transform.position + hitboxPoints[5], 
+            transform.position + hitboxPoints[7], color);
+    }
+
+    glm::vec3 GameObject::hsvToRgb(float h, float s, float v)
+    {
+        float c = v * s;
+        float x = c * (1 - fabsf(fmodf(h / 60.0f, 2) - 1));
+        float m = v - c;
+
+        float r, g, b;
+
+        if (0 <= h && h < 60)      { r = c; g = x; b = 0; }
+        else if (60 <= h && h < 120)  { r = x; g = c; b = 0; }
+        else if (120 <= h && h < 180) { r = 0; g = c; b = x; }
+        else if (180 <= h && h < 240) { r = 0; g = x; b = c; }
+        else if (240 <= h && h < 300) { r = x; g = 0; b = c; }
+        else                          { r = c; g = 0; b = x; }
+
+        return glm::vec3(r + m, g + m, b + m);
+    }
+
+    glm::vec3 GameObject::getColorBasedOnTime(){
+        float t = glfwGetTime(); // or your own time variable
+        float hue = fmodf(t * 60.0f, 360.0f); // 60° per second
+        return GameObject::hsvToRgb(hue, 1.0f, 1.0f);
+    }
+
+    glm::vec3 GameObject::updatePulse(float time)
+    {
+
+        float s = 15.0f + sin(time) * 4.0f;
+
+        return glm::vec3(s);
     }
 }
 

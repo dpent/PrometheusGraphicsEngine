@@ -11,10 +11,13 @@
 #include <iomanip>
 #include <vector>
 #include "../../engine/headers/textureManager.h"
-#include "../../objects/headers/gameObject.h"
+#include "instanceInfo.h"
 
 
 namespace Prometheus{
+
+    class GameObject;
+
     struct Mesh{
         uint32_t vertexOffset;
         uint32_t indexOffset;
@@ -23,9 +26,24 @@ namespace Prometheus{
         std::vector<Vertex> vertices;
         std::vector<uint32_t> indices;
 
+        glm::vec3 hitboxPoints[8];
+        /*
+        0: Top front left
+        1: Top front right
+        2: Top back left
+        3: Top back right
+        4: Bottom front left
+        5: Bottom front right
+        6: Bottom back left
+        7: Bottom back right
+        */
+
         Mesh();
-        Mesh(std::string meshPath, std::vector<Vertex> vertices, std::vector<uint32_t> indices);
+        Mesh(std::string meshPath, std::vector<Vertex> vertices, std::vector<uint32_t> indices,
+            glm::vec3 min, glm::vec3 max);
         std::string toString();
+
+        void drawAABB();
     };
 
     struct MeshBatch{

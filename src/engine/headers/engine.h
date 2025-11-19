@@ -39,6 +39,7 @@
 #include "../../imgui/windowManager.h"
 #include "doubleEndedQueue.h"
 #include "../../debug/headers/debug.h"
+#include "cell.h"
 
 #define EDITOR //Enables editor specific features like grid plane
 
@@ -215,6 +216,8 @@ namespace Prometheus{
         static glm::vec3 cameraChangePos;
 
         static uint32_t graphicsFamilyIndex;
+
+        static Cell* spatialHash;
 
         void run(int argc, char** argv);
         static std::vector<char> readFile(const std::string& filename);
