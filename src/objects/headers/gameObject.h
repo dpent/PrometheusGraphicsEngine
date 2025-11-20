@@ -11,11 +11,13 @@
 #include "mesh.h"
 #include "instanceInfo.h"
 #include "../../debug/headers/debug.h"
+#include "../../engine/headers/doubleEndedQueue.h"
+#include <unordered_set>
+#include "../../engine/headers/cell.h"
+#include <array>
 
 namespace Prometheus{
     
-    
-
     class GameObject{
     public:
         static uint64_t autoIncrementId;
@@ -23,9 +25,10 @@ namespace Prometheus{
         std::string texturePath;
         std::string meshPath;
         Mesh* mesh;
-        glm::vec3 hitboxPoints[8];
+        std::array<glm::vec3, 8> hitboxPoints;
         Transform transform;
         InstanceInfo* info;
+        std::unordered_set<Cell*> cells;
         GameObject* next = nullptr;
         GameObject* prev = nullptr;
 
@@ -43,7 +46,7 @@ namespace Prometheus{
         virtual void scale(glm::vec3 scale);
         virtual void rotate(glm::quat rotation);
 
-        void drawAABB(glm::vec3 color = COLOR_MAGENTA);
+        void drawOBB(glm::vec3 color = COLOR_MAGENTA);
         static glm::vec3 hsvToRgb(float h, float s, float v);
         static glm::vec3 getColorBasedOnTime();
         glm::vec3 updatePulse(float time);
@@ -53,6 +56,11 @@ namespace Prometheus{
         
         static void createObjectThreaded(std::string texturePath,std::string modelPath,VkDevice& device, VkPhysicalDevice& physicalDevice,VkQueue& graphicsQueue);
         static void deleteObjectThreaded(VkDevice &device, GameObject* object);
+
+        bool sphereTest(glm::vec3 center);
+
+        bool checkCollisions();
+        std::array<glm::vec3, 8> getWorldHitpoints();
     };
 
 

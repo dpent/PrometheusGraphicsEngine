@@ -134,6 +134,7 @@ namespace Prometheus{
         ImGui::SliderInt("Set fps cap", &Engine::fpsCap, 1, 300);
         ImGui::DragFloat("Camera speed", &Engine::camera.velocity,0.1f, 0.0f, FLT_MAX);
         ImGui::DragFloat("FOV", &Engine::camera.fov, 1.0f, 0.0f, FLT_MAX);
+        ImGui::DragFloat("View distance", &Engine::camera.far, 1.0f, 0.0f, FLT_MAX);
 
         ImGui::End();
     }

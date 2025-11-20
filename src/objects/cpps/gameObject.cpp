@@ -3,6 +3,7 @@
 #include <vulkan/vulkan_core.h> 
 #include <sstream>
 #include "../../engine/headers/modelManager.h"
+#include "../../physics/headers/collision.h"
 
 using namespace Prometheus;
 
@@ -37,6 +38,7 @@ namespace Prometheus{
         Engine::textureMutex.unlock();
 
         Engine::meshMutex.lock();
+
         if(Engine::meshMap.count(modelPath) == 0 && Engine::meshesLoading.count(modelPath) == 0){
 
             Engine::meshesLoading[modelPath] = true;
@@ -46,10 +48,7 @@ namespace Prometheus{
             sem_init(meshLoadSemaphore,0,0);
 
             ModelManager::loadModel(modelPath,*meshLoadSemaphore); //Also inserts the mesh into meshMap
-            
             glm::mat4 inverse = glm::inverse(transform.getModelMatrix());
-
-            mesh = &(Engine::meshMap[modelPath]);
 
             for (int i = 0; i < 8; i++) {
                 hitboxPoints[i] = glm::vec3(inverse * glm::vec4(Engine::meshMap[modelPath].hitboxPoints[i], 1.0f));
@@ -58,8 +57,23 @@ namespace Prometheus{
 
             delete meshLoadSemaphore;
         }
+
+        if(Engine::meshesLoading.count(modelPath)==0){
+            mesh = &(Engine::meshMap[modelPath]);
+        }else{
+
+            while(Engine::meshesLoading.count(modelPath)!=0){
+                std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    
+                if(Engine::meshesLoading.count(modelPath)==0){
+                    mesh = &(Engine::meshMap[modelPath]);
+                    break;
+                }
+            }
+        }
         
         Engine::meshMutex.unlock();
+
 
         Engine::gameObjectMutex.lock();
 
@@ -77,7 +91,7 @@ namespace Prometheus{
 
     void GameObject::terminate(VkDevice& device){ //Used for object deletion
         Engine::textureMutex.lock();
-
+        
         if (Engine::textureMap.count(texturePath)!=0) {
             Engine::textureMap[texturePath].count--;
             if(Engine::textureMap[texturePath].count==0){
@@ -190,8 +204,9 @@ namespace Prometheus{
     }
 
     void GameObject::update(){
-        drawAABB();
-        animateCircularMotion(0.0f,0.0f,0.0f,10.0f,1.0f,0.0f);
+        rotate(glm::angleAxis(id%(Engine::objectDQueue.size) * 0.05f + 0.05f,glm::vec3(0.0f,1.0f,0.0f)));
+        animateCircularMotion(0.0f,0.0f,0.0f,10.0f,id%(Engine::objectDQueue.size) * 0.1f + 0.1f,0.0f);
+        checkCollisions();
     }
 
     void GameObject::updateInstanceInfo(uint64_t textureIndex){
@@ -200,6 +215,7 @@ namespace Prometheus{
     }
 
     void GameObject::scale(glm::vec3 scale){
+
         this->transform.scale = scale;
 
         for(int i=0; i<8; i++){
@@ -215,7 +231,7 @@ namespace Prometheus{
         }
     }
 
-    void GameObject::drawAABB(glm::vec3 color){ //Magenta default
+    void GameObject::drawOBB(glm::vec3 color){ //Magenta default
         Debug::drawLine(transform.position + hitboxPoints[1], 
             transform.position + hitboxPoints[3], color); //TOP PART
         Debug::drawLine(transform.position + hitboxPoints[1], 
@@ -275,6 +291,64 @@ namespace Prometheus{
         float s = 15.0f + sin(time) * 4.0f;
 
         return glm::vec3(s);
+    }
+
+    bool GameObject::sphereTest(glm::vec3 center){
+
+        glm::vec3 obbCenter = (hitboxPoints[0] + hitboxPoints[7]) * 0.5f;
+
+        float distSqr = glm::length2(obbCenter - center);
+        float radiusSumSqr = glm::length2(obbCenter + center);
+        
+        if(distSqr > radiusSumSqr){
+            return false;
+        }
+
+        return true;
+    }
+
+    bool GameObject::checkCollisions(){
+
+        GameObject* obj = Engine::objectDQueue.head;
+
+        while(true){
+
+            if(obj->id == id){
+                if(obj->next == nullptr){
+                    return false;
+                }
+
+                obj = obj->next;
+                continue;
+            }
+
+            if(Atlas::Collision::checkOBBtoOBB(obj->transform.getBasicAxes(), 
+                this->transform.getBasicAxes(), 
+                obj->getWorldHitpoints(), 
+                getWorldHitpoints()
+            )){
+                obj->drawOBB(COLOR_RED);
+                drawOBB(COLOR_RED);
+                return true;
+            }
+
+            if(obj->next == nullptr){
+                return false;
+            }
+
+            obj = obj->next;
+        }
+    }
+
+    std::array<glm::vec3, 8> GameObject::getWorldHitpoints(){
+
+        std::array<glm::vec3, 8> worldPos = std::array<glm::vec3, 8>();
+
+        for(int i=0; i<8; i++){
+            worldPos[i] = hitboxPoints[i] + transform.position;
+        }
+
+        return worldPos;
     }
 }
 

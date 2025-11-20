@@ -9,7 +9,7 @@ namespace Prometheus{
     Camera::Camera(glm::vec3 position, glm::vec3 front,
         glm::vec3 up, glm::vec3 right, glm::quat orientation, 
         float yaw, float pitch, float roll, float velocity,
-        float sensitivity, float fov)
+        float sensitivity, float fov, float far)
     {
         this->position = position;
         this->front = front;
@@ -22,6 +22,7 @@ namespace Prometheus{
         this->velocity = velocity;
         this->sensitivity = sensitivity;
         this->fov = fov;
+        this->far = far;
     }
 
     void Camera::updateCameraVectors(){
@@ -47,7 +48,7 @@ namespace Prometheus{
         glm::mat4 proj = glm::perspective(
             glm::radians(fov),
             Engine::swapChainExtent.width / 
-            (float) Engine::swapChainExtent.height, 0.01f, 200.0f
+            (float) Engine::swapChainExtent.height, 0.01f, far
             );
 
         proj[1][1] *= -1;
@@ -66,6 +67,7 @@ namespace Prometheus{
     float Camera::getVelocity() const { return velocity; }
     float Camera::getSensitivity() const { return sensitivity; }
     float Camera::getFOV() const { return fov; }
+    float Camera::getFar() const { return far; }
 
     // --- Setters ---
     void Camera::setPosition(const glm::vec3& pos) { position = pos; }
@@ -78,4 +80,5 @@ namespace Prometheus{
     void Camera::setVelocity(float v) { velocity = std::max(v,0.0f);}
     void Camera::setSensitivity(float s) { sensitivity = s;}
     void Camera::setFOV(float fov) { this->fov = fov;}
+    void Camera::setFar(float far) { this->far = far;}
 }

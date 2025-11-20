@@ -7,7 +7,8 @@
 #include <glm/glm.hpp>  
 #include <glm/gtc/quaternion.hpp>
 #include <glm/gtx/quaternion.hpp>
-#include<glm/common.hpp>
+#include <glm/common.hpp>
+#include <vector>
 
 namespace Prometheus{
     struct Transform{
@@ -21,5 +22,7 @@ namespace Prometheus{
         glm::vec3 scale = glm::vec3(1.0f));
 
         glm::mat4 getModelMatrix();
+
+        std::vector<glm::vec3> getBasicAxes();
     };
 }

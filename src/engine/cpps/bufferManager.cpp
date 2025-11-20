@@ -239,15 +239,15 @@ namespace Prometheus{
         VkDeviceSize bufferSize = (sizeof(Engine::vertices[0]) * Engine::vertices.size())+(sizeof(Engine::indices[0]) * Engine::indices.size());
         bufferSize = bufferSize<<1;
         Engine::indexVertexBufferSize = bufferSize;
-        
+
         VkBuffer stagingBuffer;
         VkDeviceMemory stagingBufferMemory;
         BufferManager::createJointBuffer(sizeof(Engine::vertices[0]) * Engine::vertices.size(), 
-            sizeof(Engine::indices[0]) * Engine::indices.size(), Engine::indexOffset,
-            VK_BUFFER_USAGE_TRANSFER_SRC_BIT, 
-            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
-            stagingBuffer, stagingBufferMemory,device,physicalDevice);
-
+        sizeof(Engine::indices[0]) * Engine::indices.size(), Engine::indexOffset,
+        VK_BUFFER_USAGE_TRANSFER_SRC_BIT, 
+        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
+        stagingBuffer, stagingBufferMemory,device,physicalDevice);
+        
         void* data;
         vkMapMemory(device, stagingBufferMemory, 0, Engine::indexOffset, 0, &data);
         memcpy(data, Engine::vertices.data(), (size_t) (sizeof(Engine::vertices[0]) * Engine::vertices.size()));
@@ -559,6 +559,7 @@ namespace Prometheus{
         Engine::graphicsQueueMutex.unlock();
 
         for (auto& [meshName, mesh] : Engine::meshMap) {
+            //std::cout<<mesh.toString();
             mesh.vertexOffset=Engine::vertices.size();
             mesh.indexOffset=Engine::indices.size();
             Engine::vertices.insert(Engine::vertices.end(),mesh.vertices.begin(),mesh.vertices.end());
@@ -597,7 +598,7 @@ namespace Prometheus{
                 vkFreeMemory(device, Engine::instanceBufferMemories[i], nullptr);
             }
         }
-
+        
         BufferManager::createInstanceBuffers(device,physicalDevice);
 
         sem_post(&Engine::instanceBufferReady);

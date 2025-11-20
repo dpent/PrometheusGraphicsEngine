@@ -22,7 +22,7 @@ namespace Prometheus{
         hitboxPoints[5] = glm::vec3(max.x, min.y, max.z);
         hitboxPoints[6] = glm::vec3(min.x, min.y, min.z);
         hitboxPoints[7] = glm::vec3(max.x, min.y, min.z);
-
+        
         /*
         0: Top front left
         1: Top front right

@@ -75,10 +75,8 @@ namespace Prometheus{
                 indices.push_back(uniqueVertices[vertex]);
             }
         }
-        Engine::meshMutex.lock();
         Engine::meshMap[modelPath]=Mesh(modelPath,vertices,indices, minCoords, maxCoords);
         Engine::meshesLoading.erase(modelPath);
-        Engine::meshMutex.unlock();
 
         sem_post(&meshLoadSemaphore);
     }

@@ -18,12 +18,9 @@ namespace Prometheus{
                 head = newEntry;
                 tail = newEntry;
             }else if(size == 1){
-                T temp = tail;
                 tail = newEntry;
-
-                temp->next = newEntry;
                 head->next = newEntry;
-                tail->prev = temp;
+                tail->prev = head;
 
             }else{
                 T temp = tail;

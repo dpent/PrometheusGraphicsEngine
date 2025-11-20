@@ -20,6 +20,7 @@ namespace Prometheus{
         float velocity;
         float sensitivity;
         float fov;
+        float far;
 
         Camera(glm::vec3 position = glm::vec3(1.0f), 
         glm::vec3 front = glm::vec3(0.0f,0.0f,1.0f),
@@ -31,7 +32,8 @@ namespace Prometheus{
         float roll = 0.0f,
         float velocity = 0.1f,
         float sensitivity = 0.1f,
-        float fov = 45.0f);
+        float fov = 45.0f,
+        float far = 200.0f);
 
         void updateCameraVectors();
 
@@ -49,6 +51,7 @@ namespace Prometheus{
         float getVelocity() const;
         float getSensitivity() const;
         float getFOV() const;
+        float getFar() const;
 
         // Setters
         void setPosition(const glm::vec3& pos);
@@ -61,5 +64,6 @@ namespace Prometheus{
         void setVelocity(float v);
         void setSensitivity(float s);
         void setFOV(float fov);
+        void setFar(float far);
     };
 }

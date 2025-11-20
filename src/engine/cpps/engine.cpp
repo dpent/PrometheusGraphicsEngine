@@ -241,7 +241,10 @@ namespace Prometheus{
             Engine::commandBuffers, Engine::commandPool);
 
         TextureManager::createSolidColorTextureFile("../textures/babyBlue.png",137,207,240);
-
+        TextureManager::createSolidColorTextureFile("../textures/red.png",255,0,0);
+        TextureManager::createSolidColorTextureFile("../textures/green.png",0,255,0);
+        TextureManager::createSolidColorTextureFile("../textures/magenta.png",255,0,255);
+        
         GameObject::createObjectThreaded("../textures/babyBlue.png", 
             "../models/stanford_dragon.obj", 
             device, 
@@ -249,6 +252,26 @@ namespace Prometheus{
             graphicsQueue
         );
 
+        GameObject::createObjectThreaded("../textures/red.png", 
+            "../models/stanford_dragon.obj", 
+            device, 
+            physicalDevice, 
+            graphicsQueue
+        );
+
+        GameObject::createObjectThreaded("../textures/green.png", 
+            "../models/stanford_dragon.obj", 
+            device, 
+            physicalDevice, 
+            graphicsQueue
+        );
+
+        GameObject::createObjectThreaded("../textures/magenta.png", 
+            "../models/stanford_dragon.obj", 
+            device, 
+            physicalDevice, 
+            graphicsQueue
+        );
         //BufferManager::createUniformBuffers(this->device,this->physicalDevice);
 
         Engine::instanceBuffers.resize(Engine::MAX_FRAMES_IN_FLIGHT);
@@ -273,8 +296,8 @@ namespace Prometheus{
         WindowManager::initGUI(instance,graphicsQueue,device,physicalDevice);
         Engine::commandPoolMutex.unlock();
 
-        Engine::spatialHash = new Cell(glm::vec3(10.0f,5.0f,10.0f),glm::vec3(30.0f,25.0f,30.0f));
-
+        Engine::spatialHash = new Cell(glm::vec3(-100.0f,-100.0f,-100.0f),glm::vec3(100.0f,100.0f,100.0f));
+        //spatialHash->split();
         //auto frameZeroTime = std::chrono::high_resolution_clock::now();
         while (!glfwWindowShouldClose(Engine::window)) {
             glfwPollEvents();
@@ -287,8 +310,7 @@ namespace Prometheus{
             }
 
             WindowManager::startNewFrame();
-            //Debug::drawLine(glm::vec3(10.0f), glm::vec3(0.0f), COLOR_CYAN);
-            //Engine::spatialHash->drawSelf();
+            Engine::spatialHash->drawAll();
 
             drawFrame();
 
@@ -323,23 +345,22 @@ namespace Prometheus{
 
         Engine::meshBatches.clear();
 
-
         if(Engine::objectDQueue.size!=0){
             
             GameObject* object = Engine::objectDQueue.head;
-            GameObject* temp = object->next;
-            object->terminate(device);
-            delete object->info;
-            delete object;
 
-            object = temp;
+            while(true){
 
-            for(uint64_t i=1; i<Engine::objectDQueue.size; i++){
-                temp = object->next;
+                GameObject* temp = object->next;
+                
                 object->terminate(device);
                 delete object->info;
                 delete object;
-
+                
+                if(object->next == nullptr){
+                    break;
+                }
+                
                 object = temp;
             }
         }
