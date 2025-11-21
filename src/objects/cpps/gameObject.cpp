@@ -19,6 +19,8 @@ namespace Prometheus{
         GameObject::autoIncrementId++;
         Engine::gameObjectMutex.unlock();
 
+        velocity = glm::vec3(0.0f);
+
         this->transform=Transform();
         this->texturePath=texturePath;
         this->meshPath=modelPath;
@@ -75,6 +77,7 @@ namespace Prometheus{
         Engine::meshMutex.unlock();
 
         center = getCenter();
+        radius = glm::length(hitboxPoints[1]);
         Engine::insertToHash(this);
 
         Engine::gameObjectMutex.lock();
@@ -164,10 +167,10 @@ namespace Prometheus{
         time+=offset;
 
         float x = centerX + radius * cos(time * speed);
-        float y = centerY;             // keep same height
+        float y = centerY + radius * sin(time * speed);             // keep same height
         float z = centerZ + radius * sin(time * speed);
 
-        transform.position = glm::vec3(x,y,z);
+        velocity = glm::vec3(x,y,z) - transform.position;
     }
 
     void GameObject::createObjectThreaded(std::string texturePath,std::string modelPath, 
@@ -206,16 +209,9 @@ namespace Prometheus{
     }
 
     void GameObject::update(){
-        rotate(glm::angleAxis(id%(Engine::objectDQueue.size) * 0.05f + 0.05f,glm::vec3(0.0f,1.0f,0.0f)));
-        animateCircularMotion(0.0f,0.0f,0.0f,15.0f, id%(Engine::objectDQueue.size) * 0.1f + 0.1f,0.0f);
-        
-        for(auto& cell: cells){
-            cell->objects.erase(this);
-        }
-
-        cells.clear();
-
-        Engine::insertToHash(this);
+        rotate(glm::angleAxis(0.1f,glm::vec3(0.0f,1.0f,0.0f)));
+        animateCircularMotion(0.0f,0.0f,0.0f,15.0f, id%(Engine::objectDQueue.size) * 0.01f + 0.01f,0.0f);
+        move();
         checkCollisions();
     }
 
@@ -233,6 +229,7 @@ namespace Prometheus{
         }
 
         center = transform.rotation * (getCenter() * transform.scale);
+        radius = glm::length(hitboxPoints[1]);
     }
 
     void GameObject::rotate(glm::quat rotation){
@@ -242,7 +239,7 @@ namespace Prometheus{
             hitboxPoints[i] = rotation * hitboxPoints[i];
         }
 
-        center = rotation * getCenter();
+        center = getCenter();
     }
 
     void GameObject::drawOBB(glm::vec3 color){ //Magenta default
@@ -307,10 +304,10 @@ namespace Prometheus{
         return glm::vec3(s);
     }
 
-    bool GameObject::sphereTest(glm::vec3 center){
+    bool GameObject::sphereTest(glm::vec3 center,glm::vec3 radius){
 
-        float distSqr = glm::length2(this->center - center);
-        float radiusSumSqr = glm::length2(this->center + center);
+        float distSqr = glm::length2(center - this->center);
+        float radiusSumSqr = glm::length2(hitboxPoints[1]) + glm::length2(radius);
         
         if(distSqr > radiusSumSqr){
             return false;
@@ -327,8 +324,7 @@ namespace Prometheus{
                     continue;
                 }
 
-                if(sphereTest(object->getCenter())){
-
+                if(sphereTest(object->getCenter(), object->hitboxPoints[1])){
                     if(Atlas::Collision::checkOBBtoOBB(object->transform.getBasicAxes(), 
                         this->transform.getBasicAxes(), 
                         object->getWorldHitpoints(), 
@@ -357,7 +353,7 @@ namespace Prometheus{
                 continue;
             }
 
-            if(sphereTest(obj->getCenter())){
+            if(sphereTest(obj->getCenter(), obj->hitboxPoints[1])){
 
                 if(Atlas::Collision::checkOBBtoOBB(obj->transform.getBasicAxes(), 
                     this->transform.getBasicAxes(), 
@@ -391,6 +387,20 @@ namespace Prometheus{
 
     glm::vec3 GameObject::getCenter(){
         return  (transform.rotation * ((mesh->center) * transform.scale)) + transform.position;
+    }
+
+    void GameObject::move(){
+        transform.position += velocity;
+
+        for(auto& cell: cells){
+            cell->objects.erase(this);
+        }
+
+        cells.clear();
+
+        center = getCenter();
+
+        Engine::insertToHash(this);
     }
 }
 

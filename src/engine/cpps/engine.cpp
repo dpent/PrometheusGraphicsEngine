@@ -17,6 +17,7 @@
 #include <chrono>
 #include "../../threads/headers/descriptorOperations.h"
 #include "../headers/cell.h"
+#include "../../physics/headers/collision.h"
 
 using namespace Prometheus;
 
@@ -162,7 +163,7 @@ bool Engine::capFPS = true;
 int Engine::fpsCap = 60;
 double Engine::frameTime = 0.0;
 
-std::array<std::array<std::array<Cell*, 20>, 20>, 20> Engine::spatialHash = {nullptr};
+std::array<std::array<std::array<Cell*, 50>, 50>, 50> Engine::spatialHash = {nullptr};
 glm::vec3 Engine::cellSize;
 
 namespace Prometheus{
@@ -241,14 +242,14 @@ namespace Prometheus{
         BufferManager::createCommandBuffers(this->device, 
             Engine::commandBuffers, Engine::commandPool);
 
-        createSpatialHash(glm::vec3(-100.0f), glm::vec3(100.0f));
+        createSpatialHash(glm::vec3(200.0f), glm::vec3(-200.0f));
 
         TextureManager::createSolidColorTextureFile("../textures/blue.png",0,0,255);
         TextureManager::createSolidColorTextureFile("../textures/red.png",255,0,0);
         TextureManager::createSolidColorTextureFile("../textures/green.png",0,255,0);
         TextureManager::createSolidColorTextureFile("../textures/magenta.png",255,0,255);
         
-        for(int i=0; i<60; i++){ //60 is the limit
+        for(int i=0; i<4; i++){ //60 is the limit
 
             GameObject::createObjectThreaded("../textures/blue.png", 
                 "../models/stanford_dragon.obj", 
@@ -1106,18 +1107,54 @@ namespace Prometheus{
         }
     }
 
-    void Engine::insertToHash(GameObject* obj){ //Des ti strogkilopoiisi
+    void Engine::insertToHash(GameObject* obj){
 
-        int indexX = static_cast<int>(std::floor(obj->center.x / Engine::cellSize.x));
-        int indexY = static_cast<int>(std::floor(obj->center.y / Engine::cellSize.y));
-        int indexZ = static_cast<int>(std::floor(obj->center.z / Engine::cellSize.z));
+        glm::vec3 maxBounds = obj->getCenter();
+        maxBounds.x += obj->radius;
+        maxBounds.y += obj->radius;
+        maxBounds.z += obj->radius;
 
-        //std::cout<<indexX + 5<<" "<<indexY + 5<<" "<<indexZ + 5<<std::endl;
+        glm::vec3 minBounds = obj->getCenter();
+        minBounds.x -= obj->radius;
+        minBounds.y -= obj->radius;
+        minBounds.z -= obj->radius;
 
-        Engine::spatialHash[indexX + 10][indexY + 10][indexZ + 10]->objectMutex.lock();
-        Engine::spatialHash[indexX + 10][indexY + 10][indexZ + 10]->objects.insert(obj);
-        Engine::spatialHash[indexX + 10][indexY + 10][indexZ + 10]->objectMutex.unlock();
+        int minX = static_cast<int>(std::floor(minBounds.x / Engine::cellSize.x)) + 25;
+        int minY = static_cast<int>(std::floor(minBounds.y / Engine::cellSize.y)) + 25;
+        int minZ = static_cast<int>(std::floor(minBounds.z / Engine::cellSize.z)) + 25;
+        
+        int maxX = static_cast<int>(std::floor(maxBounds.x / Engine::cellSize.x)) + 25;
+        int maxY = static_cast<int>(std::floor(maxBounds.y / Engine::cellSize.y)) + 25;
+        int maxZ = static_cast<int>(std::floor(maxBounds.z / Engine::cellSize.z)) + 25;
 
-        obj->cells.insert(Engine::spatialHash[indexX + 10][indexY + 10][indexZ + 10]);
+        int indexX = static_cast<int>(std::floor(obj->center.x / Engine::cellSize.x)) + 25;
+        int indexY = static_cast<int>(std::floor(obj->center.y / Engine::cellSize.y)) + 25;
+        int indexZ = static_cast<int>(std::floor(obj->center.z / Engine::cellSize.z)) + 25;
+
+        Engine::spatialHash[indexX][indexY][indexZ]->objectMutex.lock();
+        Engine::spatialHash[indexX][indexY][indexZ]->objects.insert(obj);
+        Engine::spatialHash[indexX][indexY][indexZ]->objectMutex.unlock();
+        obj->cells.insert(Engine::spatialHash[indexX][indexY][indexZ]);
+
+        for (int x = minX; x <= maxX; x++) {
+            for (int y = minY; y <= maxY; y++) {
+                for (int z = minZ; z <= maxZ; z++) {
+                    
+                    if(obj->cells.count(Engine::spatialHash[x][y][z])){
+                        continue;
+                    }
+
+                    if(Atlas::Collision::checkOBBtoOBB(Engine::spatialHash[x][y][z]->getBasicAxes(),
+                        obj->transform.getBasicAxes(), Engine::spatialHash[x][y][z]->edges,
+                        obj->getWorldHitpoints()
+                    )){
+                        Engine::spatialHash[x][y][z]->objectMutex.lock();
+                        Engine::spatialHash[x][y][z]->objects.insert(obj);
+                        Engine::spatialHash[x][y][z]->objectMutex.unlock();
+                        obj->cells.insert(Engine::spatialHash[x][y][z]);
+                    }
+                }
+            }
+        }
     }
 }

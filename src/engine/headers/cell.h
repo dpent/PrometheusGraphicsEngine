@@ -17,6 +17,8 @@ namespace Prometheus{
         glm::vec3 maxCoords;
 
         std::array<glm::vec3, 8> edges;
+        glm::vec3 center;
+        glm::vec3 radius;
 
         std::unordered_set<GameObject*> objects;
 

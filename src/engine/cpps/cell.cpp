@@ -23,6 +23,9 @@ namespace Prometheus{
         edges[5] = glm::vec3(maxCoords.x, minCoords.y, maxCoords.z);
         edges[6] = glm::vec3(minCoords.x, minCoords.y, minCoords.z);
         edges[7] = glm::vec3(maxCoords.x, minCoords.y, minCoords.z);
+
+        center = getCenter();
+        radius = (maxCoords - minCoords) * 0.5f;
     }
 
     Cell::Cell(){}
@@ -41,6 +44,8 @@ namespace Prometheus{
         edges[7] = glm::vec3(maxCoords.x, minCoords.y, minCoords.z);
 
         this->objects = objects;
+        center = getCenter();
+        radius = (maxCoords - minCoords) * 0.5f;
     }
 
     Cell::Cell(glm::vec3 minCoords, glm::vec3 maxCoords, std::vector<GameObject*> objects){
@@ -59,6 +64,8 @@ namespace Prometheus{
         for(size_t i=0; i<objects.size(); i++){
             this->objects.insert(objects[i]);
         }
+        center = getCenter();
+        radius = (maxCoords - minCoords) * 0.5f;
     }
 
     void Cell::drawSelf(){
@@ -92,7 +99,7 @@ namespace Prometheus{
                 for(int i=0; i<2; i++){
                     for(int j=0; j<2; j++){
                         for(int k=0; k<2; k++){
-                            if(obj->sphereTest(children[i][j][k]->getCenter())){
+                            if(obj->sphereTest(children[i][j][k]->getCenter(), children[i][j][k]->radius)){
 
                                 std::vector<glm::vec3> cellVecs = Cell::getBasicAxes();
                                 std::vector<glm::vec3> objVecs = obj->transform.getBasicAxes();

@@ -27,11 +27,14 @@ namespace Prometheus{
         Mesh* mesh;
         std::array<glm::vec3, 8> hitboxPoints;
         glm::vec3 center;
+        float radius;
         Transform transform;
         InstanceInfo* info;
         std::unordered_set<Cell*> cells;
+        glm::vec3 velocity;
         GameObject* next = nullptr;
         GameObject* prev = nullptr;
+        bool moved = false;
 
         GameObject(std::string texturePath,std::string modelPath,int req_comp, 
             VkDevice& device, VkPhysicalDevice& physicalDevice,VkQueue& graphicsQueue,
@@ -58,13 +61,13 @@ namespace Prometheus{
         static void createObjectThreaded(std::string texturePath,std::string modelPath,VkDevice& device, VkPhysicalDevice& physicalDevice,VkQueue& graphicsQueue);
         static void deleteObjectThreaded(VkDevice &device, GameObject* object);
 
-        bool sphereTest(glm::vec3 center);
+        bool sphereTest(glm::vec3 center,glm::vec3 radius);
 
         bool checkCollisions();
         std::array<glm::vec3, 8> getWorldHitpoints();
 
         glm::vec3 getCenter();
+
+        void move();
     };
-
-
 }
