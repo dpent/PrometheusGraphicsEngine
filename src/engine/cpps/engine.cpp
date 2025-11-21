@@ -162,7 +162,8 @@ bool Engine::capFPS = true;
 int Engine::fpsCap = 60;
 double Engine::frameTime = 0.0;
 
-Cell* Engine::spatialHash;
+std::array<std::array<std::array<Cell*, 10>, 10>, 10> Engine::spatialHash = {nullptr};
+glm::vec3 Engine::cellSize;
 
 namespace Prometheus{
     void Engine::run(int argc, char** argv) {
@@ -240,38 +241,44 @@ namespace Prometheus{
         BufferManager::createCommandBuffers(this->device, 
             Engine::commandBuffers, Engine::commandPool);
 
-        TextureManager::createSolidColorTextureFile("../textures/babyBlue.png",137,207,240);
+        createSpatialHash(glm::vec3(-100.0f), glm::vec3(100.0f));
+
+        TextureManager::createSolidColorTextureFile("../textures/blue.png",0,0,255);
         TextureManager::createSolidColorTextureFile("../textures/red.png",255,0,0);
         TextureManager::createSolidColorTextureFile("../textures/green.png",0,255,0);
         TextureManager::createSolidColorTextureFile("../textures/magenta.png",255,0,255);
         
-        GameObject::createObjectThreaded("../textures/babyBlue.png", 
-            "../models/stanford_dragon.obj", 
-            device, 
-            physicalDevice, 
-            graphicsQueue
-        );
+        for(int i=0; i<1; i++){
 
-        GameObject::createObjectThreaded("../textures/red.png", 
-            "../models/stanford_dragon.obj", 
-            device, 
-            physicalDevice, 
-            graphicsQueue
-        );
+            GameObject::createObjectThreaded("../textures/blue.png", 
+                "../models/stanford_dragon.obj", 
+                device, 
+                physicalDevice, 
+                graphicsQueue
+            );
+    
+            GameObject::createObjectThreaded("../textures/red.png", 
+                "../models/stanford_dragon.obj", 
+                device, 
+                physicalDevice, 
+                graphicsQueue
+            );
+    
+            GameObject::createObjectThreaded("../textures/green.png", 
+                "../models/stanford_dragon.obj", 
+                device, 
+                physicalDevice, 
+                graphicsQueue
+            );
+    
+            GameObject::createObjectThreaded("../textures/magenta.png", 
+                "../models/stanford_dragon.obj", 
+                device, 
+                physicalDevice, 
+                graphicsQueue
+            );
+        }
 
-        GameObject::createObjectThreaded("../textures/green.png", 
-            "../models/stanford_dragon.obj", 
-            device, 
-            physicalDevice, 
-            graphicsQueue
-        );
-
-        GameObject::createObjectThreaded("../textures/magenta.png", 
-            "../models/stanford_dragon.obj", 
-            device, 
-            physicalDevice, 
-            graphicsQueue
-        );
         //BufferManager::createUniformBuffers(this->device,this->physicalDevice);
 
         Engine::instanceBuffers.resize(Engine::MAX_FRAMES_IN_FLIGHT);
@@ -296,8 +303,6 @@ namespace Prometheus{
         WindowManager::initGUI(instance,graphicsQueue,device,physicalDevice);
         Engine::commandPoolMutex.unlock();
 
-        Engine::spatialHash = new Cell(glm::vec3(-100.0f,-100.0f,-100.0f),glm::vec3(100.0f,100.0f,100.0f));
-        //spatialHash->split();
         //auto frameZeroTime = std::chrono::high_resolution_clock::now();
         while (!glfwWindowShouldClose(Engine::window)) {
             glfwPollEvents();
@@ -310,7 +315,8 @@ namespace Prometheus{
             }
 
             WindowManager::startNewFrame();
-            Engine::spatialHash->drawAll();
+
+            drawSpatialHash();
 
             drawFrame();
 
@@ -1046,5 +1052,69 @@ namespace Prometheus{
 
         // Refresh desktop database (optional)
         return system(("update-desktop-database " + desktopDir).c_str());
+    }
+
+    void Engine::createSpatialHash(glm::vec3 maxCoords, glm::vec3 minCoords){
+
+        float xStep = (maxCoords.x - minCoords.x)/Engine::spatialHash.size();
+        float yStep = (maxCoords.y - minCoords.y)/Engine::spatialHash.size();
+        float zStep = (maxCoords.z - minCoords.z)/Engine::spatialHash.size();
+
+        Engine::cellSize = glm::vec3(xStep, yStep, zStep);
+
+        glm::vec3 min = glm::vec3(minCoords);
+        glm::vec3 max = glm::vec3(minCoords.x + xStep, minCoords.y + yStep, minCoords.z + zStep);
+
+        for(size_t i=0; i<Engine::spatialHash.size(); i++){
+            for(size_t j=0; j<Engine::spatialHash.size(); j++){
+                for(size_t k=0; k<Engine::spatialHash.size(); k++){
+
+                    Engine::spatialHash[i][j][k] = new Cell(min, max);
+                    min.z += zStep;
+                    max.z += zStep;
+                }
+
+                min.y += yStep;
+                max.y += yStep;
+
+                min.z = minCoords.z;
+                max.z = minCoords.z + zStep;
+            }
+
+            min.x += xStep;
+            max.x += xStep;
+
+            min.y = minCoords.y;
+            max.y = minCoords.y + yStep;
+
+            min.z = minCoords.z;
+            max.z = minCoords.z + xStep;
+        }
+    }
+
+    void Engine::drawSpatialHash(){
+
+        for(uint8_t i=0; i<Engine::spatialHash.size(); i++){
+            for(uint8_t j=0; j<Engine::spatialHash.size(); j++){
+                for(uint8_t k=0; k<Engine::spatialHash.size(); k++){
+
+                    if(Engine::spatialHash[i][j][k]->objects.size()!=0){
+                        Engine::spatialHash[i][j][k]->drawSelf();
+                    }
+                }
+            }
+        }
+    }
+
+    void Engine::insertToHash(GameObject* obj){ //Des ti strogkilopoiisi
+
+        int indexX = static_cast<int>(std::floor(obj->center.x / Engine::cellSize.x));
+        int indexY = static_cast<int>(std::floor(obj->center.y / Engine::cellSize.y));
+        int indexZ = static_cast<int>(std::floor(obj->center.z / Engine::cellSize.z));
+
+        //std::cout<<indexX + 5<<" "<<indexY + 5<<" "<<indexZ + 5<<std::endl;
+
+        Engine::spatialHash[indexX + 5][indexY + 5][indexZ + 5]->objects.insert(obj);
+        obj->cells.insert(Engine::spatialHash[indexX + 5][indexY + 5][indexZ + 5]);
     }
 }

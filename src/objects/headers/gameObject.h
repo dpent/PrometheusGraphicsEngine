@@ -26,6 +26,7 @@ namespace Prometheus{
         std::string meshPath;
         Mesh* mesh;
         std::array<glm::vec3, 8> hitboxPoints;
+        glm::vec3 center;
         Transform transform;
         InstanceInfo* info;
         std::unordered_set<Cell*> cells;
@@ -61,6 +62,8 @@ namespace Prometheus{
 
         bool checkCollisions();
         std::array<glm::vec3, 8> getWorldHitpoints();
+
+        glm::vec3 getCenter();
     };
 
 

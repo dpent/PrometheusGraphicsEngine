@@ -74,6 +74,8 @@ namespace Prometheus{
         
         Engine::meshMutex.unlock();
 
+        center = getCenter();
+        Engine::insertToHash(this);
 
         Engine::gameObjectMutex.lock();
 
@@ -205,7 +207,15 @@ namespace Prometheus{
 
     void GameObject::update(){
         rotate(glm::angleAxis(id%(Engine::objectDQueue.size) * 0.05f + 0.05f,glm::vec3(0.0f,1.0f,0.0f)));
-        animateCircularMotion(0.0f,0.0f,0.0f,10.0f,id%(Engine::objectDQueue.size) * 0.1f + 0.1f,0.0f);
+        animateCircularMotion(0.0f,0.0f,0.0f,10.0f, id%(Engine::objectDQueue.size) * 0.1f + 0.1f,0.0f);
+        
+        for(auto& cell: cells){
+            cell->objects.erase(this);
+        }
+
+        cells.clear();
+
+        Engine::insertToHash(this);
         checkCollisions();
     }
 
@@ -221,6 +231,8 @@ namespace Prometheus{
         for(int i=0; i<8; i++){
             hitboxPoints[i] = transform.rotation * (mesh->hitboxPoints[i] * transform.scale);
         }
+
+        center = transform.rotation * (getCenter() * transform.scale);
     }
 
     void GameObject::rotate(glm::quat rotation){
@@ -229,6 +241,8 @@ namespace Prometheus{
         for(int i=0; i<8; i++){
             hitboxPoints[i] = rotation * hitboxPoints[i];
         }
+
+        center = rotation * getCenter();
     }
 
     void GameObject::drawOBB(glm::vec3 color){ //Magenta default
@@ -295,10 +309,8 @@ namespace Prometheus{
 
     bool GameObject::sphereTest(glm::vec3 center){
 
-        glm::vec3 obbCenter = (hitboxPoints[0] + hitboxPoints[7]) * 0.5f;
-
-        float distSqr = glm::length2(obbCenter - center);
-        float radiusSumSqr = glm::length2(obbCenter + center);
+        float distSqr = glm::length2(this->center - center);
+        float radiusSumSqr = glm::length2(this->center + center);
         
         if(distSqr > radiusSumSqr){
             return false;
@@ -322,14 +334,17 @@ namespace Prometheus{
                 continue;
             }
 
-            if(Atlas::Collision::checkOBBtoOBB(obj->transform.getBasicAxes(), 
-                this->transform.getBasicAxes(), 
-                obj->getWorldHitpoints(), 
-                getWorldHitpoints()
-            )){
-                obj->drawOBB(COLOR_RED);
-                drawOBB(COLOR_RED);
-                return true;
+            if(sphereTest(obj->getCenter())){
+
+                if(Atlas::Collision::checkOBBtoOBB(obj->transform.getBasicAxes(), 
+                    this->transform.getBasicAxes(), 
+                    obj->getWorldHitpoints(), 
+                    getWorldHitpoints()
+                )){
+                    obj->drawOBB(COLOR_RED);
+                    drawOBB(COLOR_RED);
+                    return true;
+                }
             }
 
             if(obj->next == nullptr){
@@ -349,6 +364,10 @@ namespace Prometheus{
         }
 
         return worldPos;
+    }
+
+    glm::vec3 GameObject::getCenter(){
+        return  (transform.rotation * ((mesh->center) * transform.scale)) + transform.position;
     }
 }
 

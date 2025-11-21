@@ -33,6 +33,8 @@ namespace Prometheus{
         6: Bottom back left
         7: Bottom back right
         */
+
+        center = (hitboxPoints[0] + hitboxPoints[7]) * 0.5f;
     }
 
     void Mesh::drawAABB(){

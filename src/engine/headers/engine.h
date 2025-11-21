@@ -217,7 +217,8 @@ namespace Prometheus{
 
         static uint32_t graphicsFamilyIndex;
 
-        static Cell* spatialHash;
+        static std::array<std::array<std::array<Cell*, 10>, 10>, 10> spatialHash;
+        static glm::vec3 cellSize;
 
         void run(int argc, char** argv);
         static std::vector<char> readFile(const std::string& filename);
@@ -228,6 +229,7 @@ namespace Prometheus{
         , VkSurfaceKHR& surface);
         static std::vector<std::queue<Job*>> batchJobs();
         static void createInstanceBufferUpdateJob();
+        static void insertToHash(GameObject* obj);
 
     private:
         //Window variables
@@ -265,6 +267,9 @@ namespace Prometheus{
         void createRecordCommandBufferJob(uint32_t imageIndex);
         void handleCommandBufferRecording(uint32_t imageIndex);
         void killThreads();
+
+        void createSpatialHash(glm::vec3 maxCoords, glm::vec3 minCoords);
+        void drawSpatialHash();
 
         void objectLoadingTest(std::chrono::_V2::system_clock::time_point frameZeroTime);
         

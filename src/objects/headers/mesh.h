@@ -27,6 +27,7 @@ namespace Prometheus{
         std::vector<uint32_t> indices;
 
         std::array<glm::vec3, 8> hitboxPoints;
+        glm::vec3 center;
         /*
         0: Top front left
         1: Top front right
