@@ -217,7 +217,7 @@ namespace Prometheus{
 
         static uint32_t graphicsFamilyIndex;
 
-        static std::array<std::array<std::array<Cell*, 10>, 10>, 10> spatialHash;
+        static std::array<std::array<std::array<Cell*, 20>, 20>, 20> spatialHash;
         static glm::vec3 cellSize;
 
         void run(int argc, char** argv);

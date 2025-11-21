@@ -162,7 +162,7 @@ bool Engine::capFPS = true;
 int Engine::fpsCap = 60;
 double Engine::frameTime = 0.0;
 
-std::array<std::array<std::array<Cell*, 10>, 10>, 10> Engine::spatialHash = {nullptr};
+std::array<std::array<std::array<Cell*, 20>, 20>, 20> Engine::spatialHash = {nullptr};
 glm::vec3 Engine::cellSize;
 
 namespace Prometheus{
@@ -248,7 +248,7 @@ namespace Prometheus{
         TextureManager::createSolidColorTextureFile("../textures/green.png",0,255,0);
         TextureManager::createSolidColorTextureFile("../textures/magenta.png",255,0,255);
         
-        for(int i=0; i<1; i++){
+        for(int i=0; i<60; i++){ //60 is the limit
 
             GameObject::createObjectThreaded("../textures/blue.png", 
                 "../models/stanford_dragon.obj", 
@@ -363,7 +363,7 @@ namespace Prometheus{
                 delete object->info;
                 delete object;
                 
-                if(object->next == nullptr){
+                if(temp == nullptr){
                     break;
                 }
                 
@@ -1114,7 +1114,10 @@ namespace Prometheus{
 
         //std::cout<<indexX + 5<<" "<<indexY + 5<<" "<<indexZ + 5<<std::endl;
 
-        Engine::spatialHash[indexX + 5][indexY + 5][indexZ + 5]->objects.insert(obj);
-        obj->cells.insert(Engine::spatialHash[indexX + 5][indexY + 5][indexZ + 5]);
+        Engine::spatialHash[indexX + 10][indexY + 10][indexZ + 10]->objectMutex.lock();
+        Engine::spatialHash[indexX + 10][indexY + 10][indexZ + 10]->objects.insert(obj);
+        Engine::spatialHash[indexX + 10][indexY + 10][indexZ + 10]->objectMutex.unlock();
+
+        obj->cells.insert(Engine::spatialHash[indexX + 10][indexY + 10][indexZ + 10]);
     }
 }

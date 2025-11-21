@@ -122,7 +122,7 @@ namespace Prometheus{
             if(prev != nullptr){
                 this->next->prev = this->prev;
             }else{
-                this->next->prev = this->next;
+                this->next->prev = nullptr;
             }
         }
 
@@ -207,7 +207,7 @@ namespace Prometheus{
 
     void GameObject::update(){
         rotate(glm::angleAxis(id%(Engine::objectDQueue.size) * 0.05f + 0.05f,glm::vec3(0.0f,1.0f,0.0f)));
-        animateCircularMotion(0.0f,0.0f,0.0f,10.0f, id%(Engine::objectDQueue.size) * 0.1f + 0.1f,0.0f);
+        animateCircularMotion(0.0f,0.0f,0.0f,15.0f, id%(Engine::objectDQueue.size) * 0.1f + 0.1f,0.0f);
         
         for(auto& cell: cells){
             cell->objects.erase(this);
@@ -321,7 +321,30 @@ namespace Prometheus{
 
     bool GameObject::checkCollisions(){
 
-        GameObject* obj = Engine::objectDQueue.head;
+        for(auto& cell : cells){
+            for(auto& object : cell->objects){
+                if(object->id == id){
+                    continue;
+                }
+
+                if(sphereTest(object->getCenter())){
+
+                    if(Atlas::Collision::checkOBBtoOBB(object->transform.getBasicAxes(), 
+                        this->transform.getBasicAxes(), 
+                        object->getWorldHitpoints(), 
+                        getWorldHitpoints()
+                    )){
+                        object->drawOBB(COLOR_RED);
+                        drawOBB(COLOR_RED);
+                        return true;
+                    }
+                }
+            }
+        }
+
+        return false;
+
+        /*GameObject* obj = Engine::objectDQueue.head;
 
         while(true){
 
@@ -352,7 +375,7 @@ namespace Prometheus{
             }
 
             obj = obj->next;
-        }
+        }*/
     }
 
     std::array<glm::vec3, 8> GameObject::getWorldHitpoints(){

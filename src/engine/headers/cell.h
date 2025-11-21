@@ -5,6 +5,7 @@
 #include <unordered_set>
 #include <vector>
 #include <array>
+#include <mutex>
 
 namespace Prometheus{
 
@@ -18,6 +19,8 @@ namespace Prometheus{
         std::array<glm::vec3, 8> edges;
 
         std::unordered_set<GameObject*> objects;
+
+        std::mutex objectMutex;
 
         Cell* children[2][2][2] = { nullptr };
         /*
