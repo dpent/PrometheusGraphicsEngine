@@ -167,7 +167,7 @@ namespace Prometheus{
         static std::unordered_map<std::string, std::vector<int>> framesSinceTextureQueuedForDeletion;
 
         static std::unordered_map<std::string,Mesh> meshMap;
-        static std::unordered_map<std::string,bool> meshesLoading;
+        static std::unordered_set<std::string> meshesLoading;
         static std::unordered_map<std::string,std::unordered_map<uint64_t,GameObject*>> objectsByMesh;
         static std::vector<MeshBatch> meshBatches;
 

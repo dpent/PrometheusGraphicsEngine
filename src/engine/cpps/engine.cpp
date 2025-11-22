@@ -113,7 +113,7 @@ std::unordered_map<std::string, std::vector<Texture>> Engine::texturesQueuedForD
 std::unordered_map<std::string, std::vector<int>> Engine::framesSinceTextureQueuedForDeletion;
 
 std::unordered_map<std::string,Mesh> Engine::meshMap;
-std::unordered_map<std::string,bool> Engine::meshesLoading;
+std::unordered_set<std::string> Engine::meshesLoading;
 std::unordered_map<std::string,std::unordered_map<uint64_t,GameObject*>> Engine::objectsByMesh;
 std::vector<MeshBatch> Engine::meshBatches;
 
@@ -252,35 +252,35 @@ namespace Prometheus{
         TextureManager::createSolidColorTextureFile("../textures/green.png",0,255,0);
         TextureManager::createSolidColorTextureFile("../textures/magenta.png",255,0,255);
         
-        for(int i=0; i<1; i++){ //60 is the limit
+        for(int i=0; i<2; i++){ //60 is the limit
 
             GameObject::createObjectThreaded("../textures/blue.png", 
-                "../models/stanford_dragon.obj", 
-                device, 
-                physicalDevice, 
-                graphicsQueue
-            );
-    
-            GameObject::createObjectThreaded("../textures/red.png", 
-                "../models/stanford_dragon.obj", 
-                device, 
-                physicalDevice, 
-                graphicsQueue
-            );
-    
-            GameObject::createObjectThreaded("../textures/green.png", 
-                "../models/stanford_dragon.obj", 
+                "../models/stanford_sphere.obj", 
                 device, 
                 physicalDevice, 
                 graphicsQueue
             );
     
             GameObject::createObjectThreaded("../textures/magenta.png", 
-                "../models/stanford_dragon.obj", 
+                "../models/cube.obj", 
                 device, 
                 physicalDevice, 
                 graphicsQueue
             );
+    
+            GameObject::createObjectThreaded("../textures/green.png", 
+                "../models/viking_room.obj", 
+                device, 
+                physicalDevice, 
+                graphicsQueue
+            );
+    
+            /*GameObject::createObjectThreaded("../textures/magenta.png", 
+                "../models/stanford_dragon.obj", 
+                device, 
+                physicalDevice, 
+                graphicsQueue
+            );*/
         }
 
         //BufferManager::createUniformBuffers(this->device,this->physicalDevice);
@@ -592,9 +592,57 @@ namespace Prometheus{
 
         Engine::meshBatches.clear();
 
-        int i=0;
         VkDeviceSize bufferSize=0;
-        for (auto& [meshName, innerMap] : Engine::objectsByMesh) {
+
+        std::unordered_map<std::string, MeshBatch*> meshSet;
+
+        Engine::meshBatches.reserve(Engine::objectsByMesh.size());
+        for(auto& meshName : Engine::objectsByMesh){
+            Engine::meshBatches.push_back(MeshBatch(meshName.first));
+            meshSet.insert({meshName.first,&Engine::meshBatches[Engine::meshBatches.size() - 1]});
+        }
+
+        GameObject* object = Engine::objectDQueue.head;
+        std::unordered_map<std::string,uint64_t> textureIndices;
+
+        while(true){
+            Engine::textureMutex.lock();
+            if (textureIndices.count(object->texturePath)==0) {
+                textureIndices[object->texturePath] = meshSet[object->meshPath]->textures.size();
+                meshSet[object->meshPath]->textures.push_back(&Engine::textureMap.at(object->texturePath));
+            }
+            Engine::textureMutex.unlock();
+
+            object->update();
+
+            object->updateInstanceInfo(textureIndices.at(object->texturePath));
+
+            meshSet[object->meshPath]->instances.push_back(
+                *(object->info)
+            );
+            meshSet[object->meshPath]->objects.push_back(object);
+
+            bufferSize+=sizeof(InstanceInfo);
+
+            if(object->next == nullptr){
+                
+                if(bufferSize>Engine::instanceBufferSize){
+                    Engine::recreateInstanceBuffer=true;
+                }
+
+                sem_post(&Engine::safeToMakeInstanceBuffer);
+
+                //for(size_t i=0; i<Engine::meshBatches.size(); i++){
+                    //std::cout<<Engine::meshBatches[i].meshPath<<" "<<Engine::meshBatches[i].objects.size()<<std::endl;
+                //}
+
+                return;
+            }
+            
+            object = object->next;
+        }
+
+        /*for (auto& [meshName, innerMap] : Engine::objectsByMesh) {
 
             uint64_t currIndex=0;
             std::unordered_map<std::string,uint64_t> textureIndices;
@@ -618,7 +666,6 @@ namespace Prometheus{
                     *(objPtr->info)
                 );
                 Engine::meshBatches[Engine::meshBatches.size()-1].objects.push_back(objPtr);
-                i++;
             }
             if(Engine::meshBatches[Engine::meshBatches.size()-1].objects.size()==0){
                 Engine::meshBatches.pop_back();
@@ -630,7 +677,7 @@ namespace Prometheus{
             Engine::recreateInstanceBuffer=true;
         }
 
-        sem_post(&Engine::safeToMakeInstanceBuffer);
+        sem_post(&Engine::safeToMakeInstanceBuffer);*/
     }
 
     VkSampleCountFlagBits Engine::getMaxUsableSampleCount(VkPhysicalDevice& physicalDevice){

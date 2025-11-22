@@ -24,7 +24,7 @@ namespace Prometheus{
         uint64_t id;
         std::string texturePath;
         std::string meshPath;
-        Mesh* mesh;
+        Mesh* mesh = nullptr;
         std::array<glm::vec3, 8> hitboxPoints;
         glm::vec3 center;
         float radius;

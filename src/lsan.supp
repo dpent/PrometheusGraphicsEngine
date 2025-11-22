@@ -1,0 +1,13 @@
+# Suppress system library leaks
+leak:libnvidia-glcore.so
+leak:libdbus-1.so
+leak:libvulkan.so
+leak:libVkLayer_khronos_validation.so
+leak:libglfw.so
+leak:libvulkan_intel
+leak:libvulkan_radeon
+leak:libvulkan_nouveau
+leak:libvulkan_lvp
+leak:libvulkan_virtio
+leak:libvulkan_intel_hasvk
+leak:asan_malloc_linux

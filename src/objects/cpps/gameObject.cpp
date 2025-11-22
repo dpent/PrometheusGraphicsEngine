@@ -43,8 +43,7 @@ namespace Prometheus{
 
         if(Engine::meshMap.count(modelPath) == 0 && Engine::meshesLoading.count(modelPath) == 0){
 
-            Engine::meshesLoading[modelPath] = true;
-            Engine::meshMutex.unlock();
+            Engine::meshesLoading.insert(modelPath);
 
             sem_t* meshLoadSemaphore = new sem_t(); //In case i use them sometime
             sem_init(meshLoadSemaphore,0,0);
@@ -59,9 +58,10 @@ namespace Prometheus{
 
             delete meshLoadSemaphore;
         }
-
+        
         if(Engine::meshesLoading.count(modelPath)==0){
             mesh = &(Engine::meshMap[modelPath]);
+
         }else{
 
             while(Engine::meshesLoading.count(modelPath)!=0){
@@ -72,10 +72,11 @@ namespace Prometheus{
                     break;
                 }
             }
-        }
-        
-        Engine::meshMutex.unlock();
 
+        }
+
+        Engine::meshMutex.unlock();
+        
         center = getCenter();
         radius = glm::length(hitboxPoints[1]);
         Engine::insertToHash(this);
@@ -205,12 +206,12 @@ namespace Prometheus{
     }
 
     void GameObject::start(){
-        scale(glm::vec3(15.0f));
+        //scale(glm::vec3(15.0f));
     }
 
     void GameObject::update(){
         rotate(glm::angleAxis(0.1f,glm::vec3(0.0f,1.0f,0.0f)));
-        animateCircularMotion(0.0f,0.0f,0.0f,15.0f, id%(Engine::objectDQueue.size) * 0.01f + 0.01f,0.0f);
+        animateCircularMotion(0.0f,0.0f,0.0f,15.0f, id%(Engine::objectDQueue.size) * 0.1f + 0.1f,0.0f);
         move();
         checkCollisions();
     }

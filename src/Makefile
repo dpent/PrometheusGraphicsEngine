@@ -1,5 +1,5 @@
 CXX = g++
-CFLAGS = -std=c++23 -O3 -Wall -g -Iengine/headers -Iobjects/headers#-fsanitize=address
+CFLAGS = -std=c++23 -O3 -Wall -g -Iengine/headers -Iobjects/headers -fsanitize=address
 LDFLAGS = -lglfw -lvulkan -ldl -lpthread -lX11 -lXxf86vm -lXrandr -lXi
 
 STATIC_FLAGS = -static -static-libgcc -static-libstdc++
@@ -52,7 +52,7 @@ $(TARGET): $(OBJS)
 .PHONY: clean run all
 
 run: $(TARGET)
-	@$(TARGET)
+	LSAN_OPTIONS=suppressions=lsan.supp $(TARGET)
 
 clean:
 	rm -f $(BUILD_DIR)/*.o $(TARGET)
