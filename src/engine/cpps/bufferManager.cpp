@@ -129,7 +129,12 @@ namespace Prometheus{
         cameraPushConstants->view=viewMatrix;
         cameraPushConstants->proj=projMatrix;
 
+        sem_wait(&Engine::descriptorsReadySemaphore);
+        sem_wait(&Engine::instanceBufferReady);
+
         #ifdef EDITOR
+
+            sem_wait(&Engine::debugBuffersReady);
             vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, Engine::preGraphicsPipeline);
 
             GridInfoObject* gridPushConstants = new GridInfoObject();
@@ -184,9 +189,6 @@ namespace Prometheus{
             sizeof(*cameraPushConstants),
             cameraPushConstants
         );
-
-        sem_wait(&Engine::descriptorsReadySemaphore);
-        sem_wait(&Engine::instanceBufferReady);
 
         if(Engine::indexVertexBuffer!=VK_NULL_HANDLE && Engine::objectDQueue.size!=0){
 

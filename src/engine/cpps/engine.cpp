@@ -54,6 +54,7 @@ sem_t Engine::safeToMakeInstanceBuffer;
 sem_t Engine::verIndBufferComplete;
 sem_t Engine::instanceBufferReady;
 sem_t Engine::commandBufferRecorded;
+sem_t Engine::debugBuffersReady;
 std::mutex Engine::gameObjectMutex;
 std::mutex Engine::canDeleteObjectMutex;
 std::mutex Engine::textureMutex;
@@ -73,6 +74,7 @@ std::vector<uint32_t> Engine::indices;
 
 std::vector<Vertex> Engine::debugVertices;
 std::vector<uint32_t> Engine::debugIndices;
+std::unordered_map<Vertex, uint32_t> Engine::debugVertSet;
 
 VkBuffer Engine::indexVertexBuffer= nullptr;
 VkDeviceMemory Engine::indexVertexBufferMemory= nullptr;
@@ -202,6 +204,7 @@ namespace Prometheus{
         sem_init(&Engine::safeToMakeInstanceBuffer,0,0);
         sem_init(&Engine::verIndBufferComplete,0,0);
         sem_init (&Engine::commandBufferRecorded,0,0);
+        sem_init (&Engine::debugBuffersReady,0,0);
 
         Engine::pressed.resize(349, false);
         Engine::camera.updateCameraVectors();
@@ -249,7 +252,7 @@ namespace Prometheus{
         TextureManager::createSolidColorTextureFile("../textures/green.png",0,255,0);
         TextureManager::createSolidColorTextureFile("../textures/magenta.png",255,0,255);
         
-        for(int i=0; i<4; i++){ //60 is the limit
+        for(int i=0; i<1; i++){ //60 is the limit
 
             GameObject::createObjectThreaded("../textures/blue.png", 
                 "../models/stanford_dragon.obj", 
@@ -329,6 +332,7 @@ namespace Prometheus{
             #ifdef EDITOR
                 Engine::debugVertices.clear();
                 Engine::debugIndices.clear();
+                Engine::debugVertSet.clear();
             #endif
         }
 
@@ -501,64 +505,15 @@ namespace Prometheus{
             sem_post(&Engine::verIndBufferComplete);
         }
 
-        #ifdef EDITOR
-
-        #endif
+        handleCommandBufferRecording(imageIndex);
 
         sem_wait(&Engine::verIndBufferComplete);
 
-        if(Engine::objectDQueue.size!=0){
+        handleObjectUpdates();
 
-            std::chrono::system_clock::time_point currentTime = std::chrono::system_clock::now();
-            std::chrono::duration<double> delta = currentTime - Engine::lastUpdateTime;
-
-            auto timeToUpdate = Engine::updateTime - delta.count();
-
-            if(timeToUpdate <= 0.0){
-
-                Engine::updateGameObjects();
-    
-                Engine::updateDescriptors();
-    
-                sem_wait(&Engine::safeToMakeInstanceBuffer);
-    
-                Engine::checkInstanceBufferForUpdates();
-            }else{
-                sem_post(&Engine::descriptorsReadySemaphore);
-                sem_post(&Engine::instanceBufferReady);
-            }
-
-            
-            
-        }else{
-            
-            sem_post(&Engine::descriptorsReadySemaphore);
-            sem_post(&Engine::instanceBufferReady);
-        }
-
-        if(Engine::debugVertices.size()!=0){
-
-            uint64_t size = (sizeof(Engine::debugVertices[0]) * Engine::debugVertices.size())+(sizeof(Engine::debugIndices[0]) * Engine::debugIndices.size());
-
-            if(size >= Engine::debugIndexVertexBufferSize){
-
-                if (Engine::debugIndexVertexBuffer != VK_NULL_HANDLE) {
-                    vkDestroyBuffer(device, Engine::debugIndexVertexBuffer, nullptr);
-                }
-                if (Engine::debugIndexVertexBufferMemory != VK_NULL_HANDLE) {
-                    vkFreeMemory(device, Engine::debugIndexVertexBufferMemory, nullptr);
-                }
-
-                BufferManager::createDebugIndexVertexBuffer(this->device,this->physicalDevice,
-                this->graphicsQueue, Engine::commandPool);
-
-            }else{
-                BufferManager::updateDebugIndexVertexBuffer(this->device,this->physicalDevice,
-                    this->graphicsQueue, Engine::commandPool);
-            }
-        }
-
-        //handleCommandBufferRecording(imageIndex);
+        #ifdef EDITOR
+            handleDebugBuffers();
+        #endif
         
         Engine::meshMutex.unlock();
         if(!Engine::wasPlacedInThread){
@@ -833,37 +788,39 @@ namespace Prometheus{
 
         Engine::queueMutex.lock();
 
-        if(Engine::threadsAvailable.getValue()!=0 && Engine::jobQueue.size()<Engine::threadsAvailable.getValue()){
+        if(Engine::jobQueue.size()<Engine::threadsAvailable.getValue()){
 
             createVertexIndexBufferUpdateJob();
 
             Engine::queueMutex.unlock();
-        }else{
 
-            Engine::queueMutex.unlock();
-
-            uint64_t size = BufferManager::remakeVertexIndexVectors(this->device);
-
-            if( size >=Engine::indexVertexBufferSize)
-            {
-                BufferManager::createIndexVertexBuffer(this->device,this->physicalDevice,
-                    this->graphicsQueue, Engine::commandPool);
-
-            }else{
-                BufferManager::updateIndexVertexBuffer(this->device,this->physicalDevice,
-                    this->graphicsQueue, Engine::commandPool);
-            }
-
-            Engine::recreateVertexIndexBuffer=false;
-            sem_post(&Engine::verIndBufferComplete);
+            return;
         }
+
+        Engine::queueMutex.unlock();
+
+        uint64_t size = BufferManager::remakeVertexIndexVectors(this->device);
+
+        if( size >=Engine::indexVertexBufferSize)
+        {
+            BufferManager::createIndexVertexBuffer(this->device,this->physicalDevice,
+                this->graphicsQueue, Engine::commandPool);
+
+        }else{
+            BufferManager::updateIndexVertexBuffer(this->device,this->physicalDevice,
+                this->graphicsQueue, Engine::commandPool);
+        }
+
+        Engine::recreateVertexIndexBuffer=false;
+        sem_post(&Engine::verIndBufferComplete);
+
     }
 
     void Engine::updateDescriptors(){
         if(Engine::meshBatches.size()!=Engine::descriptorSets.size() || Engine::recreateDescriptors){
 
             Engine::queueMutex.lock();
-            if(Engine::threadsAvailable.getValue()!=0 && Engine::jobQueue.size()<Engine::threadsAvailable.getValue()){
+            if(Engine::jobQueue.size()<Engine::threadsAvailable.getValue()){
                 
                 DescriptorManager::recreateDescriptors(this->device);
 
@@ -911,7 +868,7 @@ namespace Prometheus{
     void Engine::handleCommandBufferRecording(uint32_t imageIndex){
 
         Engine::queueMutex.lock();
-        if(Engine::threadsAvailable.getValue()!=0 && Engine::jobQueue.size()<Engine::threadsAvailable.getValue()){
+        if(Engine::jobQueue.size()<Engine::threadsAvailable.getValue()){
             
             Engine::wasPlacedInThread=true;
 
@@ -1156,5 +1113,68 @@ namespace Prometheus{
                 }
             }
         }
+    }
+
+    void Engine::handleDebugBuffers(){
+        if(Engine::debugVertices.size()!=0){
+
+            uint64_t size = (sizeof(Engine::debugVertices[0]) * Engine::debugVertices.size())+(sizeof(Engine::debugIndices[0]) * Engine::debugIndices.size());
+
+            if(size >= Engine::debugIndexVertexBufferSize){
+
+                if (Engine::debugIndexVertexBuffer != VK_NULL_HANDLE) {
+                    vkDestroyBuffer(device, Engine::debugIndexVertexBuffer, nullptr);
+                }
+                if (Engine::debugIndexVertexBufferMemory != VK_NULL_HANDLE) {
+                    vkFreeMemory(device, Engine::debugIndexVertexBufferMemory, nullptr);
+                }
+
+                BufferManager::createDebugIndexVertexBuffer(this->device,this->physicalDevice,
+                this->graphicsQueue, Engine::commandPool);
+
+            }else{
+                BufferManager::updateDebugIndexVertexBuffer(this->device,this->physicalDevice,
+                    this->graphicsQueue, Engine::commandPool);
+            }
+        }
+
+        sem_post(&Engine::debugBuffersReady);
+    }
+
+    void Engine::handleObjectUpdates(){
+
+        if(Engine::objectDQueue.size==0){
+            sem_post(&Engine::descriptorsReadySemaphore);
+            sem_post(&Engine::instanceBufferReady);
+
+            return;
+        }
+
+        std::chrono::system_clock::time_point currentTime = std::chrono::system_clock::now();
+        std::chrono::duration<double> delta = currentTime - Engine::lastUpdateTime;
+
+        auto timeToUpdate = Engine::updateTime - delta.count();
+
+        if(timeToUpdate > 0.0){
+
+            sem_post(&Engine::descriptorsReadySemaphore);
+            sem_post(&Engine::instanceBufferReady);
+            
+            return;
+
+        }
+
+        /*if(Engine::threadsAvailable.getValue()>1 && Engine::jobQueue.size()<Engine::threadsAvailable.getValue()){
+
+            createUpdateObjDescrJob();
+        }*/
+
+        Engine::updateGameObjects();
+
+        Engine::updateDescriptors();
+
+        sem_wait(&Engine::safeToMakeInstanceBuffer);
+
+        Engine::checkInstanceBufferForUpdates();
     }
 }

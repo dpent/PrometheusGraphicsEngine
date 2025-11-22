@@ -109,6 +109,7 @@ namespace Prometheus{
         static sem_t verIndBufferComplete;
         static sem_t instanceBufferReady;
         static sem_t commandBufferRecorded;
+        static sem_t debugBuffersReady;
         static std::mutex gameObjectMutex;
         static std::mutex canDeleteObjectMutex;
         static std::mutex textureMutex;
@@ -128,6 +129,7 @@ namespace Prometheus{
 
         static std::vector<Vertex> debugVertices;
         static std::vector<uint32_t> debugIndices;
+        static std::unordered_map<Vertex, uint32_t> debugVertSet;
 
         static VkBuffer indexVertexBuffer;
         static VkDeviceMemory indexVertexBufferMemory;
@@ -267,6 +269,8 @@ namespace Prometheus{
         void createRecordCommandBufferJob(uint32_t imageIndex);
         void handleCommandBufferRecording(uint32_t imageIndex);
         void killThreads();
+        void handleDebugBuffers();
+        void handleObjectUpdates();
 
         void createSpatialHash(glm::vec3 maxCoords, glm::vec3 minCoords);
         void drawSpatialHash();
