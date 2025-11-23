@@ -390,11 +390,18 @@ namespace Prometheus{
     }
 
     void BufferManager::createUniformBuffers(VkDevice& device, VkPhysicalDevice& physicalDevice){
-        VkDeviceSize bufferSize = sizeof(UniformBufferObject);
-        
+        VkDeviceSize bufferSize = sizeof(UBOData);
+
         Engine::uniformBuffers.resize(Engine::MAX_FRAMES_IN_FLIGHT);
         Engine::uniformBuffersMemory.resize(Engine::MAX_FRAMES_IN_FLIGHT);
         Engine::uniformBuffersMapped.resize(Engine::MAX_FRAMES_IN_FLIGHT);
+        
+        if(Engine::uniformBuffers.size() != 0){
+            for (size_t i = 0; i < Engine::MAX_FRAMES_IN_FLIGHT; i++) {
+                vkDestroyBuffer(device, Engine::uniformBuffers[i], nullptr);
+                vkFreeMemory(device, Engine::uniformBuffersMemory[i], nullptr);
+            }
+        }
 
         for (size_t i = 0; i < Engine::MAX_FRAMES_IN_FLIGHT; i++) {
             createBuffer(bufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
@@ -406,20 +413,26 @@ namespace Prometheus{
     }
     // A more efficient way to pass a small buffer of data to shaders are push constants.
     void BufferManager::updateUniformBuffer(uint32_t currentImage){
-        static auto startTime = std::chrono::high_resolution_clock::now();
 
-        auto currentTime = std::chrono::high_resolution_clock::now();
-        float time = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
+        UBOContainer* light = Engine::lights.head;
+        UBOData data;
 
-        UniformBufferObject ubo{};
-        ubo.model = glm::rotate(glm::mat4(1.0f), time * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+        for(size_t i=0; i<Engine::lights.size; i++){
 
-        ubo.view = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+            data.positions[i] = light->ubo->position;
+            //std::cout<<"Position x "<<data.positions[i].x<<" y "<<data.positions[i].y<<" z "<<data.positions[i].z<<std::endl;
+            data.colors[i] = light->ubo->color;
+            //std::cout<<"Color x "<<data.colors[i].x<<" y "<<data.colors[i].y<<" z "<<data.colors[i].z<<std::endl;
+            data.ambientLightColors[i] = light->ubo->ambientLightColor;
+            //std::cout<<"Ambient color x "<<data.ambientLightColors[i].x<<" y "<<data.ambientLightColors[i].y<<" z "<<data.ambientLightColors[i].z<<std::endl;
+            data.intensities[i] = light->ubo->intensity;
 
-        ubo.proj = glm::perspective(glm::radians(45.0f), Engine::swapChainExtent.width / (float) Engine::swapChainExtent.height, 0.1f, 10.0f);
-        ubo.proj[1][1] *= -1; //Image will be flipped if this is deleted since glm was originaly made for openGL where the y coordinate is flipped.
+            light = light->next;
+        }
 
-        memcpy(Engine::uniformBuffersMapped[currentImage], &ubo, sizeof(ubo));
+        data.lightCount = Engine::lights.size;
+
+        memcpy(Engine::uniformBuffersMapped[currentImage], &data, sizeof(UBOData));
     }
 
     VkCommandBuffer BufferManager::beginSingleTimeCommands(VkDevice& device, VkCommandPool& commandPool) {

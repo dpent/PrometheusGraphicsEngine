@@ -6,6 +6,13 @@ using namespace Prometheus;
 
 namespace Prometheus{
     void SyncManager::createSyncObjects(VkDevice& device){
+
+        sem_init(&Engine::descriptorsReadySemaphore,0,0);
+        sem_init(&Engine::safeToMakeInstanceBuffer,0,0);
+        sem_init(&Engine::verIndBufferComplete,0,0);
+        sem_init(&Engine::commandBufferRecorded,0,0);
+        sem_init(&Engine::debugBuffersReady,0,0);
+
         Engine::imageAvailableSemaphores.resize(Engine::MAX_FRAMES_IN_FLIGHT);
         Engine::renderFinishedSemaphores.resize(Engine::MAX_FRAMES_IN_FLIGHT);
         Engine::inFlightFences.resize(Engine::MAX_FRAMES_IN_FLIGHT);

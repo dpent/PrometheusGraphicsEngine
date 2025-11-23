@@ -1,4 +1,5 @@
 #include "../../objects/headers/mesh.h"
+#include "../headers/engine.h"
 
 using namespace Prometheus;
 
@@ -80,4 +81,22 @@ namespace Prometheus{
 
         return attrs;
     }
+
+    UniformBufferObject::UniformBufferObject(glm::vec4 pos, glm::vec4 color, float intensity){
+        position = pos;
+        this->color = color;
+        ambientLightColor = glm::vec4(1.0f,1.0f,1.0f,0.02f);
+        this->intensity = intensity;
+
+        Engine::lights.push(new UBOContainer(this));
+        Engine::recreateUBO = true;
+    }
+
+    UniformBufferObject::UniformBufferObject(){}
+
+    UBOContainer::UBOContainer(UniformBufferObject* ubo){
+        this->ubo = ubo;
+    }
+
+    UBOContainer::UBOContainer(){}
 }

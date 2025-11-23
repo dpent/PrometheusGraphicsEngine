@@ -30,7 +30,7 @@ namespace Prometheus{
     struct CameraObject
     {
         glm::mat4 view;
-        glm::mat4 proj;   
+        glm::mat4 proj; 
     };
 
     struct GridInfoObject
@@ -43,9 +43,33 @@ namespace Prometheus{
     
 
     struct UniformBufferObject {
-        glm::mat4 model;
-        glm::mat4 view;
-        glm::mat4 proj;
+        public:
+
+        glm::vec4 position;
+        glm::vec4 color;
+        glm::vec4 ambientLightColor;
+        float intensity;
+
+        UniformBufferObject(glm::vec4 pos, glm::vec4 color, float intensity);
+        UniformBufferObject();
+    };
+
+    struct UBOData {
+        glm::vec4 positions[128];
+        glm::vec4 colors[128];
+        glm::vec4 ambientLightColors[128];
+        alignas(16) float intensities[128];
+        uint64_t lightCount;
+    };
+
+    class UBOContainer {
+        public:
+        UniformBufferObject* ubo;
+        UBOContainer* next;
+        UBOContainer* prev;
+
+        UBOContainer(UniformBufferObject* ubo);
+        UBOContainer();
     };
 }
 

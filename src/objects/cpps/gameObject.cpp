@@ -206,7 +206,7 @@ namespace Prometheus{
     }
 
     void GameObject::start(){
-        //scale(glm::vec3(15.0f));
+        scale(glm::vec3(15.0f));
     }
 
     void GameObject::update(){

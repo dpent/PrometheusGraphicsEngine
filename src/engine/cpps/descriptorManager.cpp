@@ -6,21 +6,21 @@ using namespace Prometheus;
 
 namespace Prometheus{
     void DescriptorManager::createDescriptorSetLayout(VkDevice& device){
-        /*VkDescriptorSetLayoutBinding uboLayoutBinding{};
+        VkDescriptorSetLayoutBinding uboLayoutBinding{};
         uboLayoutBinding.binding = 0; //This will be used in the vertex shader
         uboLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT; //This as well (We also need to specify in which shader stages the descriptor is going to be referenced)
         uboLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
         uboLayoutBinding.descriptorCount = 1;
-        uboLayoutBinding.pImmutableSamplers = nullptr;*/
+        uboLayoutBinding.pImmutableSamplers = nullptr;
 
         VkDescriptorSetLayoutBinding samplerLayoutBinding{};
-        samplerLayoutBinding.binding = 0;
+        samplerLayoutBinding.binding = 1;
         samplerLayoutBinding.descriptorCount = 64; // Max per batch
         samplerLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
         samplerLayoutBinding.pImmutableSamplers = nullptr;
         samplerLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 
-        std::array<VkDescriptorSetLayoutBinding, 1> bindings = {samplerLayoutBinding};
+        std::array<VkDescriptorSetLayoutBinding, 2> bindings = {uboLayoutBinding,samplerLayoutBinding};
 
         VkDescriptorSetLayoutCreateInfo layoutInfo{};
         layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
@@ -33,14 +33,18 @@ namespace Prometheus{
     }
 
     void DescriptorManager::createDescriptorPool(VkDevice& device){
-        VkDescriptorPoolSize poolSize{};
-        poolSize.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-        poolSize.descriptorCount = static_cast<uint32_t>(Engine::meshBatches.size() * 64);
+        std::array<VkDescriptorPoolSize, 2> poolSizes{};
+
+        poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        poolSizes[0].descriptorCount = static_cast<uint32_t>(Engine::meshBatches.size() * Engine::MAX_FRAMES_IN_FLIGHT);
+
+        poolSizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        poolSizes[1].descriptorCount = static_cast<uint32_t>(Engine::meshBatches.size() * 64); // max 64 textures per batch
 
         VkDescriptorPoolCreateInfo poolInfo{};
         poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-        poolInfo.poolSizeCount = 1;
-        poolInfo.pPoolSizes = &poolSize;
+        poolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
+        poolInfo.pPoolSizes = poolSizes.data();
         poolInfo.maxSets = static_cast<uint32_t>(Engine::meshBatches.size());
 
         if (vkCreateDescriptorPool(device, &poolInfo, nullptr, &Engine::descriptorPool) != VK_SUCCESS) {
@@ -64,6 +68,28 @@ namespace Prometheus{
                 throw std::runtime_error("failed to allocate descriptor set!");
             }
 
+            std::vector<VkDescriptorBufferInfo> bufferInfos{};
+            bufferInfos.reserve(Engine::MAX_FRAMES_IN_FLIGHT);
+
+            for(size_t j=0; j<Engine::MAX_FRAMES_IN_FLIGHT; j++){
+
+                VkDescriptorBufferInfo bufferInfo{};
+                bufferInfo.buffer = Engine::uniformBuffers[j]; // VkBuffer for UBO
+                bufferInfo.offset = 0;
+                bufferInfo.range  = sizeof(UBOData);
+
+                bufferInfos.push_back(bufferInfo);
+            }
+
+            VkWriteDescriptorSet uboWrite{};
+            uboWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            uboWrite.dstSet = Engine::descriptorSets[i];
+            uboWrite.dstBinding = 0; // binding 0 for UBO
+            uboWrite.dstArrayElement = 0;
+            uboWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+            uboWrite.descriptorCount = 1;
+            uboWrite.pBufferInfo = bufferInfos.data();
+
             std::vector<VkDescriptorImageInfo> imageInfos;
             imageInfos.reserve(batch->textures.size());
 
@@ -75,16 +101,17 @@ namespace Prometheus{
                 imageInfos.push_back(info);
             }
 
-            VkWriteDescriptorSet write{};
-            write.sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-            write.dstSet          = Engine::descriptorSets[i];
-            write.dstBinding      = 0;
-            write.dstArrayElement = 0;
-            write.descriptorType  = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-            write.descriptorCount = static_cast<uint32_t>(imageInfos.size());
-            write.pImageInfo      = imageInfos.data();
+            VkWriteDescriptorSet textureWrite{};
+            textureWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            textureWrite.dstSet = Engine::descriptorSets[i];
+            textureWrite.dstBinding = 1; // binding 1 for textures
+            textureWrite.dstArrayElement = 0;
+            textureWrite.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+            textureWrite.descriptorCount = static_cast<uint32_t>(imageInfos.size());
+            textureWrite.pImageInfo = imageInfos.data();
 
-            vkUpdateDescriptorSets(device, 1, &write, 0, nullptr);
+            std::array<VkWriteDescriptorSet, 2> writes = { uboWrite, textureWrite };
+            vkUpdateDescriptorSets(device, static_cast<uint32_t>(writes.size()), writes.data(), 0, nullptr);
 
             i++;
         }

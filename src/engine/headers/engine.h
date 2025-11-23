@@ -227,6 +227,9 @@ namespace Prometheus{
         static std::unordered_map<std::string, MeshBatch*> meshSet;
         static std::unordered_map<std::string,uint64_t> textureIndices;
 
+        static DoubleEndedQueue<UBOContainer*> lights;
+        static bool recreateUBO;
+
         void run(int argc, char** argv);
         static std::vector<char> readFile(const std::string& filename);
         static void frameBufferResizeCallback(GLFWwindow* window, int width, int height);

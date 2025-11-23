@@ -6,8 +6,9 @@ layout(location = 2) in flat uint fragTextureIndex;
 
 layout(location = 0) out vec4 outColor;
 
-layout(set = 0, binding = 0) uniform sampler2D textures[64];
+layout(set = 0, binding = 1) uniform sampler2D textures[64];
 
 void main() {
-    outColor = texture(textures[fragTextureIndex], fragTexCoord);
+    vec4 texColor = texture(textures[fragTextureIndex], fragTexCoord);
+    outColor = vec4(fragColor, 1.0) * texColor;
 }
