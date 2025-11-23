@@ -254,31 +254,32 @@ namespace Prometheus{
         TextureManager::createSolidColorTextureFile("../textures/red.png",255,0,0);
         TextureManager::createSolidColorTextureFile("../textures/green.png",0,255,0);
         TextureManager::createSolidColorTextureFile("../textures/magenta.png",255,0,255);
+        TextureManager::createSolidColorTextureFile("../textures/white.png",255,255,255);
         
         for(int i=0; i<1; i++){ //100 is the safe limit
 
-            GameObject::createObjectThreaded("../textures/blue.png", 
+            GameObject::createObjectThreaded("../textures/white.png", 
                 "../models/stanford_dragon.obj", 
                 device, 
                 physicalDevice, 
                 graphicsQueue
             );
     
-            GameObject::createObjectThreaded("../textures/red.png", 
+            GameObject::createObjectThreaded("../textures/white.png", 
                 "../models/stanford_dragon.obj", 
                 device, 
                 physicalDevice, 
                 graphicsQueue
             );
     
-            GameObject::createObjectThreaded("../textures/green.png", 
+            GameObject::createObjectThreaded("../textures/white.png", 
                 "../models/stanford_dragon.obj", 
                 device, 
                 physicalDevice, 
                 graphicsQueue
             );
     
-            GameObject::createObjectThreaded("../textures/magenta.png", 
+            GameObject::createObjectThreaded("../textures/white.png", 
                 "../models/stanford_dragon.obj", 
                 device, 
                 physicalDevice, 
@@ -293,7 +294,7 @@ namespace Prometheus{
     }
 
     void Engine::mainLoop() {
-        UniformBufferObject* l1 = new UniformBufferObject(glm::vec4(10.0f,10.0f,10.0f,0.0f),glm::vec4(COLOR_BLUE,1.0f), 30.0f);
+        UniformBufferObject* l1 = new UniformBufferObject(glm::vec4(10.0f,10.0f,10.0f,0.0f),glm::vec4(COLOR_RED,1.0f), 30.0f);
 
         BufferManager::createUniformBuffers(this->device,this->physicalDevice);
 

@@ -34,7 +34,7 @@ void main() {
     vec3 ambientLight = lightsUBO.ambientColors[0].xyz * lightsUBO.ambientColors[0].w;
 
 
-    fragColor = (vec3(1.0) * attenuation) * lightsUBO.intensities[0];
+    fragColor = (lightColor * attenuation) * lightsUBO.intensities[0];
     fragTexCoord = inTexCoord;
     fragTextureIndex = instanceTextureIndex;
 }

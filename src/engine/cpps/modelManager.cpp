@@ -77,7 +77,6 @@ namespace Prometheus{
         }
         Engine::meshMap[modelPath]=Mesh(modelPath,vertices,indices, minCoords, maxCoords);
         Engine::meshesLoading.erase(modelPath);
-        
 
         sem_post(&meshLoadSemaphore);
     }
