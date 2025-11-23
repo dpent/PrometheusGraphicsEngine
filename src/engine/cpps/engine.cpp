@@ -63,6 +63,7 @@ std::mutex Engine::graphicsQueueMutex;
 std::mutex Engine::commandPoolMutex;
 std::mutex Engine::meshMutex;
 std::mutex Engine::descriptorQueuedMutex;
+std::mutex Engine::debugMutex;
 
 
 uint32_t Engine::currentFrame = 0;
@@ -115,7 +116,7 @@ std::unordered_map<std::string, std::vector<int>> Engine::framesSinceTextureQueu
 std::unordered_map<std::string,Mesh> Engine::meshMap;
 std::unordered_set<std::string> Engine::meshesLoading;
 std::unordered_map<std::string,std::unordered_map<uint64_t,GameObject*>> Engine::objectsByMesh;
-std::vector<MeshBatch> Engine::meshBatches;
+std::vector<MeshBatch*> Engine::meshBatches;
 
 VkImage Engine::depthImage;
 VkDeviceMemory Engine::depthImageMemory;
@@ -167,6 +168,9 @@ double Engine::frameTime = 0.0;
 
 std::array<std::array<std::array<Cell*, 50>, 50>, 50> Engine::spatialHash = {nullptr};
 glm::vec3 Engine::cellSize;
+
+std::unordered_map<std::string, MeshBatch*> Engine::meshSet;
+std::unordered_map<std::string,uint64_t> Engine::textureIndices;
 
 namespace Prometheus{
     void Engine::run(int argc, char** argv) {
@@ -252,7 +256,7 @@ namespace Prometheus{
         TextureManager::createSolidColorTextureFile("../textures/green.png",0,255,0);
         TextureManager::createSolidColorTextureFile("../textures/magenta.png",255,0,255);
         
-        for(int i=0; i<2; i++){ //60 is the limit
+        for(int i=0; i<100; i++){ //100 is the safe limit
 
             GameObject::createObjectThreaded("../textures/blue.png", 
                 "../models/stanford_sphere.obj", 
@@ -382,6 +386,10 @@ namespace Prometheus{
                 auto& tex = texVec[i];
                 tex.terminate(device);
             }
+        }
+
+        for(size_t i=0; i<Engine::meshBatches.size(); i++){
+            delete Engine::meshBatches[i];
         }
 
         WindowManager::cleanup();
@@ -590,37 +598,41 @@ namespace Prometheus{
 
     void Engine::updateGameObjects(){
 
+        for(size_t i=0; i<Engine::meshBatches.size(); i++){
+            delete Engine::meshBatches[i];
+        }
+
         Engine::meshBatches.clear();
 
         VkDeviceSize bufferSize=0;
 
-        std::unordered_map<std::string, MeshBatch*> meshSet;
+        Engine::meshSet.clear();
+        Engine::textureIndices.clear();
 
         Engine::meshBatches.reserve(Engine::objectsByMesh.size());
         for(auto& meshName : Engine::objectsByMesh){
-            Engine::meshBatches.push_back(MeshBatch(meshName.first));
-            meshSet.insert({meshName.first,&Engine::meshBatches[Engine::meshBatches.size() - 1]});
+            Engine::meshBatches.push_back(new MeshBatch(meshName.first));
+            Engine::meshSet.insert({meshName.first,Engine::meshBatches[Engine::meshBatches.size() - 1]});
         }
 
         GameObject* object = Engine::objectDQueue.head;
-        std::unordered_map<std::string,uint64_t> textureIndices;
 
         while(true){
             Engine::textureMutex.lock();
-            if (textureIndices.count(object->texturePath)==0) {
-                textureIndices[object->texturePath] = meshSet[object->meshPath]->textures.size();
-                meshSet[object->meshPath]->textures.push_back(&Engine::textureMap.at(object->texturePath));
+            if (Engine::textureIndices.count(object->texturePath)==0) {
+                Engine::textureIndices[object->texturePath] = Engine::meshSet[object->meshPath]->textures.size();
+                Engine::meshSet[object->meshPath]->textures.push_back(&Engine::textureMap.at(object->texturePath));
             }
             Engine::textureMutex.unlock();
 
             object->update();
 
-            object->updateInstanceInfo(textureIndices.at(object->texturePath));
+            object->updateInstanceInfo(Engine::textureIndices.at(object->texturePath));
 
-            meshSet[object->meshPath]->instances.push_back(
+            Engine::meshSet[object->meshPath]->instances.push_back(
                 *(object->info)
             );
-            meshSet[object->meshPath]->objects.push_back(object);
+            Engine::meshSet[object->meshPath]->objects.push_back(object);
 
             bufferSize+=sizeof(InstanceInfo);
 
@@ -630,17 +642,32 @@ namespace Prometheus{
                     Engine::recreateInstanceBuffer=true;
                 }
 
-                sem_post(&Engine::safeToMakeInstanceBuffer);
-
                 //for(size_t i=0; i<Engine::meshBatches.size(); i++){
                     //std::cout<<Engine::meshBatches[i].meshPath<<" "<<Engine::meshBatches[i].objects.size()<<std::endl;
                 //}
+                
+                object = Engine::objectDQueue.head;
+                while(true){
+                    if(object->moved){
+                        object->checkCollisions();
+                    }
+        
+                    if(object->next == nullptr){
+                        break;
+                    }
+                    
+                    object = object->next;
+                }
+
+                sem_post(&Engine::safeToMakeInstanceBuffer);
 
                 return;
             }
             
             object = object->next;
         }
+
+
 
         /*for (auto& [meshName, innerMap] : Engine::objectsByMesh) {
 
@@ -786,12 +813,30 @@ namespace Prometheus{
         sem_post(&(Engine::workInQueueSemaphore));
     }
 
-    void Engine::createUpdateObjDescrJob(){
+    void Engine::createUpdateObjDescrJob(Latch* l){
+
+        sem_t setReady;
+
+        sem_init(&setReady,0,0);
 
         Job j = Job(UPDATE_OBJECTS_AND_DESCRIPTORS);
         j.data.emplace_back(std::in_place_type<VkDevice*>, &device);
         j.data.emplace_back(std::in_place_type<sem_t*>,&Engine::descriptorsReadySemaphore);
         j.data.emplace_back(std::in_place_type<sem_t*>,&Engine::safeToMakeInstanceBuffer);
+        j.data.emplace_back(std::in_place_type<Latch*>, l);
+        j.data.emplace_back(std::in_place_type<sem_t*>, &setReady);
+
+        Engine::jobQueue.push(j);
+
+        sem_post(&Engine::workInQueueSemaphore);
+
+        if(Engine::objectDQueue.size < 1){
+            return;
+        }
+
+        j = Job(UPDATE_GAME_OBJECTS);
+        j.data.emplace_back(std::in_place_type<Latch*>, l);
+        j.data.emplace_back(std::in_place_type<sem_t*>, &setReady);
 
         Engine::jobQueue.push(j);
 
@@ -1211,14 +1256,19 @@ namespace Prometheus{
 
         }
 
-        /*if(Engine::threadsAvailable.getValue()>1 && Engine::jobQueue.size()<Engine::threadsAvailable.getValue()){
+        //Engine::updateGameObjects();
+    
+        //Engine::updateDescriptors();
 
-            createUpdateObjDescrJob();
-        }*/
+        if(Engine::threadsAvailable.getValue()>1 && Engine::jobQueue.size()<Engine::threadsAvailable.getValue()){
+            Latch* l = new Latch(1);
+            createUpdateObjDescrJob(l);
+        }else{
 
-        Engine::updateGameObjects();
-
-        Engine::updateDescriptors();
+            Engine::updateGameObjects();
+    
+            Engine::updateDescriptors();
+        }
 
         sem_wait(&Engine::safeToMakeInstanceBuffer);
 

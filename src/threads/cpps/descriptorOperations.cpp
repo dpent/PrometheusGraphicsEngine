@@ -52,6 +52,7 @@ namespace Prometheus{
             sem_post(&Engine::descriptorsReadySemaphore);
             return;
         }
+
         //Engine::meshMutex.unlock();
 
         DescriptorManager::createDescriptorPool(device);

@@ -213,7 +213,7 @@ namespace Prometheus{
         rotate(glm::angleAxis(0.1f,glm::vec3(0.0f,1.0f,0.0f)));
         animateCircularMotion(0.0f,0.0f,0.0f,15.0f, id%(Engine::objectDQueue.size) * 0.1f + 0.1f,0.0f);
         move();
-        checkCollisions();
+        //checkCollisions();
     }
 
     void GameObject::updateInstanceInfo(uint64_t textureIndex){
@@ -244,6 +244,7 @@ namespace Prometheus{
     }
 
     void GameObject::drawOBB(glm::vec3 color){ //Magenta default
+        Engine::debugMutex.lock();
         Debug::drawLine(transform.position + hitboxPoints[1], 
             transform.position + hitboxPoints[3], color); //TOP PART
         Debug::drawLine(transform.position + hitboxPoints[1], 
@@ -271,6 +272,8 @@ namespace Prometheus{
             transform.position + hitboxPoints[4], color);
         Debug::drawLine(transform.position + hitboxPoints[5], 
             transform.position + hitboxPoints[7], color);
+
+        Engine::debugMutex.unlock();
     }
 
     glm::vec3 GameObject::hsvToRgb(float h, float s, float v)
@@ -319,6 +322,8 @@ namespace Prometheus{
 
     bool GameObject::checkCollisions(){
 
+        moved = false;
+
         for(auto& cell : cells){
             for(auto& object : cell->objects){
                 if(object->id == id){
@@ -331,6 +336,7 @@ namespace Prometheus{
                         object->getWorldHitpoints(), 
                         getWorldHitpoints()
                     )){
+                        
                         object->drawOBB(COLOR_RED);
                         drawOBB(COLOR_RED);
                         return true;
@@ -340,39 +346,6 @@ namespace Prometheus{
         }
 
         return false;
-
-        /*GameObject* obj = Engine::objectDQueue.head;
-
-        while(true){
-
-            if(obj->id == id){
-                if(obj->next == nullptr){
-                    return false;
-                }
-
-                obj = obj->next;
-                continue;
-            }
-
-            if(sphereTest(obj->getCenter(), obj->hitboxPoints[1])){
-
-                if(Atlas::Collision::checkOBBtoOBB(obj->transform.getBasicAxes(), 
-                    this->transform.getBasicAxes(), 
-                    obj->getWorldHitpoints(), 
-                    getWorldHitpoints()
-                )){
-                    obj->drawOBB(COLOR_RED);
-                    drawOBB(COLOR_RED);
-                    return true;
-                }
-            }
-
-            if(obj->next == nullptr){
-                return false;
-            }
-
-            obj = obj->next;
-        }*/
     }
 
     std::array<glm::vec3, 8> GameObject::getWorldHitpoints(){
@@ -391,15 +364,23 @@ namespace Prometheus{
     }
 
     void GameObject::move(){
+
+        if(velocity == glm::vec3(0.0f)){
+            return;
+        }
         transform.position += velocity;
 
         for(auto& cell: cells){
+            cell->objectMutex.lock();
             cell->objects.erase(this);
+            cell->objectMutex.unlock();
         }
 
         cells.clear();
 
         center = getCenter();
+
+        moved = true;
 
         Engine::insertToHash(this);
     }

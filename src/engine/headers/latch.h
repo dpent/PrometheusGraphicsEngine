@@ -19,6 +19,14 @@ namespace Prometheus{
 
         void wait();
 
+        void setCount(uint64_t value);
+
+        void setCountNoSync(uint64_t value);
+
+        uint64_t getCount();
+
+        void post();
+
         ~Latch();
     };
 }

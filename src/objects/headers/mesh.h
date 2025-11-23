@@ -12,6 +12,7 @@
 #include <vector>
 #include "../../engine/headers/textureManager.h"
 #include "instanceInfo.h"
+#include <mutex>
 
 
 namespace Prometheus{
@@ -52,6 +53,7 @@ namespace Prometheus{
         std::vector<InstanceInfo> instances;
         std::vector<GameObject*> objects;
         std::vector<Texture*> textures;
+        std::mutex multiThreadMutex;
 
         MeshBatch(std::string path);
         MeshBatch();

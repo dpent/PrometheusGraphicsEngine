@@ -69,6 +69,8 @@ namespace Prometheus{
     }
 
     void Cell::drawSelf(){
+        Engine::debugMutex.lock();
+
         Debug::drawLine(glm::vec3(maxCoords), glm::vec3(maxCoords.x, maxCoords.y, minCoords.z), COLOR_DARK_GREEN); //TOP PART
         Debug::drawLine(glm::vec3(maxCoords), glm::vec3(minCoords.x, maxCoords.y, maxCoords.z), COLOR_DARK_GREEN);
         Debug::drawLine(glm::vec3(minCoords.x,maxCoords.y,minCoords.z), glm::vec3(maxCoords.x, maxCoords.y, minCoords.z), COLOR_DARK_GREEN);
@@ -83,6 +85,8 @@ namespace Prometheus{
         Debug::drawLine(glm::vec3(minCoords), glm::vec3(maxCoords.x, minCoords.y, minCoords.z), COLOR_DARK_GREEN);
         Debug::drawLine(glm::vec3(maxCoords.x,minCoords.y,maxCoords.z), glm::vec3(minCoords.x, minCoords.y, maxCoords.z), COLOR_DARK_GREEN);
         Debug::drawLine(glm::vec3(maxCoords.x,minCoords.y,maxCoords.z), glm::vec3(maxCoords.x, minCoords.y, minCoords.z), COLOR_DARK_GREEN);
+       
+        Engine::debugMutex.unlock();
     }
 
     void Cell::insert(GameObject* obj){

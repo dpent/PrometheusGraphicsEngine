@@ -105,17 +105,17 @@ namespace Prometheus{
 
             case UPDATE_GAME_OBJECTS:
                 updateGameObjects(
-                    *std::get<std::unordered_map<std::string, 
-                            std::unordered_map<uint64_t, Prometheus::GameObject *>>*>(job->data[0]),
-                    *std::get<std::unordered_map<std::string, Prometheus::MeshBatch>*>(job->data[1]),
-                    *std::get<Latch*>(job->data[2])
+                    std::get<Latch*>(job->data[0]),
+                    std::get<sem_t*>(job->data[1])
                 );
                 break;
             
             case UPDATE_OBJECTS_AND_DESCRIPTORS:
                 updateObjectsAndDescriptors(*std::get<VkDevice*>(job->data[0]),
                     std::get<sem_t*>(job->data[1]),
-                    std::get<sem_t*>(job->data[2])
+                    std::get<sem_t*>(job->data[2]),
+                    std::get<Latch*>(job->data[3]),
+                    std::get<sem_t*>(job->data[4])
                 );
                 break;
 

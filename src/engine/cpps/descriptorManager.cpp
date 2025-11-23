@@ -65,9 +65,9 @@ namespace Prometheus{
             }
 
             std::vector<VkDescriptorImageInfo> imageInfos;
-            imageInfos.reserve(batch.textures.size());
+            imageInfos.reserve(batch->textures.size());
 
-            for (auto tex : batch.textures) {
+            for (auto tex : batch->textures) {
                 VkDescriptorImageInfo info{};
                 info.sampler     = (*tex).textureSampler;
                 info.imageView   = (*tex).textureImageView;

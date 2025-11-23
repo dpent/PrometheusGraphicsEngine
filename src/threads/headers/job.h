@@ -11,6 +11,7 @@
 #include "../../objects/headers/gameObject.h"
 #include "../../objects/headers/mesh.h"
 #include "../../engine/headers/latch.h"
+#include <barrier>
 
 namespace Prometheus{
     enum operationId : uint16_t{

@@ -213,8 +213,8 @@ namespace Prometheus{
                     0,
                     nullptr
                 );
-                Engine::meshBatches[i].objects[0]->draw(commandBuffer,Engine::meshBatches[i].instances.size(),instanceCount);
-                instanceCount+=Engine::meshBatches[i].instances.size();
+                Engine::meshBatches[i]->objects[0]->draw(commandBuffer,Engine::meshBatches[i]->instances.size(),instanceCount);
+                instanceCount+=Engine::meshBatches[i]->instances.size();
             }
         }
 
@@ -472,7 +472,7 @@ namespace Prometheus{
 
         VkDeviceSize bufferSize=0;
         for(uint32_t i=0; i<Engine::meshBatches.size(); i++){
-            bufferSize+=sizeof(InstanceInfo) * Engine::meshBatches[i].instances.size();
+            bufferSize+=sizeof(InstanceInfo) * Engine::meshBatches[i]->instances.size();
         }
 
         bufferSize = bufferSize << 1;
@@ -493,8 +493,8 @@ namespace Prometheus{
         char* dst = reinterpret_cast<char*>(Engine::instanceBuffersMapped[currentImage]);
         size_t offset = 0;
         for (auto &batch : Engine::meshBatches) {
-            size_t batchSize = batch.instances.size() * sizeof(InstanceInfo);
-            memcpy(dst + offset, batch.instances.data(), batchSize);
+            size_t batchSize = batch->instances.size() * sizeof(InstanceInfo);
+            memcpy(dst + offset, batch->instances.data(), batchSize);
             offset += batchSize;
         }
     }

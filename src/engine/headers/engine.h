@@ -40,6 +40,7 @@
 #include "doubleEndedQueue.h"
 #include "../../debug/headers/debug.h"
 #include "cell.h"
+#include <barrier>
 
 #define EDITOR //Enables editor specific features like grid plane
 
@@ -118,6 +119,7 @@ namespace Prometheus{
         static std::mutex commandPoolMutex;
         static std::mutex meshMutex;
         static std::mutex descriptorQueuedMutex;
+        static std::mutex debugMutex;
 
         static const int MAX_FRAMES_IN_FLIGHT = 2;
         static uint32_t currentFrame;
@@ -169,7 +171,7 @@ namespace Prometheus{
         static std::unordered_map<std::string,Mesh> meshMap;
         static std::unordered_set<std::string> meshesLoading;
         static std::unordered_map<std::string,std::unordered_map<uint64_t,GameObject*>> objectsByMesh;
-        static std::vector<MeshBatch> meshBatches;
+        static std::vector<MeshBatch*> meshBatches;
 
         static VkImage depthImage;
         static VkDeviceMemory depthImageMemory;
@@ -222,6 +224,9 @@ namespace Prometheus{
         static std::array<std::array<std::array<Cell*, 50>, 50>, 50> spatialHash;
         static glm::vec3 cellSize;
 
+        static std::unordered_map<std::string, MeshBatch*> meshSet;
+        static std::unordered_map<std::string,uint64_t> textureIndices;
+
         void run(int argc, char** argv);
         static std::vector<char> readFile(const std::string& filename);
         static void frameBufferResizeCallback(GLFWwindow* window, int width, int height);
@@ -260,7 +265,7 @@ namespace Prometheus{
         void createUpdateTextureQueueJob();
         void updateMeshDataStructures();
         void createUpdateDescriptorQueueJob();
-        void createUpdateObjDescrJob();
+        void createUpdateObjDescrJob(Latch* l);
         void createVertexIndexBufferUpdateJob();
         void createInstanceBufferRemakeJob();
         void updateVertexIndexBuffers();

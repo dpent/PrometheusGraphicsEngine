@@ -23,12 +23,11 @@ namespace Prometheus
 
     void updateTextureDeleteQueue(VkDevice& device);
 
-    void updateGameObjects(std::unordered_map<std::string,std::unordered_map<uint64_t,GameObject*>>& objectsByMesh,
-        std::unordered_map<std::string,MeshBatch>& batchBuffer, Latch& latch);
+    void updateGameObjects(Latch* latch, sem_t* setReady);
 
-    void updateObjectsAndDescriptors(VkDevice& device, sem_t* jobDoneSem, sem_t* safeToMakeInstanceBuffer);
+    void updateObjectsAndDescriptors(VkDevice& device, sem_t* jobDoneSem, sem_t* safeToMakeInstanceBuffer,
+        Latch* latch, sem_t* setReady);
     void splitObjectsAndCreateJobs(uint64_t& objectsPerThread,
         std::vector<std::unordered_map<std::string,std::unordered_map<uint64_t,GameObject*>>>& objectPieces,
         Latch& latch, std::vector<std::unordered_map<std::string,MeshBatch>>& batchPieces);
-    void mergeAllThreadBatches(std::vector<std::unordered_map<std::string,MeshBatch>>& batchPieces);
 }

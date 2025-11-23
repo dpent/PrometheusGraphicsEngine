@@ -76,95 +76,145 @@ namespace Prometheus{
         Engine::textureQueuedMutex.unlock();
     }
 
-    void updateGameObjects(std::unordered_map<std::string,std::unordered_map<uint64_t,GameObject*>>& objectsByMesh,
-        std::unordered_map<std::string,MeshBatch>& batchBuffer, Latch& latch){
-        
-        int i=0;
-        int count=0;
-        for (auto& [meshName, innerMap] : objectsByMesh) {
+    void updateGameObjects(Latch* latch, sem_t* setReady){
 
-            uint64_t currIndex=0;
-            std::unordered_map<std::string,uint64_t> textureIndices;
-            batchBuffer[meshName]=MeshBatch(meshName);
+        GameObject* object = Engine::objectDQueue.tail;
+        uint64_t objectsToCheck = 0;
 
-            for (auto& [id, objPtr] : innerMap) {
-
-                if (textureIndices.find(objPtr->texturePath) == textureIndices.end()) {
-
-                    batchBuffer[meshName].textures.push_back(&Engine::textureMap[objPtr->texturePath]);
-
-                    textureIndices[objPtr->texturePath] = currIndex;
-                    currIndex++; 
-                }
-
-                objPtr->update();
-                
-                batchBuffer[meshName].instances.push_back(
-                    InstanceInfo(objPtr->transform.getModelMatrix(),textureIndices.at(objPtr->texturePath))
-                );
-                batchBuffer[meshName].objects.push_back(objPtr);
-                i++;
-                count++;
-            }
-
-            if(batchBuffer[meshName].objects.size()==0){
-                batchBuffer.erase(meshName);
-            }
+        if(Engine::objectDQueue.size % 2 == 0){
+            objectsToCheck = Engine::objectDQueue.size >> 1;
+        }else{
+            objectsToCheck = (Engine::objectDQueue.size >> 1) - 1;
         }
-        latch.count_down();
+
+        sem_wait(setReady);
+
+        for(uint64_t i=0; i<objectsToCheck; i++){
+            Engine::textureMutex.lock();
+            if (Engine::textureIndices.count(object->texturePath)==0) {
+
+                Engine::textureIndices[object->texturePath] = Engine::meshSet[object->meshPath]->textures.size();
+                Engine::meshSet[object->meshPath]->textures.push_back(&Engine::textureMap.at(object->texturePath));    
+            }
+            
+            object->updateInstanceInfo(Engine::textureIndices.at(object->texturePath));
+
+            Engine::textureMutex.unlock();
+
+            object->update();
+
+            Engine::meshSet[object->meshPath]->multiThreadMutex.lock();
+
+            Engine::meshSet[object->meshPath]->instances.push_back(
+                *(object->info)
+            );
+            Engine::meshSet[object->meshPath]->objects.push_back(object);
+
+            Engine::meshSet[object->meshPath]->multiThreadMutex.unlock();
+
+            object = object->prev;
+        }
+
+        latch->post();
+        sem_wait(setReady);
+
+        while(latch->getCount() == 0){
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        }
+
+        object = Engine::objectDQueue.tail;
+
+        for(uint64_t i=0; i<objectsToCheck; i++){
+            
+            if(object->moved){
+                object->checkCollisions();
+            }
+            
+            object = object->prev;
+        }
+        
+        latch->post();
     }
 
-    void updateObjectsAndDescriptors(VkDevice& device, sem_t* jobDoneSem, sem_t* safeToMakeInstanceBuffer){
+    void updateObjectsAndDescriptors(VkDevice& device, sem_t* jobDoneSem, sem_t* safeToMakeInstanceBuffer,
+        Latch* latch, sem_t* setReady){
 
-        uint64_t objectsPerThread=0;
+        for(size_t i=0; i<Engine::meshBatches.size(); i++){
+            delete Engine::meshBatches[i];
+        }
+        Engine::meshBatches.clear();
+        Engine::meshSet.clear();
+        Engine::textureIndices.clear();
+        uint64_t objectsToCheck = 0;
 
-        Latch* latch;
-
-        std::vector<std::unordered_map<std::string,std::unordered_map<uint64_t,GameObject*>>> objectPieces;
-        std::vector<std::unordered_map<std::string,MeshBatch>> batchPieces;
-
-        uint16_t availableThreads = Engine::threadsAvailable.getValue();
-
-        if(availableThreads<2){
-
-            Engine::updateGameObjects();
-
-            if(Engine::meshBatches.size()!=Engine::descriptorSets.size() || Engine::recreateDescriptors){
-
-                recreateDescriptorSetsAndPool(device,jobDoneSem);
-            }else{
-                sem_post(&Engine::descriptorsReadySemaphore);
-            }
-
-            return;
+        Engine::meshBatches.reserve(Engine::objectsByMesh.size());
+        for(auto& meshName : Engine::objectsByMesh){
+            Engine::meshBatches.push_back(new MeshBatch(meshName.first));
+            Engine::meshSet.insert({meshName.first,Engine::meshBatches[Engine::meshBatches.size() - 1]});
         }
 
-        if(Engine::objectDQueue.size>=(availableThreads)){
-
-            objectsPerThread = (Engine::objectDQueue.size + availableThreads - 1) / availableThreads; 
-
-            objectPieces.resize(availableThreads);
-            batchPieces.resize(availableThreads);
-
-            latch = new Latch(availableThreads);
+        sem_post(setReady);
+        
+        if(Engine::objectDQueue.size % 2 == 0){
+            objectsToCheck = Engine::objectDQueue.size >> 1;
         }else{
-            
-            objectsPerThread = Engine::objectDQueue.size;
-            
-            objectPieces.resize(1);
-            batchPieces.resize(1);
-
-            latch = new Latch(1);
+            objectsToCheck = (Engine::objectDQueue.size >> 1) + 1;
         }
 
-        splitObjectsAndCreateJobs(objectsPerThread,objectPieces,*latch,batchPieces);
+        GameObject* object = Engine::objectDQueue.head;
+
+        for(uint64_t i=0; i<objectsToCheck; i++){
+            Engine::textureMutex.lock();
+            if (Engine::textureIndices.count(object->texturePath)==0) {
+
+                Engine::textureIndices[object->texturePath] = Engine::meshSet[object->meshPath]->textures.size();
+                Engine::meshSet[object->meshPath]->textures.push_back(&Engine::textureMap.at(object->texturePath));    
+            }
+            
+            object->updateInstanceInfo(Engine::textureIndices.at(object->texturePath));
+            
+            Engine::textureMutex.unlock();
+
+            object->update();
+
+            Engine::meshSet[object->meshPath]->multiThreadMutex.lock();
+
+            Engine::meshSet[object->meshPath]->instances.push_back(
+                *(object->info)
+            );
+            Engine::meshSet[object->meshPath]->objects.push_back(object);
+
+            Engine::meshSet[object->meshPath]->multiThreadMutex.unlock();
+
+            object = object->next;
+        }
 
         latch->wait();
-        delete latch;      
-        
-        mergeAllThreadBatches(batchPieces);
+        sem_post(setReady);
+
+        object = Engine::objectDQueue.head;
+
+        for(uint64_t i=0; i<objectsToCheck; i++){
+            
+            if(object->moved){
+                object->checkCollisions();
+            }
+            
+            object = object->next;
+        }
+
+        latch->wait();
+        delete latch;
+
+        /*std::cout<<"There are "<<Engine::meshBatches.size()<<" batches and "<<Engine::objectDQueue.size<<" objects"<<std::endl;
+
+        for(size_t i=0; i<Engine::meshBatches.size(); i++){
+            std::cout<<Engine::meshBatches[i]->meshPath<<" "<<Engine::meshBatches[i]->objects.size()<<" "<<Engine::meshBatches[i]->textures.size()<<std::endl;
+        }*/
+
 
         sem_post(safeToMakeInstanceBuffer);
+
 
         if(Engine::meshBatches.size()!=Engine::descriptorSets.size() || Engine::recreateDescriptors){
 
@@ -213,50 +263,6 @@ namespace Prometheus{
             Engine::queueMutex.unlock();
 
             sem_post(&Engine::workInQueueSemaphore);
-        }
-
-    }
-
-    void mergeAllThreadBatches(std::vector<std::unordered_map<std::string,MeshBatch>>& batchPieces){
-
-        std::unordered_map<std::string,MeshBatch> batchBuffer;
-
-        for(size_t i=0; i<batchPieces.size(); i++){
-            for (auto& [meshName, data] : batchPieces[i]){
-
-                if(batchBuffer.count(meshName)==0){
-                    batchBuffer[meshName]=data;
-                }else{
-                    batchBuffer[meshName].instances.insert(
-                        batchBuffer[meshName].instances.end(),
-                        data.instances.begin(),
-                        data.instances.end()
-                    );
-
-                    batchBuffer[meshName].objects.insert(
-                        batchBuffer[meshName].objects.end(),
-                        data.objects.begin(),
-                        data.objects.end()
-                    );
-
-                    batchBuffer[meshName].textures.insert(
-                        batchBuffer[meshName].textures.end(),
-                        data.textures.begin(),
-                        data.textures.end()
-                    );
-                }
-            }
-        }
-
-        VkDeviceSize bufferSize=0;
-
-        for (auto& [meshName, data] : batchBuffer){
-            Engine::meshBatches.push_back(data);
-            bufferSize+=sizeof(InstanceInfo) * data.instances.size();
-        }
-
-        if(bufferSize>Engine::instanceBufferSize){
-            Engine::recreateInstanceBuffer=true;
         }
 
     }
