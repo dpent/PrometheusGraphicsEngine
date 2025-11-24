@@ -96,6 +96,8 @@ namespace Prometheus{
         static VkPipelineLayout preGraphicsLayout;
         static VkPipeline debugPipeline;
         static VkPipelineLayout debugPipelineLayout;
+        static VkPipeline lightBillboardPipeline;
+        static VkPipelineLayout lightPipelineLayout;
 
         static std::vector<VkFramebuffer> swapChainFramebuffers;
 
@@ -111,6 +113,7 @@ namespace Prometheus{
         static sem_t instanceBufferReady;
         static sem_t commandBufferRecorded;
         static sem_t debugBuffersReady;
+        static sem_t setReady;
         static std::mutex gameObjectMutex;
         static std::mutex canDeleteObjectMutex;
         static std::mutex textureMutex;
@@ -286,5 +289,8 @@ namespace Prometheus{
         void objectLoadingTest(std::chrono::_V2::system_clock::time_point frameZeroTime);
         
         int createLinuxDesktopEntry(const char* argv0);
+
+        void createLightSource(glm::vec4 pos, glm::vec4 color, float intensity);
+        void updateLightSources();
     };
 }

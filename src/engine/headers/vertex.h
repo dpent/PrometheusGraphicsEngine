@@ -13,10 +13,11 @@ namespace Prometheus{
         glm::vec3 pos;
         glm::vec3 color;
         glm::vec2 texCoord;
+        glm::vec3 normal;
 
         static std::array<VkVertexInputBindingDescription,2> getBindingDescription();
 
-        static std::array<VkVertexInputAttributeDescription, 8> getAttributeDescriptions();
+        static std::array<VkVertexInputAttributeDescription, 9> getAttributeDescriptions();
 
         static VkVertexInputBindingDescription getDebugBindingDescription();
 
@@ -52,6 +53,10 @@ namespace Prometheus{
 
         UniformBufferObject(glm::vec4 pos, glm::vec4 color, float intensity);
         UniformBufferObject();
+
+        virtual ~UniformBufferObject();
+
+        virtual void update();
     };
 
     struct UBOData {

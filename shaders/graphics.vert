@@ -18,6 +18,7 @@ layout(location = 1) in vec3 inColor;
 layout(location = 2) in vec2 inTexCoord;
 layout(location = 3) in mat4 instanceModelMatrix;
 layout(location = 7) in uint instanceTextureIndex;
+layout(location = 8) in vec3 inNormal;
 
 layout(location = 0) out vec3 fragColor;
 layout(location = 1) out vec2 fragTexCoord;
@@ -35,7 +36,13 @@ void main() {
         float distance2 = dot(directionToLight, directionToLight);
         float attenuation = 1.0 / max(distance2, 0.001); // avoid divide by zero
 
-        totalLight += ((lightsUBO.colors[i].xyz) * lightsUBO.intensities[i].x) * attenuation;
+        vec3 worldNormal = normalize(mat3(instanceModelMatrix) * inNormal);
+
+        vec3 lightColor = ((lightsUBO.colors[i].xyz) * lightsUBO.colors[i].w) * lightsUBO.intensities[i].x;
+
+        vec3 diffuseLight = lightColor * max(dot(worldNormal, normalize(directionToLight)), 0);
+
+        totalLight += diffuseLight * attenuation;
         totalAmbient += lightsUBO.ambientColors[i].xyz * lightsUBO.ambientColors[i].w;
     }
 

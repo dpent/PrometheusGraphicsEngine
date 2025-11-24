@@ -218,6 +218,32 @@ namespace Prometheus{
             }
         }
 
+        if(Engine::lights.size !=0 && Engine::objectDQueue.size!=0){
+            vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, Engine::lightBillboardPipeline);
+
+            vkCmdPushConstants(
+                commandBuffer,
+                Engine::lightPipelineLayout,
+                VK_SHADER_STAGE_VERTEX_BIT,
+                0,
+                sizeof(*cameraPushConstants),
+                cameraPushConstants
+            );
+
+            vkCmdBindDescriptorSets(
+                commandBuffer,
+                VK_PIPELINE_BIND_POINT_GRAPHICS,
+                Engine::lightPipelineLayout,
+                0,
+                1,
+                &Engine::descriptorSets[0],
+                0,
+                nullptr
+            );
+
+            vkCmdDraw(commandBuffer, 4, Engine::lights.size, 0, 0);
+        }
+
         WindowManager::renderWindows();
 
         vkCmdEndRenderPass(commandBuffer);

@@ -40,6 +40,8 @@ VkPipeline Engine::preGraphicsPipeline;
 VkPipelineLayout Engine::preGraphicsLayout;
 VkPipeline Engine::debugPipeline;
 VkPipelineLayout Engine::debugPipelineLayout;
+VkPipeline Engine::lightBillboardPipeline;
+VkPipelineLayout Engine::lightPipelineLayout;
 
 VkCommandPool Engine::commandPool;
 std::vector<VkCommandBuffer> Engine::commandBuffers;
@@ -55,6 +57,7 @@ sem_t Engine::verIndBufferComplete;
 sem_t Engine::instanceBufferReady;
 sem_t Engine::commandBufferRecorded;
 sem_t Engine::debugBuffersReady;
+sem_t Engine::setReady;
 std::mutex Engine::gameObjectMutex;
 std::mutex Engine::canDeleteObjectMutex;
 std::mutex Engine::textureMutex;
@@ -234,6 +237,7 @@ namespace Prometheus{
         DescriptorManager::createDescriptorSetLayout(this->device);
 
         GraphicsPipelineManager::createGraphicsPipeline(this->device);
+        GraphicsPipelineManager::createLightBillBoardPipeline(this->device);
 
         #ifdef EDITOR
             GraphicsPipelineManager::createEditorPreGraphicsPipeline(this->device);
@@ -294,8 +298,9 @@ namespace Prometheus{
     }
 
     void Engine::mainLoop() {
-        UniformBufferObject* l1 = new UniformBufferObject(glm::vec4(10.0f,10.0f,10.0f,0.0f),glm::vec4(COLOR_RED,1.0f), 30.0f);
-        UniformBufferObject* l2 = new UniformBufferObject(glm::vec4(-10.0f,-10.0f,-10.0f,0.0f),glm::vec4(COLOR_BLUE,1.0f), 30.0f);
+
+        createLightSource(glm::vec4(-10.0f,-10.0f,-10.0f,0.0f), glm::vec4(COLOR_RED,1.0f), 90.0f);
+        createLightSource(glm::vec4(10.0f,10.0f,10.0f,0.0f), glm::vec4(COLOR_BLUE,1.0f), 90.0f);
 
         BufferManager::createUniformBuffers(this->device,this->physicalDevice);
 
@@ -314,10 +319,6 @@ namespace Prometheus{
         //auto frameZeroTime = std::chrono::high_resolution_clock::now();
         while (!glfwWindowShouldClose(Engine::window)) {
             glfwPollEvents();
-
-            Debug::drawLine(glm::vec3(0.0f), glm::vec3(10.0f), COLOR_CYAN);
-            Debug::drawLine(glm::vec3(0.0f), glm::vec3(-10.0f), COLOR_CYAN);
-
             InputManager::consumeInput(Engine::window);
 
             if(Engine::updateCameraVectors){
@@ -443,6 +444,8 @@ namespace Prometheus{
 
         vkDestroyPipeline(device, graphicsPipeline, nullptr);
         vkDestroyPipelineLayout(device, pipelineLayout, nullptr);
+        vkDestroyPipeline(device, lightBillboardPipeline, nullptr);
+        vkDestroyPipelineLayout(device, lightPipelineLayout, nullptr);
         vkDestroyPipeline(device, preGraphicsPipeline, nullptr);
         vkDestroyPipelineLayout(device, preGraphicsLayout, nullptr);
         vkDestroyPipeline(device, debugPipeline, nullptr);
@@ -517,6 +520,8 @@ namespace Prometheus{
         }
 
         if(Engine::lights.size != 0){
+
+            Engine::updateLightSources();
 
             BufferManager::updateUniformBuffer(Engine::currentFrame);
         }
@@ -794,16 +799,12 @@ namespace Prometheus{
 
     void Engine::createUpdateObjDescrJob(Latch* l){
 
-        sem_t setReady;
-
-        sem_init(&setReady,0,0);
-
         Job j = Job(UPDATE_OBJECTS_AND_DESCRIPTORS);
         j.data.emplace_back(std::in_place_type<VkDevice*>, &device);
         j.data.emplace_back(std::in_place_type<sem_t*>,&Engine::descriptorsReadySemaphore);
         j.data.emplace_back(std::in_place_type<sem_t*>,&Engine::safeToMakeInstanceBuffer);
         j.data.emplace_back(std::in_place_type<Latch*>, l);
-        j.data.emplace_back(std::in_place_type<sem_t*>, &setReady);
+        j.data.emplace_back(std::in_place_type<sem_t*>, &Engine::setReady);
 
         Engine::jobQueue.push(j);
 
@@ -815,7 +816,7 @@ namespace Prometheus{
 
         j = Job(UPDATE_GAME_OBJECTS);
         j.data.emplace_back(std::in_place_type<Latch*>, l);
-        j.data.emplace_back(std::in_place_type<sem_t*>, &setReady);
+        j.data.emplace_back(std::in_place_type<sem_t*>, &Engine::setReady);
 
         Engine::jobQueue.push(j);
 
@@ -1248,5 +1249,22 @@ namespace Prometheus{
         sem_wait(&Engine::safeToMakeInstanceBuffer);
 
         Engine::checkInstanceBufferForUpdates();
+    }
+
+    void Engine::createLightSource(glm::vec4 pos, glm::vec4 color, float intensity){
+
+        new UniformBufferObject(pos, color, intensity);
+    }
+
+    void Engine::updateLightSources(){
+
+        UBOContainer* light = Engine::lights.head;
+
+        for(size_t i=0; i<Engine::lights.size; i++){
+
+            light->ubo->update();
+
+            light = light->next;
+        }
     }
 }

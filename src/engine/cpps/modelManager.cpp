@@ -34,7 +34,7 @@ namespace Prometheus{
             attrib.vertices[shapes[0].mesh.indices[0].vertex_index + 1],
             attrib.vertices[shapes[0].mesh.indices[0].vertex_index + 2]);
 
-        for (const auto& shape : shapes) {
+        for (const auto& shape : shapes) {  
             for (const auto& index : shape.mesh.indices) {
                 Vertex vertex{};
 
@@ -43,6 +43,15 @@ namespace Prometheus{
                     attrib.vertices[3 * index.vertex_index + 1],
                     attrib.vertices[3 * index.vertex_index + 2]
                 };
+
+                if(!attrib.normals.empty()){
+
+                    vertex.normal = {
+                        attrib.normals[3 * index.vertex_index + 0],
+                        attrib.normals[3 * index.vertex_index + 1],
+                        attrib.normals[3 * index.vertex_index + 2]
+                    };
+                }
 
                 if (vertex.pos.x < minCoords.x) minCoords.x = vertex.pos.x;
                 if (vertex.pos.y < minCoords.y) minCoords.y = vertex.pos.y;
@@ -65,7 +74,7 @@ namespace Prometheus{
                     vertex.texCoord = {0.0f, 0.0f};
                 }
 
-                vertex.color = {1.0f, 1.0f, 1.0f};
+                vertex.color = {1.0f, 1.0f, 1.0f}; //This means that the model will colored by the texture color
 
                 if (uniqueVertices.count(vertex) == 0) {
                     uniqueVertices[vertex] = static_cast<uint32_t>(vertices.size());
@@ -75,6 +84,50 @@ namespace Prometheus{
                 indices.push_back(uniqueVertices[vertex]);
             }
         }
+
+        std::vector<glm::vec3> tempNormals(vertices.size(), glm::vec3(0.0f));
+
+        if(attrib.normals.empty()){
+            for (const auto& shape : shapes) { 
+                for (size_t i = 0; i < shape.mesh.indices.size(); i += 3) {
+                    
+                    auto idx0 = shape.mesh.indices[i + 0].vertex_index;
+                    auto idx1 = shape.mesh.indices[i + 1].vertex_index;
+                    auto idx2 = shape.mesh.indices[i + 2].vertex_index;
+
+                    Vertex v0, v1, v2;
+
+                    v0.pos = {
+                        attrib.vertices[3 * idx0 + 0],
+                        attrib.vertices[3 * idx0 + 1],
+                        attrib.vertices[3 * idx0 + 2]
+                    };
+                    v1.pos = {
+                        attrib.vertices[3 * idx1 + 0],
+                        attrib.vertices[3 * idx1 + 1],
+                        attrib.vertices[3 * idx1 + 2]
+                    };
+                    v2.pos = {
+                        attrib.vertices[3 * idx2 + 0],
+                        attrib.vertices[3 * idx2 + 1],
+                        attrib.vertices[3 * idx2 + 2]
+                    };
+
+                    glm::vec3 edge1 = v1.pos - v0.pos;
+                    glm::vec3 edge2 = v2.pos - v0.pos;
+                    glm::vec3 faceNormal = glm::normalize(glm::cross(edge1, edge2));
+
+                    tempNormals[idx0] += faceNormal;
+                    tempNormals[idx1] += faceNormal;
+                    tempNormals[idx2] += faceNormal;
+                }
+            }
+
+            for (auto& v : vertices) {
+                v.normal = glm::normalize(tempNormals[uniqueVertices[v]]);
+            }
+        }
+
         Engine::meshMap[modelPath]=Mesh(modelPath,vertices,indices, minCoords, maxCoords);
         Engine::meshesLoading.erase(modelPath);
 

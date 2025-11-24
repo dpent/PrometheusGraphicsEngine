@@ -23,8 +23,8 @@ namespace Prometheus{
         return bindingDescriptions;
     }
 
-    std::array<VkVertexInputAttributeDescription, 8> Vertex::getAttributeDescriptions() {
-        std::array<VkVertexInputAttributeDescription, 8> attributeDescriptions{};
+    std::array<VkVertexInputAttributeDescription, 9> Vertex::getAttributeDescriptions() {
+        std::array<VkVertexInputAttributeDescription, 9> attributeDescriptions{};
 
         attributeDescriptions[0].binding = 0;
         attributeDescriptions[0].location = 0;
@@ -52,6 +52,11 @@ namespace Prometheus{
         attributeDescriptions[7].location = 7; // pick next free location
         attributeDescriptions[7].format   = VK_FORMAT_R32_UINT;
         attributeDescriptions[7].offset   = offsetof(InstanceInfo, textureIndex);
+
+        attributeDescriptions[8].binding = 0;
+        attributeDescriptions[8].location = 8;
+        attributeDescriptions[8].format = VK_FORMAT_R32G32B32_SFLOAT;
+        attributeDescriptions[8].offset = offsetof(Vertex, normal);
 
         return attributeDescriptions;
     }
@@ -93,6 +98,20 @@ namespace Prometheus{
     }
 
     UniformBufferObject::UniformBufferObject(){}
+    UniformBufferObject::~UniformBufferObject(){}
+
+    void UniformBufferObject::update(){
+
+        /*float time   = glfwGetTime(); // or your own frame timer
+
+        float x = 0.0f + 10.0f * cos(time);
+        float z = 0.0f + 10.0f * sin(time);
+
+        //position.x = x;
+        //position.z = z;*/
+
+        //Debug::drawLine(glm::vec3(0.0f), glm::vec3(position), color);
+    }
 
     UBOContainer::UBOContainer(UniformBufferObject* ubo){
         this->ubo = ubo;
