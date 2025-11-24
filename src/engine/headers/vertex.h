@@ -58,8 +58,8 @@ namespace Prometheus{
         glm::vec4 positions[128];
         glm::vec4 colors[128];
         glm::vec4 ambientLightColors[128];
-        alignas(16) float intensities[128];
-        uint64_t lightCount;
+        glm::vec4 intensities[128];
+        alignas(16) uint64_t lightCount;
     };
 
     class UBOContainer {

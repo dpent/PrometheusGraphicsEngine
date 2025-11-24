@@ -252,27 +252,27 @@ namespace Prometheus{
 
         TextureManager::createSolidColorTextureFile("../textures/blue.png",0,0,255);
         TextureManager::createSolidColorTextureFile("../textures/red.png",255,0,0);
-        TextureManager::createSolidColorTextureFile("../textures/green.png",0,255,0);
+        TextureManager::createSolidColorTextureFile("../textures/magenta.png",0,255,0);
         TextureManager::createSolidColorTextureFile("../textures/magenta.png",255,0,255);
         TextureManager::createSolidColorTextureFile("../textures/white.png",255,255,255);
         
         for(int i=0; i<1; i++){ //100 is the safe limit
 
-            GameObject::createObjectThreaded("../textures/white.png", 
+            GameObject::createObjectThreaded("../textures/magenta.png", 
                 "../models/stanford_dragon.obj", 
                 device, 
                 physicalDevice, 
                 graphicsQueue
             );
     
-            GameObject::createObjectThreaded("../textures/white.png", 
+            GameObject::createObjectThreaded("../textures/magenta.png", 
                 "../models/stanford_dragon.obj", 
                 device, 
                 physicalDevice, 
                 graphicsQueue
             );
     
-            GameObject::createObjectThreaded("../textures/white.png", 
+            GameObject::createObjectThreaded("../textures/babyBlue.png", 
                 "../models/stanford_dragon.obj", 
                 device, 
                 physicalDevice, 
@@ -295,6 +295,7 @@ namespace Prometheus{
 
     void Engine::mainLoop() {
         UniformBufferObject* l1 = new UniformBufferObject(glm::vec4(10.0f,10.0f,10.0f,0.0f),glm::vec4(COLOR_RED,1.0f), 30.0f);
+        UniformBufferObject* l2 = new UniformBufferObject(glm::vec4(-10.0f,-10.0f,-10.0f,0.0f),glm::vec4(COLOR_BLUE,1.0f), 30.0f);
 
         BufferManager::createUniformBuffers(this->device,this->physicalDevice);
 
@@ -314,7 +315,8 @@ namespace Prometheus{
         while (!glfwWindowShouldClose(Engine::window)) {
             glfwPollEvents();
 
-            Debug::drawLine(glm::vec3(0.0f), glm::vec3(20.0f), COLOR_CYAN);
+            Debug::drawLine(glm::vec3(0.0f), glm::vec3(10.0f), COLOR_CYAN);
+            Debug::drawLine(glm::vec3(0.0f), glm::vec3(-10.0f), COLOR_CYAN);
 
             InputManager::consumeInput(Engine::window);
 

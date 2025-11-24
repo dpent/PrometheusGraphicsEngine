@@ -417,16 +417,19 @@ namespace Prometheus{
         UBOContainer* light = Engine::lights.head;
         UBOData data;
 
+        //int count = 0;
+
         for(size_t i=0; i<Engine::lights.size; i++){
 
+            //std::cout<<count<<std::endl;
             data.positions[i] = light->ubo->position;
             //std::cout<<"Position x "<<data.positions[i].x<<" y "<<data.positions[i].y<<" z "<<data.positions[i].z<<std::endl;
             data.colors[i] = light->ubo->color;
             //std::cout<<"Color x "<<data.colors[i].x<<" y "<<data.colors[i].y<<" z "<<data.colors[i].z<<std::endl;
             data.ambientLightColors[i] = light->ubo->ambientLightColor;
             //std::cout<<"Ambient color x "<<data.ambientLightColors[i].x<<" y "<<data.ambientLightColors[i].y<<" z "<<data.ambientLightColors[i].z<<std::endl;
-            data.intensities[i] = light->ubo->intensity;
-
+            data.intensities[i] = glm::vec4(light->ubo->intensity);
+            //count++;
             light = light->next;
         }
 

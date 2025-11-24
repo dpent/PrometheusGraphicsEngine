@@ -9,7 +9,7 @@ layout(set = 0, binding = 0) uniform Lights {
     vec4 positions[128]; // or vec4 array for your lights
     vec4 colors[128];
     vec4 ambientColors[128];
-    float intensities[128];
+    vec4 intensities[128];
     uint  lightCount;
 } lightsUBO;
 
@@ -27,14 +27,19 @@ void main() {
     vec4 worldPos = instanceModelMatrix * vec4(inPosition, 1.0);
     gl_Position = pc.proj * pc.view * instanceModelMatrix * vec4(inPosition, 1.0);
 
-    vec3 directionToLight = lightsUBO.positions[0].xyz - worldPos.xyz;
-    float attenuation = 1.0/dot(directionToLight,directionToLight);
+    vec3 totalLight = vec3(0.0);
+    vec3 totalAmbient = vec3(0.0);
 
-    vec3 lightColor = lightsUBO.colors[0].xyz * lightsUBO.colors[0].w;
-    vec3 ambientLight = lightsUBO.ambientColors[0].xyz * lightsUBO.ambientColors[0].w;
+    for (uint i = 0; i < lightsUBO.lightCount; i++) {
+        vec3 directionToLight = lightsUBO.positions[i].xyz - worldPos.xyz;
+        float distance2 = dot(directionToLight, directionToLight);
+        float attenuation = 1.0 / max(distance2, 0.001); // avoid divide by zero
 
+        totalLight += ((lightsUBO.colors[i].xyz) * lightsUBO.intensities[i].x) * attenuation;
+        totalAmbient += lightsUBO.ambientColors[i].xyz * lightsUBO.ambientColors[i].w;
+    }
 
-    fragColor = (lightColor * attenuation) * lightsUBO.intensities[0];
+    fragColor = (totalAmbient + totalLight) / lightsUBO.lightCount;
     fragTexCoord = inTexCoord;
     fragTextureIndex = instanceTextureIndex;
 }
