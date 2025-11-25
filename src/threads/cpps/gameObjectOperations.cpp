@@ -215,8 +215,7 @@ namespace Prometheus{
 
         sem_post(safeToMakeInstanceBuffer);
 
-
-        if(Engine::meshBatches.size()!=Engine::descriptorSets.size() || Engine::recreateDescriptors){
+        if(Engine::descriptorSets.size()==0 || Engine::meshBatches.size()!=Engine::descriptorSets.size() || Engine::recreateDescriptors){
 
             recreateDescriptorSetsAndPool(device,jobDoneSem);
         }else{

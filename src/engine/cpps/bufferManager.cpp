@@ -209,7 +209,7 @@ namespace Prometheus{
                     Engine::pipelineLayout,
                     0,                              // first set
                     1,                              // number of sets
-                    &Engine::descriptorSets[i],     // pointer to descriptor set
+                    &Engine::descriptorSets[Engine::currentFrame][i],     // pointer to descriptor set
                     0,
                     nullptr
                 );
@@ -237,7 +237,7 @@ namespace Prometheus{
                     Engine::lightPipelineLayout,
                     0,
                     1,
-                    &Engine::descriptorSets[0],
+                    &Engine::descriptorSets[Engine::currentFrame][0],
                     0,
                     nullptr
                 );

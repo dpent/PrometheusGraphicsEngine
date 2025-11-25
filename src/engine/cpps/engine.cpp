@@ -102,7 +102,7 @@ std::vector<void*> Engine::uniformBuffersMapped;
 
 VkDescriptorPool Engine::descriptorPool;
 VkDescriptorPool Engine::imGUIPool;
-std::vector<VkDescriptorSet> Engine::descriptorSets;
+std::vector<std::vector<VkDescriptorSet>> Engine::descriptorSets;
 std::list<VkDescriptorPool> Engine::descriptorDeleteQueue;
 std::list<int> Engine::framesSinceDescriptorQueuedForDeletion;
 
@@ -260,7 +260,7 @@ namespace Prometheus{
         TextureManager::createSolidColorTextureFile("../textures/magenta.png",255,0,255);
         TextureManager::createSolidColorTextureFile("../textures/white.png",255,255,255);
         
-        for(int i=0; i<1; i++){ //100 is the safe limit
+        /*for(int i=0; i<1; i++){ //100 is the safe limit
 
             GameObject::createObjectThreaded("../textures/magenta.png", 
                 "../models/stanford_dragon.obj", 
@@ -289,7 +289,14 @@ namespace Prometheus{
                 physicalDevice, 
                 graphicsQueue
             );
-        }
+        }*/
+
+        GameObject::createObjectThreaded("../textures/white.png", 
+            "../models/stanford_dragon.obj", 
+            device, 
+            physicalDevice, 
+            graphicsQueue
+        );
 
         Engine::instanceBuffers.resize(Engine::MAX_FRAMES_IN_FLIGHT);
         Engine::instanceBufferMemories.resize(Engine::MAX_FRAMES_IN_FLIGHT);
@@ -299,8 +306,8 @@ namespace Prometheus{
 
     void Engine::mainLoop() {
 
-        createLightSource(glm::vec4(-10.0f,-10.0f,-10.0f,0.0f), glm::vec4(COLOR_RED,1.0f), 90.0f);
-        createLightSource(glm::vec4(10.0f,10.0f,10.0f,0.0f), glm::vec4(COLOR_BLUE,1.0f), 90.0f);
+        createLightSource(glm::vec4(0.0f), glm::vec4(COLOR_RED,1.0f), 90.0f);
+        createLightSource(glm::vec4(0.0f), glm::vec4(COLOR_BLUE,1.0f), 90.0f);
 
         BufferManager::createUniformBuffers(this->device,this->physicalDevice);
 
@@ -885,7 +892,7 @@ namespace Prometheus{
     }
 
     void Engine::updateDescriptors(){
-        if(Engine::meshBatches.size()!=Engine::descriptorSets.size() || Engine::recreateDescriptors){
+        if(Engine::descriptorSets.size()==0 || Engine::meshBatches.size()!=Engine::descriptorSets[0].size() || Engine::recreateDescriptors){
 
             Engine::queueMutex.lock();
             if(Engine::jobQueue.size()<Engine::threadsAvailable.getValue()){

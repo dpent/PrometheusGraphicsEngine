@@ -158,7 +158,7 @@ namespace Prometheus{
 
         static VkDescriptorPool descriptorPool;
         static VkDescriptorPool imGUIPool;
-        static std::vector<VkDescriptorSet> descriptorSets;
+        static std::vector<std::vector<VkDescriptorSet>> descriptorSets;
         static std::list<VkDescriptorPool> descriptorDeleteQueue;
         static std::list<int> framesSinceDescriptorQueuedForDeletion;
 

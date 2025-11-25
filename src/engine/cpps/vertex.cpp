@@ -102,13 +102,17 @@ namespace Prometheus{
 
     void UniformBufferObject::update(){
 
-        /*float time   = glfwGetTime(); // or your own frame timer
+        float time   = glfwGetTime(); // or your own frame timer
 
-        float x = 0.0f + 10.0f * cos(time);
-        float z = 0.0f + 10.0f * sin(time);
+        float offset = color.x * -0.8f + color.y * 0.2f + color.z * 0.8f;
 
-        //position.x = x;
-        //position.z = z;*/
+        float x = 0.0f + 4.0f * cos(time + offset);
+        float z = 0.0f + 4.0f * sin(time + offset);
+        float y = 2.0f * sin(time * 5.0f + offset);
+
+        position.x = x;
+        position.z = z;
+        position.y = y;
 
         //Debug::drawLine(glm::vec3(0.0f), glm::vec3(position), color);
     }
