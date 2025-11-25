@@ -709,7 +709,7 @@ namespace Prometheus{
         depthStencil.stencilTestEnable = VK_FALSE;
 
         VkPushConstantRange pushConstantRange{};
-        pushConstantRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT; // accessible in vertex shader
+        pushConstantRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT; // accessible in vertex shader
         pushConstantRange.offset = 0;
         pushConstantRange.size = sizeof(glm::mat4) * 2;
 

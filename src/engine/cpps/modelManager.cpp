@@ -51,6 +51,9 @@ namespace Prometheus{
                         attrib.normals[3 * index.vertex_index + 1],
                         attrib.normals[3 * index.vertex_index + 2]
                     };
+                }else{
+
+                    vertex.normal = glm::vec3(0.0f);
                 }
 
                 if (vertex.pos.x < minCoords.x) minCoords.x = vertex.pos.x;
@@ -85,8 +88,6 @@ namespace Prometheus{
             }
         }
 
-        std::vector<glm::vec3> tempNormals(vertices.size(), glm::vec3(0.0f));
-
         if(attrib.normals.empty()){
             for (const auto& shape : shapes) { 
                 for (size_t i = 0; i < shape.mesh.indices.size(); i += 3) {
@@ -117,14 +118,14 @@ namespace Prometheus{
                     glm::vec3 edge2 = v2.pos - v0.pos;
                     glm::vec3 faceNormal = glm::normalize(glm::cross(edge1, edge2));
 
-                    tempNormals[idx0] += faceNormal;
-                    tempNormals[idx1] += faceNormal;
-                    tempNormals[idx2] += faceNormal;
+                    vertices[idx0].normal += faceNormal;
+                    vertices[idx1].normal += faceNormal;
+                    vertices[idx2].normal += faceNormal;
                 }
             }
 
             for (auto& v : vertices) {
-                v.normal = glm::normalize(tempNormals[uniqueVertices[v]]);
+                v.normal = glm::normalize(v.normal);
             }
         }
 

@@ -77,7 +77,7 @@ namespace Prometheus{
     }
 
     void updateGameObjects(Latch* latch, sem_t* setReady){
-
+        
         GameObject* object = Engine::objectDQueue.tail;
         uint64_t objectsToCheck = 0;
 

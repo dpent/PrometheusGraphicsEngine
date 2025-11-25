@@ -810,10 +810,6 @@ namespace Prometheus{
 
         sem_post(&Engine::workInQueueSemaphore);
 
-        if(Engine::objectDQueue.size < 1){
-            return;
-        }
-
         j = Job(UPDATE_GAME_OBJECTS);
         j.data.emplace_back(std::in_place_type<Latch*>, l);
         j.data.emplace_back(std::in_place_type<sem_t*>, &Engine::setReady);
@@ -1236,14 +1232,21 @@ namespace Prometheus{
 
         }
 
-        if(Engine::threadsAvailable.getValue()>1 && Engine::jobQueue.size()<Engine::threadsAvailable.getValue()){
-            Latch* l = new Latch(1);
-            createUpdateObjDescrJob(l);
-        }else{
-
+        if(Engine::objectDQueue.size < 2){
             Engine::updateGameObjects();
     
             Engine::updateDescriptors();
+        }else{
+
+            if(Engine::threadsAvailable.getValue()>1 && Engine::jobQueue.size()<Engine::threadsAvailable.getValue()){
+                Latch* l = new Latch(1);
+                createUpdateObjDescrJob(l);
+            }else{
+    
+                Engine::updateGameObjects();
+        
+                Engine::updateDescriptors();
+            }
         }
 
         sem_wait(&Engine::safeToMakeInstanceBuffer);
