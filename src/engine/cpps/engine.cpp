@@ -610,7 +610,11 @@ namespace Prometheus{
             sem_post(&Engine::verIndBufferComplete);
         }
 
-        handleCommandBufferRecording(imageIndex);
+        #ifndef EDITOR
+            handleCommandBufferRecording(imageIndex);
+        #else
+            Engine::wasPlacedInThread = false;
+        #endif
 
         sem_wait(&Engine::verIndBufferComplete);
 
@@ -1267,7 +1271,6 @@ namespace Prometheus{
 
     void Engine::handleDebugBuffers(){
         if(Engine::debugVertices.size()!=0){
-
             uint64_t size = (sizeof(Engine::debugVertices[0]) * Engine::debugVertices.size())+(sizeof(Engine::debugIndices[0]) * Engine::debugIndices.size());
 
             if(size >= Engine::debugIndexVertexBufferSize){

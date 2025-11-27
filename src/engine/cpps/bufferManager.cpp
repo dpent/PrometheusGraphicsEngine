@@ -152,7 +152,6 @@ namespace Prometheus{
                 gridPushConstants
             );
 
-
             vkCmdDraw(commandBuffer, 3, 1, 0, 0);
 
             if(Engine::debugVertices.size() != 0 && Engine::debugIndexVertexBuffer != VK_NULL_HANDLE){
@@ -178,7 +177,6 @@ namespace Prometheus{
             }
 
         #endif
-
         vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, Engine::graphicsPipeline);
 
         vkCmdPushConstants(
@@ -479,7 +477,9 @@ namespace Prometheus{
 
         data.lightCount = Engine::lights.size;
 
+        Engine::commandPoolMutex.lock();
         memcpy(Engine::uniformBuffersMapped[currentImage], &data, sizeof(UBOData));
+        Engine::commandPoolMutex.unlock();
     }
 
     VkCommandBuffer BufferManager::beginSingleTimeCommands(VkDevice& device, VkCommandPool& commandPool) {
