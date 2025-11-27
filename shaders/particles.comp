@@ -24,5 +24,7 @@ void main()
 
     Particle particleIn = particlesIn[index];
 
-    particlesOut[index].position = particleIn.position + sin(bData.time);
+    particlesOut[index].position = vec3(particleIn.position.x, 
+                                        particleIn.position.y, 
+                                        particleIn.position.z) / 1.1;
 }
