@@ -584,6 +584,20 @@ namespace Prometheus{
             BufferManager::updateUniformBuffer(Engine::currentFrame);
         }
 
+        BufferManager::recordComputeCommandBuffer(Engine::computeCommandBuffers[Engine::currentFrame], imageIndex,
+            device, physicalDevice);
+
+        VkSubmitInfo submitInfo{};
+        submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        submitInfo.commandBufferCount = 1;
+        submitInfo.pCommandBuffers = &Engine::computeCommandBuffers[Engine::currentFrame];
+        submitInfo.signalSemaphoreCount = 1;
+        submitInfo.pSignalSemaphores = &Engine::computeFinishedSemaphores[Engine::currentFrame];
+
+        if (vkQueueSubmit(computeQueue, 1, &submitInfo, Engine::computeInFlightFences[currentFrame]) != VK_SUCCESS) {
+            throw std::runtime_error("failed to submit compute command buffer!");
+        };
+
         Engine::canDeleteObjectMutex.lock();
         Engine::gameObjectMutex.lock();
         Engine::meshMutex.lock();
@@ -618,17 +632,6 @@ namespace Prometheus{
         
         Engine::gameObjectMutex.unlock();
         Engine::canDeleteObjectMutex.unlock();
-
-        VkSubmitInfo submitInfo{};
-        submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-        submitInfo.commandBufferCount = 1;
-        submitInfo.pCommandBuffers = &Engine::computeCommandBuffers[Engine::currentFrame];
-        submitInfo.signalSemaphoreCount = 1;
-        submitInfo.pSignalSemaphores = &Engine::computeFinishedSemaphores[Engine::currentFrame];
-
-        if (vkQueueSubmit(computeQueue, 1, &submitInfo, Engine::computeInFlightFences[currentFrame]) != VK_SUCCESS) {
-            throw std::runtime_error("failed to submit compute command buffer!");
-        };
 
         submitInfo = {};
         submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;

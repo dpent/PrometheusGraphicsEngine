@@ -132,9 +132,6 @@ namespace Prometheus{
         sem_wait(&Engine::descriptorsReadySemaphore);
         sem_wait(&Engine::instanceBufferReady);
 
-        BufferManager::recordComputeCommandBuffer(Engine::computeCommandBuffers[Engine::currentFrame], imageIndex,
-            device, physicalDevice);
-
         #ifdef EDITOR
 
             sem_wait(&Engine::debugBuffersReady);
@@ -767,6 +764,17 @@ namespace Prometheus{
 
         vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, Engine::computePipeline);
         vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, Engine::computePipelineLayout, 0, 1, &Engine::computeSets[Engine::currentFrame], 0, 0);
+
+        float time = (float)glfwGetTime();
+
+        vkCmdPushConstants(
+            commandBuffer,
+            Engine::computePipelineLayout,
+            VK_SHADER_STAGE_COMPUTE_BIT,
+            0,
+            sizeof(time),
+            &time
+        );
 
         vkCmdDispatch(commandBuffer, Engine::particles.size() / 256, 1, 1);
 

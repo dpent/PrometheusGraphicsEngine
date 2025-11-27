@@ -23,10 +23,11 @@ namespace Prometheus{
             float theta = rndDist(rndEngine) * 2 * 3.14159265358979323846;
             float x = r * cos(theta) * 100.0f / 200.0f;
             float y = r * sin(theta);
+            float z = r * sin(theta * 2);
 
             Particle particle = Particle();
 
-            particle.position = glm::vec3(x, y, 0.0f);
+            particle.position = glm::vec3(x, y, z);
 
             Engine::particles.push_back(particle);
         }
