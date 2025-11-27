@@ -11,5 +11,9 @@ namespace Prometheus{
         static void createDescriptorPool(VkDevice& device);
         static void createDescriptorSets(VkDevice& device);
         static void recreateDescriptors(VkDevice& device);
+
+        static void createComputeDescriptorSetLayout(VkDevice& device);
+        static void createComputeDescriptorPool(VkDevice& device);
+        static void createComputeDescriptorSets(VkDevice& device);
     };
 }

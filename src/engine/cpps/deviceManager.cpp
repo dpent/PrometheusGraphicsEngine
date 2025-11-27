@@ -34,7 +34,6 @@ namespace Prometheus{
 
         std::sort(candidates.begin(), candidates.end(), 
             [](const auto& a, const auto& b) { return a.first > b.first; });
-        
         // Select the highest scoring device
         physicalDevice = candidates[0].second;
         Engine::msaaSamples = Engine::getMaxUsableSampleCount(physicalDevice);
@@ -115,7 +114,9 @@ namespace Prometheus{
         return requiredExtensions.empty();
     }
 
-    void DeviceManager::createLogicalDevice(const VkPhysicalDevice& physicalDevice, VkDevice& device, VkQueue& graphicsQueue, VkQueue& presentQueue, VkSurfaceKHR& surface){
+    void DeviceManager::createLogicalDevice(const VkPhysicalDevice& physicalDevice, 
+        VkDevice& device, VkQueue& graphicsQueue, VkQueue& presentQueue, VkSurfaceKHR& surface,
+        VkQueue& computeQueue){
 
         QueueFamilyIndices indices = findQueueFamilies(physicalDevice,surface);
 
@@ -131,7 +132,6 @@ namespace Prometheus{
             queueCreateInfo.pQueuePriorities = &queuePriority;
             queueCreateInfos.push_back(queueCreateInfo);
         }
-
 
         VkPhysicalDeviceFeatures deviceFeatures{};//TODO FILL THE FIELDS RIGHT NOW ALL ARE FALSE
         if(!Engine::physicalDeviceFeatures.samplerAnisotropy){
@@ -167,6 +167,7 @@ namespace Prometheus{
 
         vkGetDeviceQueue(device, indices.graphicsFamily.value(), 0, &graphicsQueue); //The 0 means we get the 0th queue from each family
         vkGetDeviceQueue(device, indices.presentFamily.value(), 0, &presentQueue);
+        vkGetDeviceQueue(device, indices.computeFamily.value(), 0, &computeQueue);
 
         Engine::graphicsQueueMutex.unlock();
     }

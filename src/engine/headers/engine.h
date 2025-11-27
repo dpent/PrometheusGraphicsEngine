@@ -41,6 +41,7 @@
 #include "../../debug/headers/debug.h"
 #include "cell.h"
 #include <barrier>
+#include "particle.h"
 
 #define EDITOR //Enables editor specific features like grid plane
 
@@ -89,6 +90,7 @@ namespace Prometheus{
         static VkSwapchainKHR swapChain;
 
         static VkDescriptorSetLayout descriptorSetLayout;
+        static VkDescriptorSetLayout computeSetLayout;
         static VkPipelineLayout pipelineLayout;
         static VkRenderPass renderPass;
         static VkPipeline graphicsPipeline;
@@ -98,15 +100,27 @@ namespace Prometheus{
         static VkPipelineLayout debugPipelineLayout;
         static VkPipeline lightBillboardPipeline;
         static VkPipelineLayout lightPipelineLayout;
+        static VkPipeline computePipeline;
+        static VkPipelineLayout computePipelineLayout;
+        static VkPipeline particleGraphicsPipeline;
+        static VkPipelineLayout particlePipelineLayout;
 
         static std::vector<VkFramebuffer> swapChainFramebuffers;
 
         static VkCommandPool commandPool;
         static std::vector<VkCommandBuffer> commandBuffers;
+        static VkCommandPool computeCommandPool;
+        static std::vector<VkCommandBuffer> computeCommandBuffers;
+
+        static std::vector<VkBuffer> shaderStorageBuffers;
+        static std::vector<VkDeviceMemory> shaderStorageBuffersMemories;
+        static VkDeviceSize shaderStorageBufferSize;
 
         static std::vector<VkSemaphore> imageAvailableSemaphores;
         static std::vector<VkSemaphore> renderFinishedSemaphores;
+        static std::vector<VkSemaphore> computeFinishedSemaphores;
         static std::vector<VkFence> inFlightFences;
+        static std::vector<VkFence> computeInFlightFences;
         static sem_t descriptorsReadySemaphore;
         static sem_t safeToMakeInstanceBuffer;
         static sem_t verIndBufferComplete;
@@ -161,6 +175,8 @@ namespace Prometheus{
         static std::vector<std::vector<VkDescriptorSet>> descriptorSets;
         static std::list<VkDescriptorPool> descriptorDeleteQueue;
         static std::list<int> framesSinceDescriptorQueuedForDeletion;
+        static VkDescriptorPool computePool;
+        static std::vector<VkDescriptorSet> computeSets;
 
         //static std::unordered_map<uint64_t,GameObject*> gameObjectMap;
         static DoubleEndedQueue<GameObject*> objectDQueue;
@@ -233,6 +249,8 @@ namespace Prometheus{
         static DoubleEndedQueue<UBOContainer*> lights;
         static bool recreateUBO;
 
+        static std::vector<Particle> particles;
+
         void run(int argc, char** argv);
         static std::vector<char> readFile(const std::string& filename);
         static void frameBufferResizeCallback(GLFWwindow* window, int width, int height);
@@ -259,6 +277,7 @@ namespace Prometheus{
         //Queues
         VkQueue graphicsQueue;
         VkQueue presentQueue;
+        VkQueue computeQueue;
 
         VkSurfaceKHR surface;
 

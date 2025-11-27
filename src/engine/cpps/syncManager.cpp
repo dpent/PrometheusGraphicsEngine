@@ -17,7 +17,9 @@ namespace Prometheus{
 
         Engine::imageAvailableSemaphores.resize(Engine::MAX_FRAMES_IN_FLIGHT);
         Engine::renderFinishedSemaphores.resize(Engine::MAX_FRAMES_IN_FLIGHT);
+        Engine::computeFinishedSemaphores.resize(Engine::MAX_FRAMES_IN_FLIGHT);
         Engine::inFlightFences.resize(Engine::MAX_FRAMES_IN_FLIGHT);
+        Engine::computeInFlightFences.resize(Engine::MAX_FRAMES_IN_FLIGHT);
 
         VkSemaphoreCreateInfo semaphoreInfo{};
         semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
@@ -33,6 +35,12 @@ namespace Prometheus{
                 vkCreateFence(device, &fenceInfo, nullptr, &Engine::inFlightFences[i]) != VK_SUCCESS) {
 
                 throw std::runtime_error("failed to create synchronization objects for a frame!");
+            }
+
+            if (vkCreateSemaphore(device, &semaphoreInfo, nullptr, &Engine::computeFinishedSemaphores[i]) != VK_SUCCESS ||
+                vkCreateFence(device, &fenceInfo, nullptr, &Engine::computeInFlightFences[i]) != VK_SUCCESS) {
+                
+                throw std::runtime_error("failed to create compute synchronization objects for a frame!");
             }
         }
     }

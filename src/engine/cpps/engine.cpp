@@ -18,6 +18,7 @@
 #include "../../threads/headers/descriptorOperations.h"
 #include "../headers/cell.h"
 #include "../../physics/headers/collision.h"
+#include "../headers/computePipelineManager.h"
 
 using namespace Prometheus;
 
@@ -33,6 +34,7 @@ VkFormat Engine::swapChainImageFormat;
 VkSwapchainKHR Engine::swapChain;
 
 VkDescriptorSetLayout Engine::descriptorSetLayout;
+VkDescriptorSetLayout Engine::computeSetLayout;
 VkPipelineLayout Engine::pipelineLayout;
 VkRenderPass Engine::renderPass;
 VkPipeline Engine::graphicsPipeline;
@@ -42,14 +44,26 @@ VkPipeline Engine::debugPipeline;
 VkPipelineLayout Engine::debugPipelineLayout;
 VkPipeline Engine::lightBillboardPipeline;
 VkPipelineLayout Engine::lightPipelineLayout;
+VkPipeline Engine::computePipeline;
+VkPipelineLayout Engine::computePipelineLayout;
+VkPipeline Engine::particleGraphicsPipeline;
+VkPipelineLayout Engine::particlePipelineLayout;
 
 VkCommandPool Engine::commandPool;
 std::vector<VkCommandBuffer> Engine::commandBuffers;
+VkCommandPool Engine::computeCommandPool;
+std::vector<VkCommandBuffer> Engine::computeCommandBuffers;
+
+std::vector<VkBuffer> Engine::shaderStorageBuffers;
+std::vector<VkDeviceMemory> Engine::shaderStorageBuffersMemories;
+VkDeviceSize Engine::shaderStorageBufferSize;
 
 std::vector<VkFramebuffer> Engine::swapChainFramebuffers;
 
 std::vector<VkSemaphore> Engine::imageAvailableSemaphores;
 std::vector<VkSemaphore> Engine::renderFinishedSemaphores;
+std::vector<VkSemaphore> Engine::computeFinishedSemaphores;
+std::vector<VkFence> Engine::computeInFlightFences;
 std::vector<VkFence> Engine::inFlightFences;
 sem_t Engine::descriptorsReadySemaphore;
 sem_t Engine::safeToMakeInstanceBuffer;
@@ -67,7 +81,6 @@ std::mutex Engine::commandPoolMutex;
 std::mutex Engine::meshMutex;
 std::mutex Engine::descriptorQueuedMutex;
 std::mutex Engine::debugMutex;
-
 
 uint32_t Engine::currentFrame = 0;
 
@@ -105,6 +118,8 @@ VkDescriptorPool Engine::imGUIPool;
 std::vector<std::vector<VkDescriptorSet>> Engine::descriptorSets;
 std::list<VkDescriptorPool> Engine::descriptorDeleteQueue;
 std::list<int> Engine::framesSinceDescriptorQueuedForDeletion;
+VkDescriptorPool Engine::computePool;
+std::vector<VkDescriptorSet> Engine::computeSets;
 
 //std::unordered_map<uint64_t,GameObject*> Engine::gameObjectMap;
 DoubleEndedQueue<GameObject*> Engine::objectDQueue;
@@ -178,6 +193,8 @@ std::unordered_map<std::string,uint64_t> Engine::textureIndices;
 DoubleEndedQueue<UBOContainer*> Engine::lights;
 bool Engine::recreateUBO = false;
 
+std::vector<Particle> Engine::particles;
+
 namespace Prometheus{
     void Engine::run(int argc, char** argv) {
 
@@ -219,7 +236,7 @@ namespace Prometheus{
         Engine::createSurface();
         
         DeviceManager::pickPhysicalDevice(this->instance,this->physicalDevice, this->surface);
-        DeviceManager::createLogicalDevice(this->physicalDevice, this->device, this->graphicsQueue,this->presentQueue, this->surface);
+        DeviceManager::createLogicalDevice(this->physicalDevice, this->device, this->graphicsQueue,this->presentQueue, this->surface, this->computeQueue);
         
         vkGetPhysicalDeviceProperties(physicalDevice, &Engine::physicalDeviceProperties); //We will use them for anisotropic filtering etc later on
         vkGetPhysicalDeviceFeatures(physicalDevice, &Engine::physicalDeviceFeatures);
@@ -234,10 +251,19 @@ namespace Prometheus{
 
         RenderPassManager::createRenderPass(this->device, this->physicalDevice);
 
+        Particle::addDemoParticles(4096);
+
+        Engine::shaderStorageBuffers.resize(MAX_FRAMES_IN_FLIGHT);
+        Engine::shaderStorageBuffersMemories.resize(MAX_FRAMES_IN_FLIGHT);
+
+        DescriptorManager::createComputeDescriptorSetLayout(this->device);
+
         DescriptorManager::createDescriptorSetLayout(this->device);
 
         GraphicsPipelineManager::createGraphicsPipeline(this->device);
         GraphicsPipelineManager::createLightBillBoardPipeline(this->device);
+        ComputePipelineManager::createComputePipeline(this->device);
+        GraphicsPipelineManager::createParticleGraphicsPipeline(this->device);
 
         #ifdef EDITOR
             GraphicsPipelineManager::createEditorPreGraphicsPipeline(this->device);
@@ -251,6 +277,16 @@ namespace Prometheus{
             this->device,Engine::commandPool);
         BufferManager::createCommandBuffers(this->device, 
             Engine::commandBuffers, Engine::commandPool);
+        BufferManager::createCommandPool(this->physicalDevice, this->surface, 
+            this->device, Engine::computeCommandPool);
+        BufferManager::createCommandBuffers(this->device, 
+            Engine::computeCommandBuffers, Engine::computeCommandPool);
+
+        BufferManager::createSSBOs(this->device, this->physicalDevice, Engine::shaderStorageBuffers,
+            Engine::shaderStorageBufferSize, Engine::shaderStorageBuffersMemories, Engine::particles, this->graphicsQueue);
+
+        DescriptorManager::createComputeDescriptorPool(this->device);
+        DescriptorManager::createComputeDescriptorSets(this->device);
 
         createSpatialHash(glm::vec3(200.0f), glm::vec3(-200.0f));
 
@@ -419,6 +455,14 @@ namespace Prometheus{
 
         vkDestroyDescriptorPool(device, Engine::imGUIPool, nullptr);
 
+        vkDestroyDescriptorSetLayout(device,Engine::computeSetLayout, nullptr);
+        vkDestroyDescriptorPool(device, Engine::computePool, nullptr);
+
+        for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+            vkDestroyBuffer(device, Engine::shaderStorageBuffers[i], nullptr);
+            vkFreeMemory(device, Engine::shaderStorageBuffersMemories[i], nullptr);
+        }
+
         SwapChainManager::cleanupSwapChain(device);
 
         for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
@@ -445,9 +489,12 @@ namespace Prometheus{
             vkDestroySemaphore(device, Engine::renderFinishedSemaphores[i], nullptr);
             vkDestroySemaphore(device, Engine::imageAvailableSemaphores[i], nullptr);
             vkDestroyFence(device, Engine::inFlightFences[i], nullptr);
+            vkDestroySemaphore(device, Engine::computeFinishedSemaphores[i], nullptr);
+            vkDestroyFence(device, Engine::computeInFlightFences[i], nullptr);
         }
 
         vkDestroyCommandPool(device, commandPool, nullptr);
+        vkDestroyCommandPool(device, computeCommandPool, nullptr);
 
         vkDestroyPipeline(device, graphicsPipeline, nullptr);
         vkDestroyPipelineLayout(device, pipelineLayout, nullptr);
@@ -457,6 +504,10 @@ namespace Prometheus{
         vkDestroyPipelineLayout(device, preGraphicsLayout, nullptr);
         vkDestroyPipeline(device, debugPipeline, nullptr);
         vkDestroyPipelineLayout(device, debugPipelineLayout, nullptr);
+        vkDestroyPipeline(device, computePipeline, nullptr);
+        vkDestroyPipelineLayout(device, computePipelineLayout, nullptr);
+        vkDestroyPipeline(device, particleGraphicsPipeline, nullptr);
+        vkDestroyPipelineLayout(device, particlePipelineLayout, nullptr);
 
         vkDestroyRenderPass(device, renderPass, nullptr);
 
@@ -570,10 +621,31 @@ namespace Prometheus{
 
         VkSubmitInfo submitInfo{};
         submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        submitInfo.commandBufferCount = 1;
+        submitInfo.pCommandBuffers = &Engine::computeCommandBuffers[Engine::currentFrame];
+        submitInfo.signalSemaphoreCount = 1;
+        submitInfo.pSignalSemaphores = &Engine::computeFinishedSemaphores[Engine::currentFrame];
 
-        VkSemaphore waitSemaphores[] = {Engine::imageAvailableSemaphores[Engine::currentFrame]};
-        VkPipelineStageFlags waitStages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
-        submitInfo.waitSemaphoreCount = 1;
+        if (vkQueueSubmit(computeQueue, 1, &submitInfo, Engine::computeInFlightFences[currentFrame]) != VK_SUCCESS) {
+            throw std::runtime_error("failed to submit compute command buffer!");
+        };
+
+        submitInfo = {};
+        submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+
+        VkSemaphore waitSemaphores[] = 
+        {
+            Engine::computeFinishedSemaphores[currentFrame], 
+            Engine::imageAvailableSemaphores[Engine::currentFrame]
+        };
+
+        VkPipelineStageFlags waitStages[] = 
+        {
+            VK_PIPELINE_STAGE_VERTEX_INPUT_BIT, 
+            VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT
+        };
+
+        submitInfo.waitSemaphoreCount = 2;
         submitInfo.pWaitSemaphores = waitSemaphores;
         submitInfo.pWaitDstStageMask = waitStages;
         submitInfo.commandBufferCount = 1;

@@ -21,8 +21,10 @@ namespace Prometheus{
                 indices.presentFamily = i;
             }
 
-            if (queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT) {
+            if (queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT && 
+                (queueFamily.queueFlags & VK_QUEUE_COMPUTE_BIT)) {
                 indices.graphicsFamily = i;
+                indices.computeFamily = i;
                 Engine::graphicsFamilyIndex = i;
             }
             if (indices.isComplete()) {

@@ -132,6 +132,9 @@ namespace Prometheus{
         sem_wait(&Engine::descriptorsReadySemaphore);
         sem_wait(&Engine::instanceBufferReady);
 
+        BufferManager::recordComputeCommandBuffer(Engine::computeCommandBuffers[Engine::currentFrame], imageIndex,
+            device, physicalDevice);
+
         #ifdef EDITOR
 
             sem_wait(&Engine::debugBuffersReady);
@@ -217,6 +220,22 @@ namespace Prometheus{
                 instanceCount+=Engine::meshBatches[i]->instances.size();
             }
         }
+
+        vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, Engine::particleGraphicsPipeline);
+
+        vkCmdPushConstants(
+            commandBuffer,
+            Engine::particlePipelineLayout,
+            VK_SHADER_STAGE_VERTEX_BIT,
+            0,
+            sizeof(*cameraPushConstants),
+            cameraPushConstants
+        );
+
+        VkDeviceSize offsets[] = {0};
+        vkCmdBindVertexBuffers(commandBuffer, 0, 1, &Engine::shaderStorageBuffers[Engine::currentFrame], offsets);
+
+        vkCmdDraw(commandBuffer, Engine::particles.size(), 1, 0, 0);
 
         #ifdef EDITOR
             if(Engine::lights.size !=0 && Engine::objectDQueue.size!=0){
@@ -730,5 +749,30 @@ namespace Prometheus{
         vkFreeMemory(device, stagingBufferMemory, nullptr);
 
     }
+
+    void BufferManager::recordComputeCommandBuffer(VkCommandBuffer& commandBuffer, uint32_t& imageIndex,
+            VkDevice& device, VkPhysicalDevice& physicalDevice)
+    {
+
+        vkWaitForFences(device, 1, &Engine::computeInFlightFences[Engine::currentFrame], VK_TRUE, UINT64_MAX);
+        vkResetFences(device, 1, &Engine::computeInFlightFences[Engine::currentFrame]);
+        vkResetCommandBuffer(Engine::computeCommandBuffers[Engine::currentFrame], 0);
+
+        VkCommandBufferBeginInfo beginInfo{};
+        beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+
+        if (vkBeginCommandBuffer(commandBuffer, &beginInfo) != VK_SUCCESS) {
+            throw std::runtime_error("failed to begin recording command buffer!");
+        }
+
+        vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, Engine::computePipeline);
+        vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, Engine::computePipelineLayout, 0, 1, &Engine::computeSets[Engine::currentFrame], 0, 0);
+
+        vkCmdDispatch(commandBuffer, Engine::particles.size() / 256, 1, 1);
+
+        if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS) {
+            throw std::runtime_error("failed to record command buffer!");
+        }
+    }   
 
 }

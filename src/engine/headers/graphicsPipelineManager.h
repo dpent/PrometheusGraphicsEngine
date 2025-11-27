@@ -22,5 +22,7 @@ namespace Prometheus{
         static void createDebugPipeline(VkDevice& device);
 
         static void createLightBillBoardPipeline(VkDevice& device);
+
+        static void createParticleGraphicsPipeline(VkDevice& device);
     };
 }

@@ -9,8 +9,8 @@
 #define GLM_FORCE_DEFAULT_ALIGNED_GENTYPES //REMEMBER THIS IS SUPPOSED TO ALIGN EVERYTHING
 #include <glm/glm.hpp>  
 #include <glm/gtc/matrix_transform.hpp>
-
 #include <chrono>
+#include "engine.h"
 
 namespace Prometheus{
     class BufferManager{
@@ -21,6 +21,9 @@ namespace Prometheus{
         static void createCommandBuffers(VkDevice& device, std::vector<VkCommandBuffer>& commandBuffers, 
         VkCommandPool& commandPool);
         static void recordCommandBuffer(VkCommandBuffer& commandBuffer, uint32_t& imageIndex,
+            VkDevice& device, VkPhysicalDevice& physicalDevice);
+
+        static void recordComputeCommandBuffer(VkCommandBuffer& commandBuffer, uint32_t& imageIndex,
             VkDevice& device, VkPhysicalDevice& physicalDevice);
 
         static void createIndexVertexBuffer(VkDevice& device, VkPhysicalDevice& physicalDevice, 
@@ -78,5 +81,37 @@ namespace Prometheus{
             VkPhysicalDevice& physicalDevice);
         static VkFormat findDepthFormat(VkPhysicalDevice& physicalDevice);
         static bool hasStencilComponent(VkFormat format);
+
+        template <typename T> static void createSSBOs(VkDevice& device, VkPhysicalDevice& physicalDevice,
+            std::vector<VkBuffer>& buffers, VkDeviceSize& size, std::vector<VkDeviceMemory>& memories,
+            std::vector<T>& bufferData,VkQueue& graphicsQueue)
+        {
+            VkBuffer stagingBuffer;
+            VkDeviceMemory stagingBufferMemory;
+
+            VkDeviceSize bufferSize = sizeof(T) * bufferData.size();
+
+            BufferManager::createBuffer(size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+                VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+                stagingBuffer, stagingBufferMemory, device, physicalDevice);
+
+            void* data;
+            vkMapMemory(device, stagingBufferMemory, 0, bufferSize, 0, &data);
+            memcpy(data, bufferData.data(), bufferSize);
+            vkUnmapMemory(device, stagingBufferMemory);
+            
+            for(size_t i=0; i<buffers.size(); i++){
+
+                BufferManager::createBuffer(size, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT 
+                    | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+                    VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, buffers[i], memories[i], device,
+                    physicalDevice);
+
+                copyBuffer(stagingBuffer, buffers[i], size, device, graphicsQueue, Engine::commandPool);
+            }
+
+            vkDestroyBuffer(device, stagingBuffer, nullptr);
+            vkFreeMemory(device, stagingBufferMemory, nullptr);
+        }
     };
 }

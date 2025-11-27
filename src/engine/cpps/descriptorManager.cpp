@@ -20,7 +20,26 @@ namespace Prometheus{
         samplerLayoutBinding.pImmutableSamplers = nullptr;
         samplerLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 
-        std::array<VkDescriptorSetLayoutBinding, 2> bindings = {uboLayoutBinding,samplerLayoutBinding};
+        VkDescriptorSetLayoutBinding computeLayoutBinding1{};
+        computeLayoutBinding1.binding = 2;
+        computeLayoutBinding1.descriptorCount = 1;
+        computeLayoutBinding1.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+        computeLayoutBinding1.pImmutableSamplers = nullptr;
+        computeLayoutBinding1.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+
+        VkDescriptorSetLayoutBinding computeLayoutBinding2{};
+        computeLayoutBinding2.binding = 3;
+        computeLayoutBinding2.descriptorCount = 1;
+        computeLayoutBinding2.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+        computeLayoutBinding2.pImmutableSamplers = nullptr;
+        computeLayoutBinding2.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+
+        std::array<VkDescriptorSetLayoutBinding, 4> bindings = {
+            uboLayoutBinding,
+            samplerLayoutBinding,
+            computeLayoutBinding1,
+            computeLayoutBinding2
+        };
 
         VkDescriptorSetLayoutCreateInfo layoutInfo{};
         layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
@@ -126,5 +145,102 @@ namespace Prometheus{
 
         sem_post(&Engine::workInQueueSemaphore);
 
+    }
+
+    void DescriptorManager::createComputeDescriptorSetLayout(VkDevice& device){
+
+        VkDescriptorSetLayoutBinding computeLayoutBinding1{};
+        computeLayoutBinding1.binding = 0;
+        computeLayoutBinding1.descriptorCount = 1;
+        computeLayoutBinding1.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+        computeLayoutBinding1.pImmutableSamplers = nullptr;
+        computeLayoutBinding1.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+
+        VkDescriptorSetLayoutBinding computeLayoutBinding2{};
+        computeLayoutBinding2.binding = 1;
+        computeLayoutBinding2.descriptorCount = 1;
+        computeLayoutBinding2.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+        computeLayoutBinding2.pImmutableSamplers = nullptr;
+        computeLayoutBinding2.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+
+        std::array<VkDescriptorSetLayoutBinding, 2> bindings = {
+            computeLayoutBinding1,
+            computeLayoutBinding2
+        };
+
+        VkDescriptorSetLayoutCreateInfo layoutInfo{};
+        layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+        layoutInfo.bindingCount = static_cast<uint32_t>(bindings.size());
+        layoutInfo.pBindings = bindings.data();
+
+        if (vkCreateDescriptorSetLayout(device, &layoutInfo, nullptr, &Engine::computeSetLayout) != VK_SUCCESS) {
+            throw std::runtime_error("failed to create descriptor set layout!");
+        }
+    }
+
+    void DescriptorManager::createComputeDescriptorPool(VkDevice& device){
+        std::array<VkDescriptorPoolSize, 1> poolSizes{};
+
+        poolSizes[0].type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+        poolSizes[0].descriptorCount = static_cast<uint32_t>(Engine::MAX_FRAMES_IN_FLIGHT) * 2;
+
+        VkDescriptorPoolCreateInfo poolInfo{};
+        poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+        poolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
+        poolInfo.pPoolSizes = poolSizes.data();
+        poolInfo.maxSets = static_cast<uint32_t>(Engine::MAX_FRAMES_IN_FLIGHT);
+
+        if (vkCreateDescriptorPool(device, &poolInfo, nullptr, &Engine::computePool) != VK_SUCCESS) {
+            throw std::runtime_error("failed to create descriptor pool!");
+        }
+    }
+
+    void DescriptorManager::createComputeDescriptorSets(VkDevice& device){
+        
+        Engine::computeSets.resize(Engine::MAX_FRAMES_IN_FLIGHT);
+
+        for(size_t j=0; j<Engine::MAX_FRAMES_IN_FLIGHT; j++){
+    
+            VkDescriptorSetAllocateInfo allocInfo{};
+            allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+            allocInfo.descriptorPool = Engine::computePool;
+            allocInfo.descriptorSetCount = 1;
+            allocInfo.pSetLayouts = &Engine::computeSetLayout;
+
+            if (vkAllocateDescriptorSets(device, &allocInfo, &Engine::computeSets[j]) != VK_SUCCESS) {
+                throw std::runtime_error("failed to allocate descriptor set!");
+            }
+
+            VkDescriptorBufferInfo storageBufferInfoLastFrame{};
+            storageBufferInfoLastFrame.buffer = Engine::shaderStorageBuffers[(j - 1)%Engine::MAX_FRAMES_IN_FLIGHT];
+            storageBufferInfoLastFrame.offset = 0;
+            storageBufferInfoLastFrame.range  = sizeof(Particle) * Engine::particles.size();
+
+            VkWriteDescriptorSet lastSSBO{};
+            lastSSBO.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            lastSSBO.dstSet = Engine::computeSets[j];
+            lastSSBO.dstBinding = 0;
+            lastSSBO.dstArrayElement = 0;
+            lastSSBO.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+            lastSSBO.descriptorCount = 1;
+            lastSSBO.pBufferInfo = &storageBufferInfoLastFrame;
+
+            VkDescriptorBufferInfo storageBufferInfoCurrentFrame{};
+            storageBufferInfoCurrentFrame.buffer = Engine::shaderStorageBuffers[j];
+            storageBufferInfoCurrentFrame.offset = 0;
+            storageBufferInfoCurrentFrame.range = sizeof(Particle) * Engine::particles.size();
+
+            VkWriteDescriptorSet currentSSBO{};
+            currentSSBO.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            currentSSBO.dstSet = Engine::computeSets[j];
+            currentSSBO.dstBinding = 1;
+            currentSSBO.dstArrayElement = 0;
+            currentSSBO.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+            currentSSBO.descriptorCount = 1;
+            currentSSBO.pBufferInfo = &storageBufferInfoCurrentFrame;
+
+            std::array<VkWriteDescriptorSet, 2> writes = { lastSSBO, currentSSBO };
+            vkUpdateDescriptorSets(device, static_cast<uint32_t>(writes.size()), writes.data(), 0, nullptr);
+        }
     }
 }

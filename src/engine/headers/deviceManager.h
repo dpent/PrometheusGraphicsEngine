@@ -22,7 +22,8 @@ namespace Prometheus{
             VkDevice& device,
             VkQueue& graphicsQueue,
             VkQueue& presentQueue,
-            VkSurfaceKHR& surface
+            VkSurfaceKHR& surface,
+            VkQueue& computeQueue
         );
 
         static const char* deviceTypeToString(VkPhysicalDeviceType& deviceType);
