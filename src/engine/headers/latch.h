@@ -1,6 +1,6 @@
 #pragma once
 #include <mutex>
-#include <semaphore.h>
+#include <semaphore>
 
 
 namespace Prometheus{
@@ -10,7 +10,7 @@ namespace Prometheus{
         
         std::mutex mutex;
         uint64_t count;
-        sem_t countDoneSemaphore;
+        std::binary_semaphore countDoneSemaphore{ 0 };
 
     public:
         Latch(uint64_t countSize);

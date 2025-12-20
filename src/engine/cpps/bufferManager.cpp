@@ -128,13 +128,12 @@ namespace Prometheus{
         CameraObject* cameraPushConstants= new CameraObject();
         cameraPushConstants->view=viewMatrix;
         cameraPushConstants->proj=projMatrix;
-
-        sem_wait(&Engine::descriptorsReadySemaphore);
-        sem_wait(&Engine::instanceBufferReady);
-
+        
+        Engine::descriptorsReadySemaphore.acquire();
+        Engine::instanceBufferReady.acquire();
         #ifdef EDITOR
 
-            sem_wait(&Engine::debugBuffersReady);
+            Engine::debugBuffersReady.acquire();
             vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, Engine::preGraphicsPipeline);
 
             GridInfoObject* gridPushConstants = new GridInfoObject();
@@ -173,10 +172,11 @@ namespace Prometheus{
                 vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
                 vkCmdBindIndexBuffer(commandBuffer, Engine::debugIndexVertexBuffer, Engine::debugIndexOffset, VK_INDEX_TYPE_UINT32);
 
-                vkCmdDrawIndexed(commandBuffer, Engine::debugIndices.size(), Engine::debugVertices.size()>>1, 0, 0, 0);
+                vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(Engine::debugIndices.size()), static_cast<uint32_t>(Engine::debugVertices.size()>>1), 0, 0, 0);
             }
 
         #endif
+
         vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, Engine::graphicsPipeline);
 
         vkCmdPushConstants(
@@ -211,8 +211,8 @@ namespace Prometheus{
                     0,
                     nullptr
                 );
-                Engine::meshBatches[i]->objects[0]->draw(commandBuffer,Engine::meshBatches[i]->instances.size(),instanceCount);
-                instanceCount+=Engine::meshBatches[i]->instances.size();
+                Engine::meshBatches[i]->objects[0]->draw(commandBuffer, static_cast<uint32_t>(Engine::meshBatches[i]->instances.size()),instanceCount);
+                instanceCount+= static_cast<uint32_t>(Engine::meshBatches[i]->instances.size());
             }
         }
 
@@ -230,7 +230,7 @@ namespace Prometheus{
         VkDeviceSize offsets[] = {0};
         vkCmdBindVertexBuffers(commandBuffer, 0, 1, &Engine::shaderStorageBuffers[Engine::currentFrame], offsets);
 
-        vkCmdDraw(commandBuffer, Engine::particles.size(), 1, 0, 0);
+        vkCmdDraw(commandBuffer, static_cast<uint32_t>(Engine::particles.size()), 1, 0, 0);
 
         #ifdef EDITOR
             if(Engine::lights.size !=0 && Engine::objectDQueue.size!=0){
@@ -273,8 +273,9 @@ namespace Prometheus{
         #ifdef EDITOR
             delete gridPushConstants;
         #endif
+            
+        Engine::commandBufferRecorded.release();
 
-        sem_post(&Engine::commandBufferRecorded);
     }
 
     void BufferManager::createIndexVertexBuffer(VkDevice& device, VkPhysicalDevice& physicalDevice, 
@@ -622,8 +623,8 @@ namespace Prometheus{
 
         for (auto& [meshName, mesh] : Engine::meshMap) {
             //std::cout<<mesh.toString();
-            mesh.vertexOffset=Engine::vertices.size();
-            mesh.indexOffset=Engine::indices.size();
+            mesh.vertexOffset= static_cast<uint32_t>(Engine::vertices.size());
+            mesh.indexOffset= static_cast<uint32_t>(Engine::indices.size());
             Engine::vertices.insert(Engine::vertices.end(),mesh.vertices.begin(),mesh.vertices.end());
             Engine::indices.insert(Engine::indices.end(),mesh.indices.begin(),mesh.indices.end());
         }
@@ -663,7 +664,7 @@ namespace Prometheus{
         
         BufferManager::createInstanceBuffers(device,physicalDevice);
 
-        sem_post(&Engine::instanceBufferReady);
+        Engine::instanceBufferReady.release();
     }
 
     void BufferManager::createColorResources(VkDevice& device, VkPhysicalDevice& physicalDevice){
@@ -776,7 +777,7 @@ namespace Prometheus{
             &time
         );
 
-        vkCmdDispatch(commandBuffer, Engine::particles.size() / 256, 1, 1);
+        vkCmdDispatch(commandBuffer, static_cast<uint32_t>(Engine::particles.size() / 256), 1, 1);
 
         if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS) {
             throw std::runtime_error("failed to record command buffer!");

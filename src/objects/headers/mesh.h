@@ -4,7 +4,7 @@
 #include <GLFW/glfw3.h>
 #include <string>
 #define GLM_FORCE_RADIANS
-#define GLM_FORCE_DEFAULT_ALIGNED_GENTYPES //REMEMBER THIS IS SUPPOSED TO ALIGN EVERYTHING
+//#define GLM_FORCE_DEFAULT_ALIGNED_GENTYPES //REMEMBER THIS IS SUPPOSED TO ALIGN EVERYTHING
 #include <glm/glm.hpp>  
 #include <string>
 #include <sstream>

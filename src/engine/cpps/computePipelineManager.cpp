@@ -7,7 +7,7 @@ using namespace Prometheus;
 namespace Prometheus{
 
     void ComputePipelineManager::createComputePipeline(VkDevice& device){
-        auto computeShaderCode = Engine::readFile("../build/particlesComp.spv");
+        auto computeShaderCode = Engine::readFile("./build/particlesComp.spv");
 
         VkShaderModule computeShaderModule = GraphicsPipelineManager::createShaderModule(computeShaderCode, device);
         

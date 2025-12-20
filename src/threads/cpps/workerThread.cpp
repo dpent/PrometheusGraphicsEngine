@@ -32,7 +32,7 @@ namespace Prometheus{
                 
                 doWork(&job);
             }else if(alive){
-                sem_wait(&(Engine::workInQueueSemaphore));
+                Engine::workInQueueSemaphore.acquire();
 
                 jobsMutex.lock();
                 Engine::queueMutex.lock();
@@ -42,6 +42,10 @@ namespace Prometheus{
                 jobs.push(std::move(Engine::jobQueue.front()));
                 
                 Engine::jobQueue.pop();
+
+
+                //std::cout << "OP ID " << jobs.back().opId << " grabbed. There are " << Engine::jobQueue.size() << " jobs in queue" << std::endl;
+                //Engine::printJobQueue();
 
                 Engine::queueMutex.unlock();
                 jobsMutex.unlock();
@@ -87,7 +91,7 @@ namespace Prometheus{
 
             case LOAD_MODEL:
                 loadModel(std::get<std::string>(job->data[0]),
-                *std::get<sem_t*>(job->data[1]));
+                *std::get<std::binary_semaphore*>(job->data[1]));
                 break;
 
             case UPDATE_MESH_DATA_STRUCTURES:
@@ -100,22 +104,22 @@ namespace Prometheus{
 
             case RECREATE_DESCRIPTORS:
                 recreateDescriptorSetsAndPool(*std::get<VkDevice*>(job->data[0]),
-                    std::get<sem_t*>(job->data[1]));
+                    std::get<std::binary_semaphore*>(job->data[1]));
                 break;
 
             case UPDATE_GAME_OBJECTS:
                 updateGameObjects(
                     std::get<Latch*>(job->data[0]),
-                    std::get<sem_t*>(job->data[1])
+                    std::get<std::binary_semaphore*>(job->data[1])
                 );
                 break;
             
             case UPDATE_OBJECTS_AND_DESCRIPTORS:
                 updateObjectsAndDescriptors(*std::get<VkDevice*>(job->data[0]),
-                    std::get<sem_t*>(job->data[1]),
-                    std::get<sem_t*>(job->data[2]),
+                    std::get<std::binary_semaphore*>(job->data[1]),
+                    std::get<std::binary_semaphore*>(job->data[2]),
                     std::get<Latch*>(job->data[3]),
-                    std::get<sem_t*>(job->data[4])
+                    std::get<std::binary_semaphore*>(job->data[4])
                 );
                 break;
 
@@ -134,7 +138,7 @@ namespace Prometheus{
             case MAKE_INSTANCE_BUFFER:
                 recreateInstanceBuffers(*std::get<VkDevice*>(job->data[0]),
                     *std::get<VkPhysicalDevice*>(job->data[1]),
-                    std::get<sem_t*>(job->data[2])
+                    std::get<std::binary_semaphore*>(job->data[2])
                 );
                 break;
             

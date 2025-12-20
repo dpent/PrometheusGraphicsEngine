@@ -3,7 +3,7 @@
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 #include <string>
-#include <semaphore.h>
+#include <semaphore>
 #include <algorithm>
 #include "../../engine/headers/modelManager.h"
 #include "../../engine/headers/descriptorManager.h"
@@ -23,10 +23,10 @@ namespace Prometheus
 
     void updateTextureDeleteQueue(VkDevice& device);
 
-    void updateGameObjects(Latch* latch, sem_t* setReady);
+    void updateGameObjects(Latch* latch, std::binary_semaphore* setReady);
 
-    void updateObjectsAndDescriptors(VkDevice& device, sem_t* jobDoneSem, sem_t* safeToMakeInstanceBuffer,
-        Latch* latch, sem_t* setReady);
+    void updateObjectsAndDescriptors(VkDevice& device, std::binary_semaphore* jobDoneSem, std::binary_semaphore* safeToMakeInstanceBuffer,
+        Latch* latch, std::binary_semaphore* setReady);
     void splitObjectsAndCreateJobs(uint64_t& objectsPerThread,
         std::vector<std::unordered_map<std::string,std::unordered_map<uint64_t,GameObject*>>>& objectPieces,
         Latch& latch, std::vector<std::unordered_map<std::string,MeshBatch>>& batchPieces);

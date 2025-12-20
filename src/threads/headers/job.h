@@ -6,7 +6,7 @@
 #include <vector>
 #include <variant>
 #include <string>
-#include <semaphore.h>
+#include <semaphore>
 #include <unordered_map>
 #include "../../objects/headers/gameObject.h"
 #include "../../objects/headers/mesh.h"
@@ -44,7 +44,7 @@ namespace Prometheus{
         VkPhysicalDevice*,
         VkQueue*, 
         uint64_t,
-        sem_t*,
+        std::binary_semaphore*,
         std::unordered_map<std::string,std::unordered_map<uint64_t,GameObject*>>*,
         std::unordered_map<std::string,MeshBatch>*, 
         Latch*,

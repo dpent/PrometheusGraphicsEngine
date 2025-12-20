@@ -1,5 +1,5 @@
 #include "../headers/latch.h"
-#include <semaphore.h>
+#include <semaphore>
 
 using namespace Prometheus;
 
@@ -8,7 +8,6 @@ namespace Prometheus{
  
     Latch::Latch(uint64_t countSize){
         this->count=countSize;
-        sem_init(&(this->countDoneSemaphore),0,0);
     }
 
     void Latch::count_down(){
@@ -18,23 +17,22 @@ namespace Prometheus{
         count--;
 
         if(count==0){
-            sem_post(&(this->countDoneSemaphore));
+            this->countDoneSemaphore.release();
         }
 
         mutex.unlock();
     }
 
     void Latch::post(){
-        sem_post(&(this->countDoneSemaphore));
+        this->countDoneSemaphore.release();
     }
 
     void Latch::wait(){
 
-        sem_wait(&(this->countDoneSemaphore));
+        this->countDoneSemaphore.acquire();
     }
 
     Latch::~Latch(){
-        sem_destroy(&(this->countDoneSemaphore));
     }
 
     void Latch::setCount(uint64_t value){
@@ -43,7 +41,7 @@ namespace Prometheus{
         count = value;
 
         if(count==0){
-            sem_post(&(this->countDoneSemaphore));
+            this->countDoneSemaphore.release();
         }
 
         mutex.unlock();
@@ -53,7 +51,7 @@ namespace Prometheus{
         count = value;
 
         if(count==0){
-            sem_post(&(this->countDoneSemaphore));
+            this->countDoneSemaphore.release();
         }
     }
 

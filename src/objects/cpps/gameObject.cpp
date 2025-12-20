@@ -1,5 +1,5 @@
 #include "../../engine/headers/engine.h"
-#include <semaphore.h>
+#include <semaphore>
 #include <vulkan/vulkan_core.h> 
 #include <sstream>
 #include "../../engine/headers/modelManager.h"
@@ -45,8 +45,7 @@ namespace Prometheus{
 
             Engine::meshesLoading.insert(modelPath);
 
-            sem_t* meshLoadSemaphore = new sem_t(); //In case i use them sometime
-            sem_init(meshLoadSemaphore,0,0);
+            std::binary_semaphore* meshLoadSemaphore = new std::binary_semaphore{ 0 }; //In case i use them sometime
 
             ModelManager::loadModel(modelPath,*meshLoadSemaphore); //Also inserts the mesh into meshMap
             glm::mat4 inverse = glm::inverse(transform.getModelMatrix());
@@ -76,7 +75,6 @@ namespace Prometheus{
         }
 
         Engine::meshMutex.unlock();
-        
         center = getCenter();
         radius = glm::length(hitboxPoints[1]);
         Engine::insertToHash(this);
@@ -189,7 +187,7 @@ namespace Prometheus{
         Engine::jobQueue.push(j);
         Engine::queueMutex.unlock();
 
-        sem_post(&(Engine::workInQueueSemaphore));
+        Engine::workInQueueSemaphore.release();
     }
 
     void GameObject::deleteObjectThreaded(VkDevice &device, GameObject* object){
@@ -202,7 +200,7 @@ namespace Prometheus{
         Engine::jobQueue.push(j);
         Engine::queueMutex.unlock();
         
-        sem_post(&(Engine::workInQueueSemaphore));
+        Engine::workInQueueSemaphore.release();
     }
 
     void GameObject::start(){

@@ -7,8 +7,8 @@ using namespace Prometheus;
 namespace Prometheus{
 
     void GraphicsPipelineManager::createGraphicsPipeline(VkDevice& device){
-        auto vertShaderCode = Engine::readFile("../build/graphicsVert.spv");
-        auto fragShaderCode = Engine::readFile("../build/graphicsFrag.spv");
+        auto vertShaderCode = Engine::readFile("./build/graphicsVert.spv");
+        auto fragShaderCode = Engine::readFile("./build/graphicsFrag.spv");
 
         VkShaderModule vertShaderModule = GraphicsPipelineManager::createShaderModule(vertShaderCode, device);
         VkShaderModule fragShaderModule = GraphicsPipelineManager::createShaderModule(fragShaderCode, device);
@@ -36,7 +36,7 @@ namespace Prometheus{
 
         VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
         vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-        vertexInputInfo.vertexBindingDescriptionCount = bindingDescription.size();
+        vertexInputInfo.vertexBindingDescriptionCount = static_cast<uint32_t>(bindingDescription.size());
         vertexInputInfo.pVertexBindingDescriptions = bindingDescription.data();
         vertexInputInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(attributeDescriptions.size());
         vertexInputInfo.pVertexAttributeDescriptions = attributeDescriptions.data();
@@ -237,8 +237,8 @@ namespace Prometheus{
     }
 
     void GraphicsPipelineManager::createEditorPreGraphicsPipeline(VkDevice& device){
-        auto vertShaderCode = Engine::readFile("../build/pregraphicsVert.spv");
-        auto fragShaderCode = Engine::readFile("../build/pregraphicsFrag.spv");
+        auto vertShaderCode = Engine::readFile("./build/pregraphicsVert.spv");
+        auto fragShaderCode = Engine::readFile("./build/pregraphicsFrag.spv");
 
         VkShaderModule vertShaderModule = GraphicsPipelineManager::createShaderModule(vertShaderCode, device);
         VkShaderModule fragShaderModule = GraphicsPipelineManager::createShaderModule(fragShaderCode, device);
@@ -429,8 +429,8 @@ namespace Prometheus{
     }
 
     void GraphicsPipelineManager::createDebugPipeline(VkDevice& device){
-        auto vertShaderCode = Engine::readFile("../build/debugVert.spv");
-        auto fragShaderCode = Engine::readFile("../build/debugFrag.spv");
+        auto vertShaderCode = Engine::readFile("./build/debugVert.spv");
+        auto fragShaderCode = Engine::readFile("./build/debugFrag.spv");
 
         VkShaderModule vertShaderModule = GraphicsPipelineManager::createShaderModule(vertShaderCode, device);
         VkShaderModule fragShaderModule = GraphicsPipelineManager::createShaderModule(fragShaderCode, device);
@@ -624,8 +624,8 @@ namespace Prometheus{
     }
 
     void GraphicsPipelineManager::createLightBillBoardPipeline(VkDevice& device){
-        auto vertShaderCode = Engine::readFile("../build/lightingVert.spv");
-        auto fragShaderCode = Engine::readFile("../build/lightingFrag.spv");
+        auto vertShaderCode = Engine::readFile("./build/lightingVert.spv");
+        auto fragShaderCode = Engine::readFile("./build/lightingFrag.spv");
 
         VkShaderModule vertShaderModule = createShaderModule(vertShaderCode, device);
         VkShaderModule fragShaderModule = createShaderModule(fragShaderCode, device);
@@ -750,8 +750,8 @@ namespace Prometheus{
     }
 
     void GraphicsPipelineManager::createParticleGraphicsPipeline(VkDevice& device){
-        auto vertShaderCode = Engine::readFile("../build/particleGraphicsVert.spv");
-        auto fragShaderCode = Engine::readFile("../build/particleGraphicsFrag.spv");
+        auto vertShaderCode = Engine::readFile("./build/particleGraphicsVert.spv");
+        auto fragShaderCode = Engine::readFile("./build/particleGraphicsFrag.spv");
 
         VkShaderModule vertShaderModule = GraphicsPipelineManager::createShaderModule(vertShaderCode, device);
         VkShaderModule fragShaderModule = GraphicsPipelineManager::createShaderModule(fragShaderCode, device);
@@ -779,7 +779,7 @@ namespace Prometheus{
 
         VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
         vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-        vertexInputInfo.vertexBindingDescriptionCount = bindingDescription.size();
+        vertexInputInfo.vertexBindingDescriptionCount = static_cast<uint32_t>(bindingDescription.size());
         vertexInputInfo.pVertexBindingDescriptions = bindingDescription.data();
         vertexInputInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(attributeDescriptions.size());
         vertexInputInfo.pVertexAttributeDescriptions = attributeDescriptions.data();

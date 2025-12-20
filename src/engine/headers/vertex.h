@@ -4,7 +4,7 @@
 #include <glm/glm.hpp>
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
-#define GLM_ENABLE_EXPERIMENTAL
+//#define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/hash.hpp>
 
 

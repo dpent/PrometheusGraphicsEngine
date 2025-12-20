@@ -5,14 +5,13 @@
 #include "../headers/renderPassManager.h"
 #include "../headers/bufferManager.h"
 #include "../headers/syncManager.h"
-#include <semaphore.h>
+#include <semaphore>
 #include <stdexcept>
 #include <vulkan/vulkan_core.h>
 #include "../headers/descriptorManager.h"
 #include <fstream>
 #include <filesystem>
 #include <cstdlib>
-#include <unistd.h> 
 #include <string.h>
 #include <chrono>
 #include "../../threads/headers/descriptorOperations.h"
@@ -65,13 +64,13 @@ std::vector<VkSemaphore> Engine::renderFinishedSemaphores;
 std::vector<VkSemaphore> Engine::computeFinishedSemaphores;
 std::vector<VkFence> Engine::computeInFlightFences;
 std::vector<VkFence> Engine::inFlightFences;
-sem_t Engine::descriptorsReadySemaphore;
-sem_t Engine::safeToMakeInstanceBuffer;
-sem_t Engine::verIndBufferComplete;
-sem_t Engine::instanceBufferReady;
-sem_t Engine::commandBufferRecorded;
-sem_t Engine::debugBuffersReady;
-sem_t Engine::setReady;
+std::binary_semaphore Engine::descriptorsReadySemaphore{ 0 };
+std::binary_semaphore Engine::safeToMakeInstanceBuffer{ 0 };
+std::binary_semaphore Engine::verIndBufferComplete{ 0 };
+std::binary_semaphore Engine::instanceBufferReady{ 0 };
+std::binary_semaphore Engine::commandBufferRecorded{ 0 };
+std::binary_semaphore Engine::debugBuffersReady{ 0 };
+std::binary_semaphore Engine::setReady{ 0 };
 std::mutex Engine::gameObjectMutex;
 std::mutex Engine::canDeleteObjectMutex;
 std::mutex Engine::textureMutex;
@@ -153,7 +152,7 @@ std::unordered_map<std::thread::id, WorkerThread*> Engine::threadPool;
 std::queue<Job> Engine::jobQueue;
 std::queue<Job> Engine::deferredJobQueue;
 std::mutex Engine::queueMutex;
-sem_t Engine::workInQueueSemaphore;
+std::counting_semaphore<INT_MAX> Engine::workInQueueSemaphore(0);
 
 uint64_t Engine::frameCount=0;
 
@@ -161,7 +160,11 @@ SafeUint16_t Engine::threadsAvailable = SafeUint16_t(std::thread::hardware_concu
 
 bool Engine::wasPlacedInThread=false;
 
-std::filesystem::path Engine::exeDir = std::filesystem::canonical("/proc/self/exe").parent_path();
+#ifdef __linux__
+    std::filesystem::path Engine::exeDir = std::filesystem::canonical("/proc/self/exe").parent_path();
+#elif _WIN32
+    std::filesystem::path Engine::exeDir = std::filesystem::current_path();
+#endif
 
 Camera Engine::camera = Camera();
 
@@ -194,6 +197,7 @@ DoubleEndedQueue<UBOContainer*> Engine::lights;
 bool Engine::recreateUBO = false;
 
 std::vector<Particle> Engine::particles;
+bool Engine::particlesChanged = false;
 
 namespace Prometheus{
     void Engine::run(int argc, char** argv) {
@@ -251,7 +255,7 @@ namespace Prometheus{
 
         RenderPassManager::createRenderPass(this->device, this->physicalDevice);
 
-        Particle::addDemoParticles(4096);
+        //Particle::addDemoParticles(4096);
 
         Engine::shaderStorageBuffers.resize(MAX_FRAMES_IN_FLIGHT);
         Engine::shaderStorageBuffersMemories.resize(MAX_FRAMES_IN_FLIGHT);
@@ -282,19 +286,19 @@ namespace Prometheus{
         BufferManager::createCommandBuffers(this->device, 
             Engine::computeCommandBuffers, Engine::computeCommandPool);
 
-        BufferManager::createSSBOs(this->device, this->physicalDevice, Engine::shaderStorageBuffers,
+        /*BufferManager::createSSBOs(this->device, this->physicalDevice, Engine::shaderStorageBuffers,
             Engine::shaderStorageBufferSize, Engine::shaderStorageBuffersMemories, Engine::particles, this->graphicsQueue);
 
         DescriptorManager::createComputeDescriptorPool(this->device);
-        DescriptorManager::createComputeDescriptorSets(this->device);
+        DescriptorManager::createComputeDescriptorSets(this->device);*/
 
         createSpatialHash(glm::vec3(200.0f), glm::vec3(-200.0f));
 
-        TextureManager::createSolidColorTextureFile("../textures/blue.png",0,0,255);
-        TextureManager::createSolidColorTextureFile("../textures/red.png",255,0,0);
-        TextureManager::createSolidColorTextureFile("../textures/magenta.png",0,255,0);
-        TextureManager::createSolidColorTextureFile("../textures/magenta.png",255,0,255);
-        TextureManager::createSolidColorTextureFile("../textures/white.png",255,255,255);
+        TextureManager::createSolidColorTextureFile("./textures/blue.png",0,0,255);
+        TextureManager::createSolidColorTextureFile("./textures/red.png",255,0,0);
+        TextureManager::createSolidColorTextureFile("./textures/magenta.png",0,255,0);
+        TextureManager::createSolidColorTextureFile("./textures/magenta.png",255,0,255);
+        TextureManager::createSolidColorTextureFile("./textures/white.png",255,255,255);
         
         /*for(int i=0; i<1; i++){ //100 is the safe limit
 
@@ -327,8 +331,8 @@ namespace Prometheus{
             );
         }*/
 
-        GameObject::createObjectThreaded("../textures/white.png", 
-            "../models/stanford_dragon.obj", 
+        GameObject::createObjectThreaded("./textures/white.png",
+            "./models/stanford_dragon.obj", 
             device, 
             physicalDevice, 
             graphicsQueue
@@ -337,6 +341,9 @@ namespace Prometheus{
         Engine::instanceBuffers.resize(Engine::MAX_FRAMES_IN_FLIGHT);
         Engine::instanceBufferMemories.resize(Engine::MAX_FRAMES_IN_FLIGHT);
         Engine::instanceBuffersMapped.resize(Engine::MAX_FRAMES_IN_FLIGHT);
+
+		Engine::shaderStorageBuffers.resize(Engine::MAX_FRAMES_IN_FLIGHT);
+		Engine::shaderStorageBuffersMemories.resize(Engine::MAX_FRAMES_IN_FLIGHT);
 
     }
 
@@ -562,6 +569,7 @@ namespace Prometheus{
             throw std::runtime_error("failed to acquire swap chain image!");
         }
 
+
         vkResetFences(device, 1, &Engine::inFlightFences[Engine::currentFrame]);
 
         double timeBetweenDraws = 1.0f/Engine::fpsCap;
@@ -584,30 +592,42 @@ namespace Prometheus{
             BufferManager::updateUniformBuffer(Engine::currentFrame);
         }
 
-        BufferManager::recordComputeCommandBuffer(Engine::computeCommandBuffers[Engine::currentFrame], imageIndex,
-            device, physicalDevice);
+        if (Engine::particlesChanged) {
+
+            updateParticleSSBOs();
+            remakeComputeDescriptorSetsAndPool();
+
+			Engine::particlesChanged = false;
+        }
 
         VkSubmitInfo submitInfo{};
-        submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-        submitInfo.commandBufferCount = 1;
-        submitInfo.pCommandBuffers = &Engine::computeCommandBuffers[Engine::currentFrame];
-        submitInfo.signalSemaphoreCount = 1;
-        submitInfo.pSignalSemaphores = &Engine::computeFinishedSemaphores[Engine::currentFrame];
 
-        if (vkQueueSubmit(computeQueue, 1, &submitInfo, Engine::computeInFlightFences[currentFrame]) != VK_SUCCESS) {
-            throw std::runtime_error("failed to submit compute command buffer!");
-        };
+        if (Engine::particles.size() != 0) {
+
+            BufferManager::recordComputeCommandBuffer(Engine::computeCommandBuffers[Engine::currentFrame], imageIndex,
+                device, physicalDevice);
+
+            submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+            submitInfo.commandBufferCount = 1;
+            submitInfo.pCommandBuffers = &Engine::computeCommandBuffers[Engine::currentFrame];
+            submitInfo.signalSemaphoreCount = 1;
+            submitInfo.pSignalSemaphores = &Engine::computeFinishedSemaphores[Engine::currentFrame];
+
+            if (vkQueueSubmit(computeQueue, 1, &submitInfo, Engine::computeInFlightFences[currentFrame]) != VK_SUCCESS) {
+                throw std::runtime_error("failed to submit compute command buffer!");
+            };
+        }
 
         Engine::canDeleteObjectMutex.lock();
         Engine::gameObjectMutex.lock();
         Engine::meshMutex.lock();
-
+        
         if(Engine::recreateVertexIndexBuffer && Engine::meshMap.size()!=0){
 
             Engine::updateVertexIndexBuffers();
             
         }else{
-            sem_post(&Engine::verIndBufferComplete);
+            Engine::verIndBufferComplete.release();
         }
 
         #ifndef EDITOR
@@ -616,7 +636,7 @@ namespace Prometheus{
             Engine::wasPlacedInThread = false;
         #endif
 
-        sem_wait(&Engine::verIndBufferComplete);
+		Engine::verIndBufferComplete.acquire();
 
         handleObjectUpdates();
 
@@ -625,6 +645,7 @@ namespace Prometheus{
         #endif
         
         Engine::meshMutex.unlock();
+
         if(!Engine::wasPlacedInThread){
             Engine::commandPoolMutex.lock();
             BufferManager::recordCommandBuffer(Engine::commandBuffers[Engine::currentFrame], imageIndex,device,
@@ -632,7 +653,7 @@ namespace Prometheus{
             Engine::commandPoolMutex.unlock();
         }
 
-        sem_wait(&Engine::commandBufferRecorded);
+		Engine::commandBufferRecorded.acquire();
         
         Engine::gameObjectMutex.unlock();
         Engine::canDeleteObjectMutex.unlock();
@@ -768,7 +789,7 @@ namespace Prometheus{
                     object = object->next;
                 }
 
-                sem_post(&Engine::safeToMakeInstanceBuffer);
+                Engine::safeToMakeInstanceBuffer.release();
 
                 return;
             }
@@ -795,7 +816,6 @@ namespace Prometheus{
     void Engine::initThreadPool(uint16_t poolSize, VkDevice& device, VkPhysicalDevice& physicalDevice
         , VkSurfaceKHR& surface){
 
-        sem_init(&(Engine::workInQueueSemaphore),0,0);
         std::cout<<"\nThreads in pool: "<<poolSize<<"\n"<<std::endl;
         for (uint16_t i=0; i<poolSize; i++){
             WorkerThread* wt = new WorkerThread(device, physicalDevice,surface);
@@ -858,7 +878,7 @@ namespace Prometheus{
         Engine::jobQueue.push(j);
         Engine::queueMutex.unlock();
 
-        sem_post(&(Engine::workInQueueSemaphore));
+        Engine::workInQueueSemaphore.release();
     }
 
     void Engine::updateMeshDataStructures(){
@@ -868,7 +888,7 @@ namespace Prometheus{
         Engine::jobQueue.push(j);
         Engine::queueMutex.unlock();
 
-        sem_post(&(Engine::workInQueueSemaphore));
+		Engine::workInQueueSemaphore.release();
     }
 
     void Engine::createUpdateDescriptorQueueJob(){
@@ -880,29 +900,29 @@ namespace Prometheus{
         Engine::jobQueue.push(j);
         Engine::queueMutex.unlock();
 
-        sem_post(&(Engine::workInQueueSemaphore));
+        Engine::workInQueueSemaphore.release();
     }
 
     void Engine::createUpdateObjDescrJob(Latch* l){
 
         Job j = Job(UPDATE_OBJECTS_AND_DESCRIPTORS);
         j.data.emplace_back(std::in_place_type<VkDevice*>, &device);
-        j.data.emplace_back(std::in_place_type<sem_t*>,&Engine::descriptorsReadySemaphore);
-        j.data.emplace_back(std::in_place_type<sem_t*>,&Engine::safeToMakeInstanceBuffer);
+        j.data.emplace_back(std::in_place_type<std::binary_semaphore*>,&Engine::descriptorsReadySemaphore);
+        j.data.emplace_back(std::in_place_type<std::binary_semaphore*>,&Engine::safeToMakeInstanceBuffer);
         j.data.emplace_back(std::in_place_type<Latch*>, l);
-        j.data.emplace_back(std::in_place_type<sem_t*>, &Engine::setReady);
+        j.data.emplace_back(std::in_place_type<std::binary_semaphore*>, &Engine::setReady);
 
         Engine::jobQueue.push(j);
 
-        sem_post(&Engine::workInQueueSemaphore);
+        Engine::workInQueueSemaphore.release();
 
         j = Job(UPDATE_GAME_OBJECTS);
         j.data.emplace_back(std::in_place_type<Latch*>, l);
-        j.data.emplace_back(std::in_place_type<sem_t*>, &Engine::setReady);
+        j.data.emplace_back(std::in_place_type<std::binary_semaphore*>, &Engine::setReady);
 
         Engine::jobQueue.push(j);
 
-        sem_post(&Engine::workInQueueSemaphore);
+        Engine::workInQueueSemaphore.release();
 
     }
 
@@ -915,18 +935,18 @@ namespace Prometheus{
 
         Engine::jobQueue.push(j);
 
-        sem_post(&Engine::workInQueueSemaphore);
+        Engine::workInQueueSemaphore.release();
     }
 
     void Engine::createInstanceBufferRemakeJob(){
         Job j = Job(MAKE_INSTANCE_BUFFER);
         j.data.emplace_back(std::in_place_type<VkDevice*>, &device);
         j.data.emplace_back(std::in_place_type<VkPhysicalDevice*>, &physicalDevice);
-        j.data.emplace_back(std::in_place_type<sem_t*>,&Engine::instanceBufferReady);
+        j.data.emplace_back(std::in_place_type<std::binary_semaphore*>,&Engine::instanceBufferReady);
 
         Engine::jobQueue.push(j);
 
-        sem_post(&Engine::workInQueueSemaphore);
+        Engine::workInQueueSemaphore.release();
     }
 
     void Engine::createInstanceBufferUpdateJob(){
@@ -935,7 +955,7 @@ namespace Prometheus{
 
         Engine::jobQueue.push(j);
 
-        sem_post(&Engine::workInQueueSemaphore);
+        Engine::workInQueueSemaphore.release();
     }
 
     void Engine::updateVertexIndexBuffers(){
@@ -966,7 +986,7 @@ namespace Prometheus{
         }
 
         Engine::recreateVertexIndexBuffer=false;
-        sem_post(&Engine::verIndBufferComplete);
+		Engine::verIndBufferComplete.release();
 
     }
 
@@ -989,7 +1009,7 @@ namespace Prometheus{
             Engine::recreateDescriptors=false;
 
         }else{
-            sem_post(&Engine::descriptorsReadySemaphore);
+            Engine::descriptorsReadySemaphore.release();
         }
 
     }
@@ -1002,7 +1022,7 @@ namespace Prometheus{
             recreateInstanceBuffer=false;
 
         }else{
-            sem_post(&Engine::instanceBufferReady);
+            Engine::instanceBufferReady.release();
         }
     }
 
@@ -1016,7 +1036,7 @@ namespace Prometheus{
 
         Engine::jobQueue.push(j);
 
-        sem_post(&Engine::workInQueueSemaphore);
+        Engine::workInQueueSemaphore.release();
     }
 
     void Engine::handleCommandBufferRecording(uint32_t imageIndex){
@@ -1036,7 +1056,7 @@ namespace Prometheus{
         }
     }
 
-    void Engine::objectLoadingTest(std::chrono::_V2::system_clock::time_point frameZeroTime){
+    void Engine::objectLoadingTest(std::chrono::system_clock::time_point frameZeroTime){
         for(int i=0; i<40; i++){
             GameObject::createObjectThreaded("../textures/statue.jpg", 
                 "../models/stanford_sphere.obj", 
@@ -1065,7 +1085,8 @@ namespace Prometheus{
             Engine::gameObjectMutex.lock();
             std::cout<<Engine::objectDQueue.size<<" objects loaded"<<std::endl;
 
-            auto finalTime = std::chrono::high_resolution_clock::now();
+            auto finalTime = std::chrono::system_clock::now();
+
             std::chrono::duration<double> deltaSec = finalTime - frameZeroTime;
             std::chrono::duration<double, std::milli> deltaMs = finalTime - frameZeroTime;
 
@@ -1100,7 +1121,7 @@ namespace Prometheus{
         }
         
         for (size_t i=0; i<Engine::threadPool.size(); i++) {
-            sem_post(&(Engine::workInQueueSemaphore));
+            Engine::workInQueueSemaphore.release();
         }
         
         int j=0;
@@ -1117,53 +1138,58 @@ namespace Prometheus{
     }
 
     int Engine::createLinuxDesktopEntry(const char* argv0){
-        const char* home = std::getenv("HOME");
-        if (!home) return 1;
+        
+        #ifdef __linux__
+            const char* home = std::getenv("HOME");
+            if (!home) return 1;
 
-        std::string desktopDir = std::string(home) + "/.local/share/applications/";
-        std::filesystem::create_directories(desktopDir);
+            std::string desktopDir = std::string(home) + "/.local/share/applications/";
+            std::filesystem::create_directories(desktopDir);
 
-        std::string desktopFile = desktopDir + "prometheus.desktop";
-        if (std::filesystem::exists(desktopFile)) {
-            std::cout << "Desktop entry already exists, skipping creation.\n";
-            return 0;
-        }
+            std::string desktopFile = desktopDir + "prometheus.desktop";
+            if (std::filesystem::exists(desktopFile)) {
+                std::cout << "Desktop entry already exists, skipping creation.\n";
+                return 0;
+            }
 
-        // Get full executable path
-        char exePath[PATH_MAX];
-        ssize_t len = readlink("/proc/self/exe", exePath, sizeof(exePath) - 1);
-        if (len != -1) exePath[len] = '\0';
-        else strlcpy(exePath, argv0, sizeof(exePath));
-        exePath[sizeof(exePath) - 1] = '\0';
+            // Get full executable path
+            char exePath[PATH_MAX];
+            ssize_t len = readlink("/proc/self/exe", exePath, sizeof(exePath) - 1);
+            if (len != -1) exePath[len] = '\0';
+            else strlcpy(exePath, argv0, sizeof(exePath));
+            exePath[sizeof(exePath) - 1] = '\0';
 
-        // Build absolute paths
-        std::string execPath = std::filesystem::absolute(exePath).string();
-        std::string iconPath = (Engine::exeDir / "../textures/logo/logo-144.png").lexically_normal().c_str();
+            // Build absolute paths
+            std::string execPath = std::filesystem::absolute(exePath).string();
+            std::string iconPath = (Engine::exeDir / "../textures/logo/logo-144.png").lexically_normal().c_str();
 
-        if (!std::filesystem::exists(iconPath)) {
-            std::cerr << "Warning: icon file not found at " << iconPath << std::endl;
-            return 2;
-        }
+            if (!std::filesystem::exists(iconPath)) {
+                std::cerr << "Warning: icon file not found at " << iconPath << std::endl;
+                return 2;
+            }
 
-        // Create desktop entry
-        std::ofstream file(desktopDir + "prometheus.desktop");
-        if (!file.is_open()) {
-            std::cerr << "Failed to create desktop entry!" << std::endl;
-            return 3;
-        }
+            // Create desktop entry
+            std::ofstream file(desktopDir + "prometheus.desktop");
+            if (!file.is_open()) {
+                std::cerr << "Failed to create desktop entry!" << std::endl;
+                return 3;
+            }
 
-        file << "[Desktop Entry]\n"
-            << "Name=Prometheus\n"
-            << "Exec=" << execPath << "\n"
-            << "Icon=" << iconPath << "\n"
-            << "Type=Application\n"
-            << "StartupWMClass=Prometheus\n"
-            << "Terminal=false\n"
-            << "Categories=Development;Game;\n";
-        file.close();
+            file << "[Desktop Entry]\n"
+                << "Name=Prometheus\n"
+                << "Exec=" << execPath << "\n"
+                << "Icon=" << iconPath << "\n"
+                << "Type=Application\n"
+                << "StartupWMClass=Prometheus\n"
+                << "Terminal=false\n"
+                << "Categories=Development;Game;\n";
+            file.close();
 
-        // Refresh desktop database (optional)
-        return system(("update-desktop-database " + desktopDir).c_str());
+            // Refresh desktop database (optional)
+            return system(("update-desktop-database " + desktopDir).c_str());
+        #endif  
+
+        return 0;
     }
 
     void Engine::createSpatialHash(glm::vec3 maxCoords, glm::vec3 minCoords){
@@ -1291,14 +1317,14 @@ namespace Prometheus{
             }
         }
 
-        sem_post(&Engine::debugBuffersReady);
+        Engine::debugBuffersReady.release();
     }
 
     void Engine::handleObjectUpdates(){
 
         if(Engine::objectDQueue.size==0){
-            sem_post(&Engine::descriptorsReadySemaphore);
-            sem_post(&Engine::instanceBufferReady);
+            Engine::descriptorsReadySemaphore.release();
+			Engine::instanceBufferReady.release();
 
             return;
         }
@@ -1310,8 +1336,8 @@ namespace Prometheus{
 
         if(timeToUpdate > 0.0){
 
-            sem_post(&Engine::descriptorsReadySemaphore);
-            sem_post(&Engine::instanceBufferReady);
+            Engine::descriptorsReadySemaphore.release();
+            Engine::instanceBufferReady.release();
             
             return;
 
@@ -1319,7 +1345,6 @@ namespace Prometheus{
 
         if(Engine::objectDQueue.size < 2){
             Engine::updateGameObjects();
-    
             Engine::updateDescriptors();
         }else{
 
@@ -1334,7 +1359,7 @@ namespace Prometheus{
             }
         }
 
-        sem_wait(&Engine::safeToMakeInstanceBuffer);
+        Engine::safeToMakeInstanceBuffer.acquire();
 
         Engine::checkInstanceBufferForUpdates();
     }
@@ -1354,5 +1379,53 @@ namespace Prometheus{
 
             light = light->next;
         }
+    }
+
+    void Engine::printJobQueue() {
+        std::cout << "Current Job Queue ("<<Engine::threadsAvailable.getValue()<<"threads available):" << std::endl;
+        std::queue<Job> tempQueue = Engine::jobQueue;
+
+		if (tempQueue.empty()) {
+            std::cout << "[Empty]" << std::endl;
+            return;
+        }
+
+        while (!tempQueue.empty()) {
+            Job j = tempQueue.front();
+			std::cout << "[" << j.opId << "] ";
+            tempQueue.pop();
+        }
+
+        std::cout<<std::endl;
+    }
+
+    void Engine::updateParticleSSBOs() {
+
+		for (size_t i = 0; i < Engine::shaderStorageBuffers.size(); i++) {
+            if (Engine::shaderStorageBuffers[i] != VK_NULL_HANDLE) {
+                vkDestroyBuffer(device, Engine::shaderStorageBuffers[i], nullptr);
+                vkFreeMemory(device, Engine::shaderStorageBuffersMemories[i], nullptr);
+            }
+        }
+
+        BufferManager::createSSBOs(this->device, this->physicalDevice, Engine::shaderStorageBuffers,
+            Engine::shaderStorageBufferSize, Engine::shaderStorageBuffersMemories, Engine::particles, this->graphicsQueue);
+    }
+
+    void Engine::remakeComputeDescriptorSetsAndPool() {
+
+        Engine::graphicsQueueMutex.lock();
+        vkDeviceWaitIdle(device);
+
+        Engine::graphicsQueueMutex.unlock();
+
+        Engine::descriptorQueuedMutex.lock();
+        Engine::descriptorDeleteQueue.push_back(std::move(Engine::computePool));
+        Engine::framesSinceDescriptorQueuedForDeletion.push_back(0);
+
+        Engine::descriptorQueuedMutex.unlock();
+
+        DescriptorManager::createComputeDescriptorPool(device);
+        DescriptorManager::createComputeDescriptorSets(device);
     }
 }

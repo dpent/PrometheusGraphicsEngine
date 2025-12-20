@@ -7,7 +7,7 @@
 #include <queue>
 #include <thread>
 #include "job.h"
-#include <semaphore.h>
+#include <semaphore>
 #include <iostream>
 #include <chrono>
 #include <mutex>

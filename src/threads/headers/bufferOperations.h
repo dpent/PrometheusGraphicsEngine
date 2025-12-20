@@ -12,7 +12,7 @@ namespace Prometheus{
         VkQueue& graphicsQueue, VkCommandPool& commandPool);
 
     void recreateInstanceBuffers(VkDevice& device, VkPhysicalDevice& physicalDevice,
-        sem_t* jobDoneSem);
+        std::binary_semaphore* jobDoneSem);
 
     void updateInstanceBuffer(uint32_t currentImage);
 

@@ -5,7 +5,6 @@ using namespace Prometheus;
 
 namespace Prometheus{
     void updateDescriptorDeleteQueue(VkDevice &device){
-
         Engine::descriptorQueuedMutex.lock();
 
         auto it1=Engine::descriptorDeleteQueue.begin();
@@ -32,16 +31,14 @@ namespace Prometheus{
         Engine::descriptorQueuedMutex.unlock();
     }
 
-    void recreateDescriptorSetsAndPool(VkDevice& device, sem_t* jobDoneSem){
+    void recreateDescriptorSetsAndPool(VkDevice& device, std::binary_semaphore* jobDoneSem){
 
         Engine::graphicsQueueMutex.lock();
-
         vkDeviceWaitIdle(device);
 
         Engine::graphicsQueueMutex.unlock();
 
         Engine::descriptorQueuedMutex.lock();
-
         Engine::descriptorDeleteQueue.push_back(std::move(Engine::descriptorPool));
         Engine::framesSinceDescriptorQueuedForDeletion.push_back(0);
 
@@ -49,7 +46,7 @@ namespace Prometheus{
 
         //Engine::meshMutex.lock();
         if(Engine::meshBatches.size()==0){
-            sem_post(&Engine::descriptorsReadySemaphore);
+			Engine::descriptorsReadySemaphore.release();
             return;
         }
 
@@ -58,6 +55,6 @@ namespace Prometheus{
         DescriptorManager::createDescriptorPool(device);
         DescriptorManager::createDescriptorSets(device);
 
-        sem_post(jobDoneSem);
+		jobDoneSem->release();
     }
 }

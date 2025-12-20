@@ -2,8 +2,9 @@
 
 #include <vulkan/vulkan_core.h>
 #define GLM_FORCE_RADIANS
-#define GLM_FORCE_DEFAULT_ALIGNED_GENTYPES //REMEMBER THIS IS SUPPOSED TO ALIGN EVERYTHING
+//#define GLM_FORCE_DEFAULT_ALIGNED_GENTYPES //REMEMBER THIS IS SUPPOSED TO ALIGN EVERYTHING
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
+//#define GLM_ENABLE_EXPERIMENTAL
 #include <glm/glm.hpp>  
 #include <glm/gtc/matrix_transform.hpp>
 
@@ -19,7 +20,6 @@
 #include <map>
 #include <fstream>
 #include <array>
-#include <glm/glm.hpp>
 #include <mutex>
 #include <queue>
 #include <thread>
@@ -29,10 +29,8 @@
 #include "../../threads/headers/workerThread.h"
 #include <list>
 #include "../../threads/headers/threadSafeNumber.h"
-#include <fstream>
 #include <filesystem>
 #include <cstdlib>
-#include <unistd.h> 
 #include <string.h>
 #include "../headers/inputManager.h"
 #include "../../objects/headers/camera.h"
@@ -121,13 +119,13 @@ namespace Prometheus{
         static std::vector<VkSemaphore> computeFinishedSemaphores;
         static std::vector<VkFence> inFlightFences;
         static std::vector<VkFence> computeInFlightFences;
-        static sem_t descriptorsReadySemaphore;
-        static sem_t safeToMakeInstanceBuffer;
-        static sem_t verIndBufferComplete;
-        static sem_t instanceBufferReady;
-        static sem_t commandBufferRecorded;
-        static sem_t debugBuffersReady;
-        static sem_t setReady;
+        static std::binary_semaphore descriptorsReadySemaphore;
+        static std::binary_semaphore safeToMakeInstanceBuffer;
+        static std::binary_semaphore verIndBufferComplete;
+        static std::binary_semaphore instanceBufferReady;
+        static std::binary_semaphore commandBufferRecorded;
+        static std::binary_semaphore debugBuffersReady;
+        static std::binary_semaphore setReady;
         static std::mutex gameObjectMutex;
         static std::mutex canDeleteObjectMutex;
         static std::mutex textureMutex;
@@ -210,7 +208,7 @@ namespace Prometheus{
         static std::queue<Job> jobQueue;
         static std::queue<Job> deferredJobQueue;
         static std::mutex queueMutex;
-        static sem_t workInQueueSemaphore;
+        static std::counting_semaphore<INT_MAX> workInQueueSemaphore;
         static uint64_t frameCount;
 
         static SafeUint16_t threadsAvailable;
@@ -251,6 +249,8 @@ namespace Prometheus{
 
         static std::vector<Particle> particles;
 
+        static bool particlesChanged;
+
         void run(int argc, char** argv);
         static std::vector<char> readFile(const std::string& filename);
         static void frameBufferResizeCallback(GLFWwindow* window, int width, int height);
@@ -261,6 +261,8 @@ namespace Prometheus{
         static std::vector<std::queue<Job*>> batchJobs();
         static void createInstanceBufferUpdateJob();
         static void insertToHash(GameObject* obj);
+
+        static void printJobQueue();
 
     private:
         //Window variables
@@ -305,11 +307,13 @@ namespace Prometheus{
         void createSpatialHash(glm::vec3 maxCoords, glm::vec3 minCoords);
         void drawSpatialHash();
 
-        void objectLoadingTest(std::chrono::_V2::system_clock::time_point frameZeroTime);
+        void objectLoadingTest(std::chrono::system_clock::time_point frameZeroTime);
         
         int createLinuxDesktopEntry(const char* argv0);
 
         void createLightSource(glm::vec4 pos, glm::vec4 color, float intensity);
         void updateLightSources();
+        void updateParticleSSBOs();
+		void remakeComputeDescriptorSetsAndPool();
     };
 }

@@ -139,12 +139,13 @@ namespace Prometheus{
 
         Job j = Job(RECREATE_DESCRIPTORS);
         j.data.emplace_back(std::in_place_type<VkDevice*>, &device);
-        j.data.emplace_back(std::in_place_type<sem_t*>,&Engine::descriptorsReadySemaphore);
+        j.data.emplace_back(std::in_place_type<std::binary_semaphore*>,&Engine::descriptorsReadySemaphore);
 
         Engine::jobQueue.push(j);
 
-        sem_post(&Engine::workInQueueSemaphore);
+        Engine::workInQueueSemaphore.release();
 
+        std::cout << "Sent to thread" << std::endl;
     }
 
     void DescriptorManager::createComputeDescriptorSetLayout(VkDevice& device){

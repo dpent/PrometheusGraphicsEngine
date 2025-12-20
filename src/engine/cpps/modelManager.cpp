@@ -7,17 +7,21 @@
 using namespace Prometheus;
 
 namespace Prometheus{
-    void ModelManager::loadModel(std::string modelPath, sem_t& meshLoadSemaphore){
+    void ModelManager::loadModel(std::string modelPath, std::binary_semaphore& meshLoadSemaphore){
         tinyobj::attrib_t attrib;
         std::vector<tinyobj::shape_t> shapes;
         std::vector<tinyobj::material_t> materials;
         std::string warn;
         std::string err;
 
+		//std::cout << "Loading model: " << modelPath << "..." << std::endl;
+
         if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, 
-            (Engine::exeDir / modelPath).lexically_normal().c_str())) {
+            (Engine::exeDir / modelPath).lexically_normal().string().c_str())) {
             throw std::runtime_error(err);
         }
+
+        //std::cout << "DONE" << std::endl;
 
         std::vector<Vertex> vertices;
         std::vector<uint32_t> indices;
@@ -47,9 +51,9 @@ namespace Prometheus{
                 if(!attrib.normals.empty()){
 
                     vertex.normal = {
-                        attrib.normals[3 * index.vertex_index + 0],
-                        attrib.normals[3 * index.vertex_index + 1],
-                        attrib.normals[3 * index.vertex_index + 2]
+                        attrib.normals[3 * index.normal_index + 0],
+                        attrib.normals[3 * index.normal_index + 1],
+                        attrib.normals[3 * index.normal_index + 2]
                     };
                 }else{
 
@@ -132,6 +136,6 @@ namespace Prometheus{
         Engine::meshMap[modelPath]=Mesh(modelPath,vertices,indices, minCoords, maxCoords);
         Engine::meshesLoading.erase(modelPath);
 
-        sem_post(&meshLoadSemaphore);
+        meshLoadSemaphore.release();
     }
 }

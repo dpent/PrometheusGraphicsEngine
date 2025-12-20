@@ -76,7 +76,7 @@ namespace Prometheus{
         Engine::textureQueuedMutex.unlock();
     }
 
-    void updateGameObjects(Latch* latch, sem_t* setReady){
+    void updateGameObjects(Latch* latch, std::binary_semaphore* setReady){
         
         GameObject* object = Engine::objectDQueue.tail;
         uint64_t objectsToCheck = 0;
@@ -87,7 +87,7 @@ namespace Prometheus{
             objectsToCheck = (Engine::objectDQueue.size >> 1) - 1;
         }
 
-        sem_wait(setReady);
+        setReady->acquire();
 
         for(uint64_t i=0; i<objectsToCheck; i++){
             Engine::textureMutex.lock();
@@ -116,7 +116,7 @@ namespace Prometheus{
         }
 
         latch->post();
-        sem_wait(setReady);
+        setReady->acquire();
 
         while(latch->getCount() == 0){
             std::this_thread::sleep_for(std::chrono::milliseconds(100));
@@ -136,8 +136,8 @@ namespace Prometheus{
         latch->post();
     }
 
-    void updateObjectsAndDescriptors(VkDevice& device, sem_t* jobDoneSem, sem_t* safeToMakeInstanceBuffer,
-        Latch* latch, sem_t* setReady){
+    void updateObjectsAndDescriptors(VkDevice& device, std::binary_semaphore* jobDoneSem, std::binary_semaphore* safeToMakeInstanceBuffer,
+        Latch* latch, std::binary_semaphore* setReady){
 
         for(size_t i=0; i<Engine::meshBatches.size(); i++){
             delete Engine::meshBatches[i];
@@ -153,7 +153,7 @@ namespace Prometheus{
             Engine::meshSet.insert({meshName.first,Engine::meshBatches[Engine::meshBatches.size() - 1]});
         }
 
-        sem_post(setReady);
+        setReady->release();
         
         if(Engine::objectDQueue.size % 2 == 0){
             objectsToCheck = Engine::objectDQueue.size >> 1;
@@ -190,7 +190,7 @@ namespace Prometheus{
         }
 
         latch->wait();
-        sem_post(setReady);
+		setReady->release();
 
         object = Engine::objectDQueue.head;
 
@@ -212,14 +212,14 @@ namespace Prometheus{
             std::cout<<Engine::meshBatches[i]->meshPath<<" "<<Engine::meshBatches[i]->objects.size()<<" "<<Engine::meshBatches[i]->textures.size()<<std::endl;
         }*/
 
-
-        sem_post(safeToMakeInstanceBuffer);
+        safeToMakeInstanceBuffer->release();
 
         if(Engine::descriptorSets.size()==0 || Engine::meshBatches.size()!=Engine::descriptorSets.size() || Engine::recreateDescriptors){
 
             recreateDescriptorSetsAndPool(device,jobDoneSem);
         }else{
-            sem_post(&Engine::descriptorsReadySemaphore);
+            std::cout << "thread ready" << std::endl;
+            Engine::descriptorsReadySemaphore.release();
         }
     }
 
@@ -261,7 +261,7 @@ namespace Prometheus{
             Engine::jobQueue.push(j);
             Engine::queueMutex.unlock();
 
-            sem_post(&Engine::workInQueueSemaphore);
+			Engine::workInQueueSemaphore.release();
         }
 
     }

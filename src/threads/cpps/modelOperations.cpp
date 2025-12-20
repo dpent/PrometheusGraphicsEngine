@@ -5,7 +5,7 @@
 using namespace Prometheus;
 
 namespace Prometheus{
-    void loadModel(std::string modelPath, sem_t& meshLoadSemaphore){
+    void loadModel(std::string modelPath, std::binary_semaphore& meshLoadSemaphore){
 
         ModelManager::loadModel(modelPath, meshLoadSemaphore);
     }

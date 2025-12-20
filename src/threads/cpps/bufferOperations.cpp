@@ -18,15 +18,15 @@ namespace Prometheus{
         }
         Engine::recreateVertexIndexBuffer=false;
 
-        sem_post(&Engine::verIndBufferComplete);
+        Engine::verIndBufferComplete.release();
     }
 
-    void recreateInstanceBuffers(VkDevice& device, VkPhysicalDevice& physicalDevice,sem_t* jobDoneSem){
+    void recreateInstanceBuffers(VkDevice& device, VkPhysicalDevice& physicalDevice, std::binary_semaphore* jobDoneSem){
         
         BufferManager::recreateInstanceBuffers(device,physicalDevice);
 
         Engine::recreateInstanceBuffer=false;
-        sem_post(jobDoneSem);
+        jobDoneSem->release();
     }
 
     void updateInstanceBuffer(uint32_t currentImage){
