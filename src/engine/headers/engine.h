@@ -24,6 +24,7 @@
 #include <queue>
 #include <thread>
 #include "../../objects/headers/gameObject.h"
+#include "../../objects/headers/mapFloor.h"
 #include "../../objects/headers/mesh.h"
 #include "../../threads/headers/job.h"
 #include "../../threads/headers/workerThread.h"

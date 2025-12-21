@@ -20,25 +20,9 @@ namespace Prometheus{
         samplerLayoutBinding.pImmutableSamplers = nullptr;
         samplerLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 
-        VkDescriptorSetLayoutBinding computeLayoutBinding1{};
-        computeLayoutBinding1.binding = 2;
-        computeLayoutBinding1.descriptorCount = 1;
-        computeLayoutBinding1.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-        computeLayoutBinding1.pImmutableSamplers = nullptr;
-        computeLayoutBinding1.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
-
-        VkDescriptorSetLayoutBinding computeLayoutBinding2{};
-        computeLayoutBinding2.binding = 3;
-        computeLayoutBinding2.descriptorCount = 1;
-        computeLayoutBinding2.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-        computeLayoutBinding2.pImmutableSamplers = nullptr;
-        computeLayoutBinding2.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
-
-        std::array<VkDescriptorSetLayoutBinding, 4> bindings = {
+        std::array<VkDescriptorSetLayoutBinding, 2> bindings = {
             uboLayoutBinding,
             samplerLayoutBinding,
-            computeLayoutBinding1,
-            computeLayoutBinding2
         };
 
         VkDescriptorSetLayoutCreateInfo layoutInfo{};
@@ -100,7 +84,11 @@ namespace Prometheus{
     
                 std::vector<VkDescriptorImageInfo> imageInfos;
                 imageInfos.reserve(batch->textures.size());
-    
+                
+                if (batch->textures.size() == 0) {
+                    std::cout << "0 here for batch " << batch->meshPath << std::endl;
+                }
+
                 for (auto tex : batch->textures) {
                     VkDescriptorImageInfo info{};
                     info.sampler     = (*tex).textureSampler;

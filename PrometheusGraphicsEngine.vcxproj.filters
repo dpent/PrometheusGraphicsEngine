@@ -192,6 +192,9 @@
     <ClInclude Include="src\threads\headers\workerThread.h">
       <Filter>Header Files\threads</Filter>
     </ClInclude>
+    <ClInclude Include="src\objects\headers\mapFloor.h">
+      <Filter>Header Files\gameObjects</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\debug\cpps\debug.cpp">
@@ -322,6 +325,9 @@
     </ClCompile>
     <ClCompile Include="src\main.cpp">
       <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\objects\cpps\mapFloor.cpp">
+      <Filter>Source Files\gameObjects</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

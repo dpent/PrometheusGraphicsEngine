@@ -286,12 +286,6 @@ namespace Prometheus{
         BufferManager::createCommandBuffers(this->device, 
             Engine::computeCommandBuffers, Engine::computeCommandPool);
 
-        /*BufferManager::createSSBOs(this->device, this->physicalDevice, Engine::shaderStorageBuffers,
-            Engine::shaderStorageBufferSize, Engine::shaderStorageBuffersMemories, Engine::particles, this->graphicsQueue);
-
-        DescriptorManager::createComputeDescriptorPool(this->device);
-        DescriptorManager::createComputeDescriptorSets(this->device);*/
-
         createSpatialHash(glm::vec3(200.0f), glm::vec3(-200.0f));
 
         TextureManager::createSolidColorTextureFile("./textures/blue.png",0,0,255);
@@ -299,39 +293,11 @@ namespace Prometheus{
         TextureManager::createSolidColorTextureFile("./textures/magenta.png",0,255,0);
         TextureManager::createSolidColorTextureFile("./textures/magenta.png",255,0,255);
         TextureManager::createSolidColorTextureFile("./textures/white.png",255,255,255);
-        
-        /*for(int i=0; i<1; i++){ //100 is the safe limit
 
-            GameObject::createObjectThreaded("../textures/magenta.png", 
-                "../models/stanford_dragon.obj", 
-                device, 
-                physicalDevice, 
-                graphicsQueue
-            );
-    
-            GameObject::createObjectThreaded("../textures/magenta.png", 
-                "../models/stanford_dragon.obj", 
-                device, 
-                physicalDevice, 
-                graphicsQueue
-            );
-    
-            GameObject::createObjectThreaded("../textures/babyBlue.png", 
-                "../models/stanford_dragon.obj", 
-                device, 
-                physicalDevice, 
-                graphicsQueue
-            );
-    
-            GameObject::createObjectThreaded("../textures/white.png", 
-                "../models/stanford_dragon.obj", 
-                device, 
-                physicalDevice, 
-                graphicsQueue
-            );
-        }*/
 
 		GameObject::createObjectThreaded(device, physicalDevice, graphicsQueue, new GameObject("./textures/red.png", "./models/stanford_dragon.obj"));
+
+        GameObject::createObjectThreaded(device, physicalDevice, graphicsQueue, new MapFloor("./textures/white.png", "./models/square.obj", glm::vec3(0.0f), glm::vec3(10.0f)));
 
         Engine::instanceBuffers.resize(Engine::MAX_FRAMES_IN_FLIGHT);
         Engine::instanceBufferMemories.resize(Engine::MAX_FRAMES_IN_FLIGHT);
@@ -344,8 +310,8 @@ namespace Prometheus{
 
     void Engine::mainLoop() {
 
-        createLightSource(glm::vec4(0.0f), glm::vec4(COLOR_RED,1.0f), 90.0f);
-        createLightSource(glm::vec4(0.0f), glm::vec4(COLOR_BLUE,1.0f), 90.0f);
+        createLightSource(glm::vec4(2.0f), glm::vec4(COLOR_RED,1.0f), 90.0f);
+        createLightSource(glm::vec4(2.0f), glm::vec4(COLOR_BLUE,1.0f), 90.0f);
 
         BufferManager::createUniformBuffers(this->device,this->physicalDevice);
 
@@ -605,6 +571,21 @@ namespace Prometheus{
             submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
             submitInfo.commandBufferCount = 1;
             submitInfo.pCommandBuffers = &Engine::computeCommandBuffers[Engine::currentFrame];
+            submitInfo.signalSemaphoreCount = 1;
+            submitInfo.pSignalSemaphores = &Engine::computeFinishedSemaphores[Engine::currentFrame];
+
+            if (vkQueueSubmit(computeQueue, 1, &submitInfo, Engine::computeInFlightFences[currentFrame]) != VK_SUCCESS) {
+                throw std::runtime_error("failed to submit compute command buffer!");
+            };
+        }
+        else {
+
+            vkWaitForFences(device, 1, &Engine::computeInFlightFences[Engine::currentFrame], VK_TRUE, UINT64_MAX);
+            vkResetFences(device, 1, &Engine::computeInFlightFences[Engine::currentFrame]);
+
+            submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+            submitInfo.commandBufferCount = 0;
+            submitInfo.pCommandBuffers = nullptr;
             submitInfo.signalSemaphoreCount = 1;
             submitInfo.pSignalSemaphores = &Engine::computeFinishedSemaphores[Engine::currentFrame];
 

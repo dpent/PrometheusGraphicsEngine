@@ -216,21 +216,24 @@ namespace Prometheus{
             }
         }
 
-        vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, Engine::particleGraphicsPipeline);
+        if (Engine::particles.size() != 0) {
 
-        vkCmdPushConstants(
-            commandBuffer,
-            Engine::particlePipelineLayout,
-            VK_SHADER_STAGE_VERTEX_BIT,
-            0,
-            sizeof(*cameraPushConstants),
-            cameraPushConstants
-        );
+            vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, Engine::particleGraphicsPipeline);
 
-        VkDeviceSize offsets[] = {0};
-        vkCmdBindVertexBuffers(commandBuffer, 0, 1, &Engine::shaderStorageBuffers[Engine::currentFrame], offsets);
+            vkCmdPushConstants(
+                commandBuffer,
+                Engine::particlePipelineLayout,
+                VK_SHADER_STAGE_VERTEX_BIT,
+                0,
+                sizeof(*cameraPushConstants),
+                cameraPushConstants
+            );
 
-        vkCmdDraw(commandBuffer, static_cast<uint32_t>(Engine::particles.size()), 1, 0, 0);
+            VkDeviceSize offsets[] = {0};
+            vkCmdBindVertexBuffers(commandBuffer, 0, 1, &Engine::shaderStorageBuffers[Engine::currentFrame], offsets);
+
+            vkCmdDraw(commandBuffer, static_cast<uint32_t>(Engine::particles.size()), 1, 0, 0);
+        }
 
         #ifdef EDITOR
             if(Engine::lights.size !=0 && Engine::objectDQueue.size!=0){

@@ -175,6 +175,7 @@
     <ClInclude Include="src\objects\headers\camera.h" />
     <ClInclude Include="src\objects\headers\gameObject.h" />
     <ClInclude Include="src\objects\headers\instanceInfo.h" />
+    <ClInclude Include="src\objects\headers\mapFloor.h" />
     <ClInclude Include="src\objects\headers\mesh.h" />
     <ClInclude Include="src\objects\headers\transform.h" />
     <ClInclude Include="src\physics\headers\collision.h" />
@@ -220,6 +221,7 @@
     <ClCompile Include="src\objects\cpps\camera.cpp" />
     <ClCompile Include="src\objects\cpps\gameObject.cpp" />
     <ClCompile Include="src\objects\cpps\instanceInfo.cpp" />
+    <ClCompile Include="src\objects\cpps\mapFloor.cpp" />
     <ClCompile Include="src\objects\cpps\mesh.cpp" />
     <ClCompile Include="src\objects\cpps\transform.cpp" />
     <ClCompile Include="src\physics\cpps\collision.cpp" />
