@@ -179,6 +179,7 @@
     <ClInclude Include="src\objects\headers\mesh.h" />
     <ClInclude Include="src\objects\headers\transform.h" />
     <ClInclude Include="src\physics\headers\collision.h" />
+    <ClInclude Include="src\physics\headers\light.h" />
     <ClInclude Include="src\threads\headers\bufferOperations.h" />
     <ClInclude Include="src\threads\headers\descriptorOperations.h" />
     <ClInclude Include="src\threads\headers\gameObjectOperations.h" />
@@ -225,6 +226,7 @@
     <ClCompile Include="src\objects\cpps\mesh.cpp" />
     <ClCompile Include="src\objects\cpps\transform.cpp" />
     <ClCompile Include="src\physics\cpps\collision.cpp" />
+    <ClCompile Include="src\physics\cpps\light.cpp" />
     <ClCompile Include="src\threads\cpps\bufferOperations.cpp" />
     <ClCompile Include="src\threads\cpps\descriptorOperations.cpp" />
     <ClCompile Include="src\threads\cpps\gameObjectOperations.cpp" />

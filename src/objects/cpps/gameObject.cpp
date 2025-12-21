@@ -143,7 +143,7 @@ namespace Prometheus{
     }
 
     void GameObject::update(){
-        //rotate(glm::angleAxis(0.1f,glm::vec3(0.0f,1.0f,0.0f)));
+        rotate(glm::angleAxis(0.1f,glm::vec3(0.0f,1.0f,0.0f)));
         //animateCircularMotion(0.0f,0.0f,0.0f,15.0f, id%(Engine::objectDQueue.size) * 0.1f + 0.1f,0.0f);
         move();
         //checkCollisions();

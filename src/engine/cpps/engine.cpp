@@ -20,6 +20,7 @@
 #include "../headers/computePipelineManager.h"
 
 using namespace Prometheus;
+using namespace Hyperion;
 
 //DEFINE STATIC VARIABLES BEFORE VULKAN INIT
 GLFWwindow* Engine::window = nullptr;
@@ -193,7 +194,7 @@ glm::vec3 Engine::cellSize;
 std::unordered_map<std::string, MeshBatch*> Engine::meshSet;
 std::unordered_map<std::string,uint64_t> Engine::textureIndices;
 
-DoubleEndedQueue<UBOContainer*> Engine::lights;
+DoubleEndedQueue<Hyperion::UBOContainer*> Engine::lights;
 bool Engine::recreateUBO = false;
 
 std::vector<Particle> Engine::particles;
@@ -310,8 +311,10 @@ namespace Prometheus{
 
     void Engine::mainLoop() {
 
-        createLightSource(glm::vec4(2.0f), glm::vec4(COLOR_RED,1.0f), 90.0f);
-        createLightSource(glm::vec4(2.0f), glm::vec4(COLOR_BLUE,1.0f), 90.0f);
+        new PointLight(glm::vec4(2.0f), glm::vec4(COLOR_RED, 1.0f), 90.0f, LIGHT_POINT);
+        new PointLight(glm::vec4(2.0f), glm::vec4(COLOR_BLUE, 1.0f), 90.0f, LIGHT_POINT);
+        new DirectionalLight(glm::vec4(10.0f), glm::vec4(COLOR_GREEN, 1.0f), 10.0f, LIGHT_DIRECTIONAL);
+        new DirectionalLight(glm::vec4(-10.0f,10.0f,-10.0f,10.0f), glm::vec4(COLOR_MAGENTA, 1.0f), 10.0f, LIGHT_DIRECTIONAL);
 
         BufferManager::createUniformBuffers(this->device,this->physicalDevice);
 
@@ -1298,9 +1301,9 @@ namespace Prometheus{
         Engine::checkInstanceBufferForUpdates();
     }
 
-    void Engine::createLightSource(glm::vec4 pos, glm::vec4 color, float intensity){
+    void Engine::createLightSource(glm::vec4 pos, glm::vec4 color, float intensity, LightType type){
 
-        new UniformBufferObject(pos, color, intensity);
+        new UniformBufferObject(pos, color, intensity, type);
     }
 
     void Engine::updateLightSources(){

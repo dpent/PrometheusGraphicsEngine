@@ -4,8 +4,8 @@ SETLOCAL ENABLEDELAYEDEXPANSION
 REM Create build directory if it doesn't exist
 IF NOT EXIST ..\build mkdir ..\build
 
-SET SHADER_DIR=C:\Users\Dimitris\source\repos\Prometheus\shaders
-SET BUILD_DIR=C:\Users\Dimitris\source\repos\Prometheus\build
+SET SHADER_DIR=C:\Users\Dimitris\source\repos\PrometheusGraphicsEngine\shaders
+SET BUILD_DIR=C:\Users\Dimitris\source\repos\PrometheusGraphicsEngine\build
 
 REM Loop through all shader files
 FOR %%f IN (%SHADER_DIR%\*) DO (
@@ -28,7 +28,7 @@ FOR %%f IN (%SHADER_DIR%\*) DO (
     IF "!output!"=="" (
         ECHO Unknown shader type: !filename!
     ) ELSE (
-        "C:\Users\Dimitris\Documents\Libraries\Vulkan1.4.335.0\Bin\glslc.exe" "%%f" -o "%BUILD_DIR%\!output!"
+        "C:\Users\Dimitris\Documents\Libraries\VulkanSDK\1.4.335.0\Bin\glslc.exe" "%%f" -o "%BUILD_DIR%\!output!"
         IF ERRORLEVEL 1 (
             ECHO Failed to compile !filename!
             EXIT /B 1

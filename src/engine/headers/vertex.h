@@ -41,41 +41,6 @@ namespace Prometheus{
         glm::vec3 cameraPos;
         float gridSize;
     };
-    
-
-    struct UniformBufferObject {
-        public:
-
-        glm::vec4 position;
-        glm::vec4 color;
-        glm::vec4 ambientLightColor;
-        float intensity;
-
-        UniformBufferObject(glm::vec4 pos, glm::vec4 color, float intensity);
-        UniformBufferObject();
-
-        virtual ~UniformBufferObject();
-
-        virtual void update();
-    };
-
-    struct UBOData {
-        glm::vec4 positions[128];
-        glm::vec4 colors[128];
-        glm::vec4 ambientLightColors[128];
-        glm::vec4 intensities[128];
-        alignas(16) uint64_t lightCount;
-    };
-
-    class UBOContainer {
-        public:
-        UniformBufferObject* ubo;
-        UBOContainer* next;
-        UBOContainer* prev;
-
-        UBOContainer(UniformBufferObject* ubo);
-        UBOContainer();
-    };
 }
 
 namespace std {

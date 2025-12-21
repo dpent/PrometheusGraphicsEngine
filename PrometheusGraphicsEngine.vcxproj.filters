@@ -195,6 +195,9 @@
     <ClInclude Include="src\objects\headers\mapFloor.h">
       <Filter>Header Files\gameObjects</Filter>
     </ClInclude>
+    <ClInclude Include="src\physics\headers\light.h">
+      <Filter>Header Files\physics</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\debug\cpps\debug.cpp">
@@ -328,6 +331,9 @@
     </ClCompile>
     <ClCompile Include="src\objects\cpps\mapFloor.cpp">
       <Filter>Source Files\gameObjects</Filter>
+    </ClCompile>
+    <ClCompile Include="src\physics\cpps\light.cpp">
+      <Filter>Source Files\physics</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

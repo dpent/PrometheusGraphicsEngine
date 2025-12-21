@@ -3,6 +3,7 @@
 
 
 using namespace Prometheus;
+using namespace Prometheus::Hyperion;
 
 namespace Prometheus{
     void DescriptorManager::createDescriptorSetLayout(VkDevice& device){
@@ -132,8 +133,6 @@ namespace Prometheus{
         Engine::jobQueue.push(j);
 
         Engine::workInQueueSemaphore.release();
-
-        std::cout << "Sent to thread" << std::endl;
     }
 
     void DescriptorManager::createComputeDescriptorSetLayout(VkDevice& device){

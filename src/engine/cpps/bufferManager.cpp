@@ -4,7 +4,7 @@
 #include <vulkan/vulkan_core.h>
 #include "../headers/swapChainManager.h"
 
-
+using namespace Prometheus::Hyperion;
 using namespace Prometheus;
 
 namespace Prometheus{
@@ -463,27 +463,23 @@ namespace Prometheus{
         UBOContainer* light = Engine::lights.head;
         UBOData data;
 
-        //int count = 0;
-
         for(size_t i=0; i<Engine::lights.size; i++){
 
-            //std::cout<<count<<std::endl;
             data.positions[i] = light->ubo->position;
-            //std::cout<<"Position x "<<data.positions[i].x<<" y "<<data.positions[i].y<<" z "<<data.positions[i].z<<std::endl;
             data.colors[i] = light->ubo->color;
-            //std::cout<<"Color x "<<data.colors[i].x<<" y "<<data.colors[i].y<<" z "<<data.colors[i].z<<std::endl;
             data.ambientLightColors[i] = light->ubo->ambientLightColor;
-            //std::cout<<"Ambient color x "<<data.ambientLightColors[i].x<<" y "<<data.ambientLightColors[i].y<<" z "<<data.ambientLightColors[i].z<<std::endl;
             data.intensities[i] = glm::vec4(light->ubo->intensity);
-            //count++;
+
+            size_t idx = i / 4;        // which uint32_t
+            size_t bytePos = i % 4;    // which byte in that uint32_t
+            data.types[idx] |= ((uint32_t)light->ubo->type << (8 * (3 - bytePos))); // write 8bit value inside said byte
+
             light = light->next;
         }
 
         data.lightCount = Engine::lights.size;
 
-        Engine::commandPoolMutex.lock();
         memcpy(Engine::uniformBuffersMapped[currentImage], &data, sizeof(UBOData));
-        Engine::commandPoolMutex.unlock();
     }
 
     VkCommandBuffer BufferManager::beginSingleTimeCommands(VkDevice& device, VkCommandPool& commandPool) {

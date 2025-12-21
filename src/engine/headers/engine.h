@@ -41,6 +41,7 @@
 #include "cell.h"
 #include <barrier>
 #include "particle.h"
+#include "../../physics/headers/light.h"
 
 #define EDITOR //Enables editor specific features like grid plane
 
@@ -245,7 +246,7 @@ namespace Prometheus{
         static std::unordered_map<std::string, MeshBatch*> meshSet;
         static std::unordered_map<std::string,uint64_t> textureIndices;
 
-        static DoubleEndedQueue<UBOContainer*> lights;
+        static DoubleEndedQueue<Hyperion::UBOContainer*> lights;
         static bool recreateUBO;
 
         static std::vector<Particle> particles;
@@ -311,7 +312,7 @@ namespace Prometheus{
         
         int createLinuxDesktopEntry(const char* argv0);
 
-        void createLightSource(glm::vec4 pos, glm::vec4 color, float intensity);
+        void createLightSource(glm::vec4 pos, glm::vec4 color, float intensity, Hyperion::LightType type);
         void updateLightSources();
         void updateParticleSSBOs();
 		void remakeComputeDescriptorSetsAndPool();
