@@ -10,84 +10,21 @@ using namespace Prometheus;
 namespace Prometheus{
     uint64_t GameObject::autoIncrementId=0;
 
-    GameObject::GameObject(std::string texturePath, std::string modelPath, int req_comp, VkDevice& device, 
-        VkPhysicalDevice& physicalDevice, VkQueue& graphicsQueue, VkCommandPool& commandPool)
+    GameObject::GameObject(std::string texturePath, std::string modelPath)
     {
 
         Engine::gameObjectMutex.lock();
-        this->id=GameObject::autoIncrementId;
+        this->id = GameObject::autoIncrementId;
         GameObject::autoIncrementId++;
         Engine::gameObjectMutex.unlock();
 
         velocity = glm::vec3(0.0f);
 
-        this->transform=Transform();
-        this->texturePath=texturePath;
-        this->meshPath=modelPath;
+        this->transform = Transform();
+        this->texturePath = texturePath;
+        this->meshPath = modelPath;
 
         this->info = new InstanceInfo();
-
-        Engine::textureMutex.lock();
-        if (Engine::textureMap.count(texturePath) != 0) {
-
-            Engine::textureMap[texturePath].count++;
-
-        } else {
-            Engine::textureMap.insert(std::make_pair(texturePath, 
-                Texture(texturePath, 4, device, physicalDevice, graphicsQueue, commandPool)));
-        }
-
-        Engine::textureMutex.unlock();
-
-        Engine::meshMutex.lock();
-
-        if(Engine::meshMap.count(modelPath) == 0 && Engine::meshesLoading.count(modelPath) == 0){
-
-            Engine::meshesLoading.insert(modelPath);
-
-            std::binary_semaphore* meshLoadSemaphore = new std::binary_semaphore{ 0 }; //In case i use them sometime
-
-            ModelManager::loadModel(modelPath,*meshLoadSemaphore); //Also inserts the mesh into meshMap
-            glm::mat4 inverse = glm::inverse(transform.getModelMatrix());
-
-            for (int i = 0; i < 8; i++) {
-                hitboxPoints[i] = glm::vec3(inverse * glm::vec4(Engine::meshMap[modelPath].hitboxPoints[i], 1.0f));
-            }
-            Engine::recreateVertexIndexBuffer=true;
-
-            delete meshLoadSemaphore;
-        }
-        
-        if(Engine::meshesLoading.count(modelPath)==0){
-            mesh = &(Engine::meshMap[modelPath]);
-
-        }else{
-
-            while(Engine::meshesLoading.count(modelPath)!=0){
-                std::this_thread::sleep_for(std::chrono::milliseconds(100));
-    
-                if(Engine::meshesLoading.count(modelPath)==0){
-                    mesh = &(Engine::meshMap[modelPath]);
-                    break;
-                }
-            }
-
-        }
-
-        Engine::meshMutex.unlock();
-        center = getCenter();
-        radius = glm::length(hitboxPoints[1]);
-        Engine::insertToHash(this);
-
-        Engine::gameObjectMutex.lock();
-
-        //Engine::gameObjectMap.insert({this->id,this});
-        Engine::objectsByMesh[modelPath][this->id]=this;
-        Engine::objectDQueue.push(this);
-
-        Engine::gameObjectMutex.unlock();
-
-        this->start();
     }
 
     GameObject::~GameObject(){
@@ -172,16 +109,14 @@ namespace Prometheus{
         velocity = glm::vec3(x,y,z) - transform.position;
     }
 
-    void GameObject::createObjectThreaded(std::string texturePath,std::string modelPath, 
-        VkDevice& device, VkPhysicalDevice& physicalDevice,
-        VkQueue& graphicsQueue
+    void GameObject::createObjectThreaded(VkDevice& device, VkPhysicalDevice& physicalDevice,
+        VkQueue& graphicsQueue, GameObject* obj
     ){
-        Job j = Job(CREATE_OBJECT);
-        j.data.emplace_back(std::in_place_type<std::string>, texturePath);
-        j.data.emplace_back(std::in_place_type<std::string>, modelPath);
-        j.data.emplace_back(std::in_place_type<VkDevice*>, &device);
-        j.data.emplace_back(std::in_place_type<VkPhysicalDevice*>, &physicalDevice);
-        j.data.emplace_back(std::in_place_type<VkQueue*>, &graphicsQueue);
+        CreateObjectJob* j = new CreateObjectJob();
+        j->data.emplace_back(std::in_place_type<GameObject*>, obj);
+        j->data.emplace_back(std::in_place_type<VkDevice*>, &device);
+        j->data.emplace_back(std::in_place_type<VkPhysicalDevice*>, &physicalDevice);
+        j->data.emplace_back(std::in_place_type<VkQueue*>, &graphicsQueue);
 
         Engine::queueMutex.lock();
         Engine::jobQueue.push(j);
@@ -192,9 +127,9 @@ namespace Prometheus{
 
     void GameObject::deleteObjectThreaded(VkDevice &device, GameObject* object){
 
-        Job j = Job(DELETE_OBJECT);
-        j.data.emplace_back(std::in_place_type<GameObject*>, object);
-        j.data.emplace_back(std::in_place_type<VkDevice*>, &device);
+        DeleteObjectJob* j = new DeleteObjectJob();
+        j->data.emplace_back(std::in_place_type<GameObject*>, object);
+        j->data.emplace_back(std::in_place_type<VkDevice*>, &device);
 
         Engine::queueMutex.lock();
         Engine::jobQueue.push(j);
@@ -381,6 +316,74 @@ namespace Prometheus{
         moved = true;
 
         Engine::insertToHash(this);
+    }
+
+    void GameObject::instantiate(VkCommandPool& commandPool, VkDevice& device, VkPhysicalDevice& physicalDevice, 
+        VkQueue& graphicsQueue, int req_comp) {
+
+        Engine::textureMutex.lock();
+        if (Engine::textureMap.count(texturePath) != 0) {
+
+            Engine::textureMap[texturePath].count++;
+
+        }
+        else {
+            Engine::textureMap.insert(std::make_pair(texturePath,
+                Texture(texturePath, req_comp, device, physicalDevice, graphicsQueue, commandPool)));
+        }
+
+        Engine::textureMutex.unlock();
+
+        Engine::meshMutex.lock();
+
+        if (Engine::meshMap.count(this->meshPath) == 0 && Engine::meshesLoading.count(this->meshPath) == 0) {
+
+            Engine::meshesLoading.insert(this->meshPath);
+
+            std::binary_semaphore* meshLoadSemaphore = new std::binary_semaphore{ 0 }; //In case i use them sometime
+
+            ModelManager::loadModel(this->meshPath, *meshLoadSemaphore); //Also inserts the mesh into meshMap
+            glm::mat4 inverse = glm::inverse(transform.getModelMatrix());
+
+            for (int i = 0; i < 8; i++) {
+                hitboxPoints[i] = glm::vec3(inverse * glm::vec4(Engine::meshMap[this->meshPath].hitboxPoints[i], 1.0f));
+            }
+            Engine::recreateVertexIndexBuffer = true;
+
+            delete meshLoadSemaphore;
+        }
+
+        if (Engine::meshesLoading.count(this->meshPath) == 0) {
+            mesh = &(Engine::meshMap[this->meshPath]);
+
+        }
+        else {
+
+            while (Engine::meshesLoading.count(this->meshPath) != 0) {
+                std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+                if (Engine::meshesLoading.count(this->meshPath) == 0) {
+                    mesh = &(Engine::meshMap[this->meshPath]);
+                    break;
+                }
+            }
+
+        }
+
+        Engine::meshMutex.unlock();
+        center = getCenter();
+        radius = glm::length(hitboxPoints[1]);
+        Engine::insertToHash(this);
+
+        Engine::gameObjectMutex.lock();
+
+        //Engine::gameObjectMap.insert({this->id,this});
+        Engine::objectsByMesh[this->meshPath][this->id] = this;
+        Engine::objectDQueue.push(this);
+
+        Engine::gameObjectMutex.unlock();
+
+        this->start();
     }
 }
 

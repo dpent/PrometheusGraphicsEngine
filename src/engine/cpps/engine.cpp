@@ -149,8 +149,8 @@ VkDeviceMemory Engine::colorImageMemory;
 VkImageView Engine::colorImageView;
 
 std::unordered_map<std::thread::id, WorkerThread*> Engine::threadPool;
-std::queue<Job> Engine::jobQueue;
-std::queue<Job> Engine::deferredJobQueue;
+std::queue<Job*> Engine::jobQueue;
+std::queue<Job*> Engine::deferredJobQueue;
 std::mutex Engine::queueMutex;
 std::counting_semaphore<INT_MAX> Engine::workInQueueSemaphore(0);
 
@@ -331,12 +331,7 @@ namespace Prometheus{
             );
         }*/
 
-        GameObject::createObjectThreaded("./textures/white.png",
-            "./models/stanford_dragon.obj", 
-            device, 
-            physicalDevice, 
-            graphicsQueue
-        );
+		GameObject::createObjectThreaded(device, physicalDevice, graphicsQueue, new GameObject("./textures/red.png", "./models/stanford_dragon.obj"));
 
         Engine::instanceBuffers.resize(Engine::MAX_FRAMES_IN_FLIGHT);
         Engine::instanceBufferMemories.resize(Engine::MAX_FRAMES_IN_FLIGHT);
@@ -824,55 +819,9 @@ namespace Prometheus{
         }
     }
 
-    std::vector<std::queue<Job*>> Engine::batchJobs(){
-        std::vector<std::queue<Job*>> batches;
-        std::unordered_map<std::string,std::queue<Job*>> batchMap;
-
-        while(!jobQueue.empty()){
-            Job* j = new Job(jobQueue.front());
-            //std::cout<<j->opId<<std::endl;
-
-            switch (j->opId){
-                
-                case 0:
-                case 1:
-                case 2:
-                case 3:
-
-                    batchMap["0123"].push(j);
-                    break;
-                
-                case 4:
-                    batchMap["4"].push(j);
-                    break;
-                
-                case 5:
-
-                    batchMap["5"].push(j);
-                    break;
-
-                case 6:
-                    batchMap["6"].push(j);
-                    break;
-                default:
-                    break;
-
-            }
-            jobQueue.pop();
-        }
-
-        batches.reserve(batchMap.size());
-
-        for (auto& pair : batchMap) {
-            batches.push_back(pair.second);
-        }
-
-        return batches;
-    }
-
     void Engine::createUpdateTextureQueueJob(){
-        Job j = Job(UPDATE_TEXTURE_DELETE_QUEUE);
-        j.data.emplace_back(std::in_place_type<VkDevice*>, &device);
+        UpdateTextureDeleteQueueJob* j = new UpdateTextureDeleteQueueJob();
+        j->data.emplace_back(std::in_place_type<VkDevice*>, &device);
 
         Engine::queueMutex.lock();
         Engine::jobQueue.push(j);
@@ -882,7 +831,8 @@ namespace Prometheus{
     }
 
     void Engine::updateMeshDataStructures(){
-        Job j = Job(UPDATE_MESH_DATA_STRUCTURES);
+
+        UpdateMeshDataStructuresJob* j = new UpdateMeshDataStructuresJob();
 
         Engine::queueMutex.lock();
         Engine::jobQueue.push(j);
@@ -893,8 +843,8 @@ namespace Prometheus{
 
     void Engine::createUpdateDescriptorQueueJob(){
 
-        Job j = Job(UPDATE_DESCRIPTOR_DELETE_QUEUE);
-        j.data.emplace_back(std::in_place_type<VkDevice*>, &device);
+        UpdateDescriptorDeleteQueueJob* j = new UpdateDescriptorDeleteQueueJob();
+        j->data.emplace_back(std::in_place_type<VkDevice*>, &device);
 
         Engine::queueMutex.lock();
         Engine::jobQueue.push(j);
@@ -905,22 +855,22 @@ namespace Prometheus{
 
     void Engine::createUpdateObjDescrJob(Latch* l){
 
-        Job j = Job(UPDATE_OBJECTS_AND_DESCRIPTORS);
-        j.data.emplace_back(std::in_place_type<VkDevice*>, &device);
-        j.data.emplace_back(std::in_place_type<std::binary_semaphore*>,&Engine::descriptorsReadySemaphore);
-        j.data.emplace_back(std::in_place_type<std::binary_semaphore*>,&Engine::safeToMakeInstanceBuffer);
-        j.data.emplace_back(std::in_place_type<Latch*>, l);
-        j.data.emplace_back(std::in_place_type<std::binary_semaphore*>, &Engine::setReady);
+        UpdateGameObjectsAndDescriptorsJob* j = new UpdateGameObjectsAndDescriptorsJob();
+        j->data.emplace_back(std::in_place_type<VkDevice*>, &device);
+        j->data.emplace_back(std::in_place_type<std::binary_semaphore*>,&Engine::descriptorsReadySemaphore);
+        j->data.emplace_back(std::in_place_type<std::binary_semaphore*>,&Engine::safeToMakeInstanceBuffer);
+        j->data.emplace_back(std::in_place_type<Latch*>, l);
+        j->data.emplace_back(std::in_place_type<std::binary_semaphore*>, &Engine::setReady);
 
         Engine::jobQueue.push(j);
 
         Engine::workInQueueSemaphore.release();
 
-        j = Job(UPDATE_GAME_OBJECTS);
-        j.data.emplace_back(std::in_place_type<Latch*>, l);
-        j.data.emplace_back(std::in_place_type<std::binary_semaphore*>, &Engine::setReady);
+        UpdateGameObjectsJob* j2 = new UpdateGameObjectsJob();
+        j2->data.emplace_back(std::in_place_type<Latch*>, l);
+        j2->data.emplace_back(std::in_place_type<std::binary_semaphore*>, &Engine::setReady);
 
-        Engine::jobQueue.push(j);
+        Engine::jobQueue.push(j2);
 
         Engine::workInQueueSemaphore.release();
 
@@ -928,10 +878,10 @@ namespace Prometheus{
 
     void Engine::createVertexIndexBufferUpdateJob(){
 
-        Job j = Job(UPDATE_VERTEX_INDEX_BUFFER);
-        j.data.emplace_back(std::in_place_type<VkDevice*>, &device);
-        j.data.emplace_back(std::in_place_type<VkPhysicalDevice*>, &physicalDevice);
-        j.data.emplace_back(std::in_place_type<VkQueue*>, &graphicsQueue);
+        UpdateVertexIndexBufferJob* j = new UpdateVertexIndexBufferJob();
+        j->data.emplace_back(std::in_place_type<VkDevice*>, &device);
+        j->data.emplace_back(std::in_place_type<VkPhysicalDevice*>, &physicalDevice);
+        j->data.emplace_back(std::in_place_type<VkQueue*>, &graphicsQueue);
 
         Engine::jobQueue.push(j);
 
@@ -939,10 +889,11 @@ namespace Prometheus{
     }
 
     void Engine::createInstanceBufferRemakeJob(){
-        Job j = Job(MAKE_INSTANCE_BUFFER);
-        j.data.emplace_back(std::in_place_type<VkDevice*>, &device);
-        j.data.emplace_back(std::in_place_type<VkPhysicalDevice*>, &physicalDevice);
-        j.data.emplace_back(std::in_place_type<std::binary_semaphore*>,&Engine::instanceBufferReady);
+
+        MakeInstanceBufferJob* j = new MakeInstanceBufferJob();
+        j->data.emplace_back(std::in_place_type<VkDevice*>, &device);
+        j->data.emplace_back(std::in_place_type<VkPhysicalDevice*>, &physicalDevice);
+        j->data.emplace_back(std::in_place_type<std::binary_semaphore*>,&Engine::instanceBufferReady);
 
         Engine::jobQueue.push(j);
 
@@ -950,8 +901,9 @@ namespace Prometheus{
     }
 
     void Engine::createInstanceBufferUpdateJob(){
-        Job j = Job(UPDATE_INSTANCE_BUFFER);
-        j.data.emplace_back((uint64_t)&Engine::currentFrame);
+
+        UpdateInstanceBufferJob* j = new UpdateInstanceBufferJob();
+        j->data.emplace_back((uint64_t)&Engine::currentFrame);
 
         Engine::jobQueue.push(j);
 
@@ -1028,11 +980,11 @@ namespace Prometheus{
 
     void Engine::createRecordCommandBufferJob(uint32_t imageIndex){
 
-        Job j = Job(RECORD_COMMAND_BUFFER);
-        j.data.emplace_back(std::in_place_type<VkCommandBuffer*>, &Engine::commandBuffers[Engine::currentFrame]);
-        j.data.emplace_back(std::in_place_type<uint32_t>, imageIndex);
-        j.data.emplace_back(std::in_place_type<VkDevice*>, &device);
-        j.data.emplace_back(std::in_place_type<VkPhysicalDevice*>, &physicalDevice);
+        RecordCommandBufferJob* j = new RecordCommandBufferJob();
+        j->data.emplace_back(std::in_place_type<VkCommandBuffer*>, &Engine::commandBuffers[Engine::currentFrame]);
+        j->data.emplace_back(std::in_place_type<uint32_t>, imageIndex);
+        j->data.emplace_back(std::in_place_type<VkDevice*>, &device);
+        j->data.emplace_back(std::in_place_type<VkPhysicalDevice*>, &physicalDevice);
 
         Engine::jobQueue.push(j);
 
@@ -1058,7 +1010,7 @@ namespace Prometheus{
 
     void Engine::objectLoadingTest(std::chrono::system_clock::time_point frameZeroTime){
         for(int i=0; i<40; i++){
-            GameObject::createObjectThreaded("../textures/statue.jpg", 
+            /*GameObject::createObjectThreaded("../textures/statue.jpg",
                 "../models/stanford_sphere.obj", 
                 device, 
                 physicalDevice, 
@@ -1077,7 +1029,7 @@ namespace Prometheus{
                 device, 
                 physicalDevice, 
                 graphicsQueue
-            );
+            );*/
         }
 
         if(Engine::frameCount%1300==0 && Engine::frameCount>0){ //About 156.000 objects
@@ -1108,8 +1060,9 @@ namespace Prometheus{
         }
 
         for(size_t i=0; i<Engine::threadPool.size(); i++){
-            Job j = Job(PREPARE_FOR_JOIN);
-            j.data.emplace_back(std::in_place_type<VkDevice*>, &device);
+
+            PrepareForJoinJob* j = new PrepareForJoinJob();
+            j->data.emplace_back(std::in_place_type<VkDevice*>, &device);
 
             Engine::jobQueue.push(j);
         }
@@ -1383,7 +1336,7 @@ namespace Prometheus{
 
     void Engine::printJobQueue() {
         std::cout << "Current Job Queue ("<<Engine::threadsAvailable.getValue()<<"threads available):" << std::endl;
-        std::queue<Job> tempQueue = Engine::jobQueue;
+        std::queue<Job*> tempQueue = Engine::jobQueue;
 
 		if (tempQueue.empty()) {
             std::cout << "[Empty]" << std::endl;
@@ -1391,8 +1344,8 @@ namespace Prometheus{
         }
 
         while (!tempQueue.empty()) {
-            Job j = tempQueue.front();
-			std::cout << "[" << j.opId << "] ";
+            Job* j = tempQueue.front();
+			std::cout << "[" << j->name() << "] ";
             tempQueue.pop();
         }
 

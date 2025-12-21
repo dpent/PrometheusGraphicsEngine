@@ -12,32 +12,13 @@
 #include "../../objects/headers/mesh.h"
 #include "../../engine/headers/latch.h"
 #include <barrier>
+#include "workerThread.h"
 
 namespace Prometheus{
-    enum operationId : uint16_t{
-        CREATE_OBJECT = 0,
-        DELETE_OBJECT = 1,
-        UPDATE_VERTEX_INDEX_BUFFER = 2,
-        UPDATE_INSTANCE_BUFFER = 3,
-        MAKE_INSTANCE_BUFFER = 4,
-        MAKE_COMMAND_BUFFER = 5,
-        LOAD_MODEL = 6,
-        APPLY_INPUT = 7,
-        UPDATE_TEXTURE_DELETE_QUEUE = 8,
-        UPDATE_MESH_DATA_STRUCTURES = 9,
-        UPDATE_DESCRIPTOR_DELETE_QUEUE = 10,
-        RECREATE_DESCRIPTORS = 11,
-        UPDATE_GAME_OBJECTS = 12,
-        UPDATE_OBJECTS_AND_DESCRIPTORS = 13,
-        RECORD_COMMAND_BUFFER = 14,
-        DUMMY_JOB = 15,
-        PREPARE_FOR_JOIN = 16
-    };
+
 
     struct Job{
     public:
-        operationId opId;
-        uint64_t threadId;
 
         std::vector<std::variant<std::string,
         VkDevice*,
@@ -52,6 +33,130 @@ namespace Prometheus{
         VkCommandBuffer*,
         GameObject*>> data;
 
-        Job(operationId opId);
+        Job();
+
+        virtual void execute(WorkerThread& worker);
+        virtual std::string name();
+    };
+
+    struct CreateObjectJob : Job {
+
+    public:
+
+        CreateObjectJob();
+		void execute(WorkerThread& worker) override;
+        std::string name() override;
+    };
+
+    struct DeleteObjectJob : Job {
+    public:
+
+		DeleteObjectJob();
+		void execute(WorkerThread& worker) override;
+        std::string name() override;
+    };
+
+    struct UpdateTextureDeleteQueueJob : Job {
+    public:
+
+		UpdateTextureDeleteQueueJob();
+		void execute(WorkerThread& worker) override;
+        std::string name() override;
+    };
+
+    struct LoadModelJob : Job {
+    public:
+
+		LoadModelJob();
+		void execute(WorkerThread& worker) override;
+        std::string name() override;
+    };
+
+    struct UpdateMeshDataStructuresJob : Job {
+    public:
+
+        UpdateMeshDataStructuresJob();
+        void execute(WorkerThread& worker) override;
+        std::string name() override;
+    };
+
+    struct UpdateDescriptorDeleteQueueJob : Job {
+    public:
+
+        UpdateDescriptorDeleteQueueJob();
+        void execute(WorkerThread& worker) override;
+        std::string name() override;
+    };
+
+    struct RecreateDescriptorsJob : Job {
+    public:
+
+        RecreateDescriptorsJob();
+        void execute(WorkerThread& worker) override;
+        std::string name() override;    
+    };
+
+    struct UpdateGameObjectsJob : Job {
+    public:
+
+        UpdateGameObjectsJob();
+        void execute(WorkerThread& worker) override;
+        std::string name() override;
+    };
+
+    struct UpdateGameObjectsAndDescriptorsJob : Job {
+    public:
+
+        UpdateGameObjectsAndDescriptorsJob();
+        void execute(WorkerThread& worker) override;
+        std::string name() override;
+    };
+
+    struct UpdateVertexIndexBufferJob : Job {
+    public:
+
+        UpdateVertexIndexBufferJob();
+        void execute(WorkerThread& worker) override;
+        std::string name() override;
+    };
+
+    struct UpdateInstanceBufferJob : Job {
+    public:
+
+        UpdateInstanceBufferJob();
+        void execute(WorkerThread& worker) override;
+        std::string name() override;
+    };
+
+    struct MakeInstanceBufferJob : Job {
+    public:
+
+        MakeInstanceBufferJob();
+        void execute(WorkerThread& worker) override;
+        std::string name() override;
+    };
+    
+    struct RecordCommandBufferJob : Job {
+    public:
+
+        RecordCommandBufferJob();
+        void execute(WorkerThread& worker) override;
+        std::string name() override;
+    };
+
+    struct DummyJob : Job {
+    public:
+
+        DummyJob();
+        void execute(WorkerThread& worker) override;
+        std::string name() override;
+    };
+
+    struct PrepareForJoinJob : Job {
+    public:
+
+        PrepareForJoinJob();
+        void execute(WorkerThread& worker) override;
+        std::string name() override;
     };
 }

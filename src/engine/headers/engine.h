@@ -205,8 +205,8 @@ namespace Prometheus{
         static VkImageView colorImageView;
 
         static std::unordered_map<std::thread::id, WorkerThread*> threadPool;
-        static std::queue<Job> jobQueue;
-        static std::queue<Job> deferredJobQueue;
+        static std::queue<Job*> jobQueue;
+        static std::queue<Job*> deferredJobQueue;
         static std::mutex queueMutex;
         static std::counting_semaphore<INT_MAX> workInQueueSemaphore;
         static uint64_t frameCount;
@@ -258,7 +258,6 @@ namespace Prometheus{
         static VkSampleCountFlagBits getMaxUsableSampleCount(VkPhysicalDevice& physicalDevice);
         static void initThreadPool(uint16_t poolSize, VkDevice& device, VkPhysicalDevice& physicalDevice
         , VkSurfaceKHR& surface);
-        static std::vector<std::queue<Job*>> batchJobs();
         static void createInstanceBufferUpdateJob();
         static void insertToHash(GameObject* obj);
 

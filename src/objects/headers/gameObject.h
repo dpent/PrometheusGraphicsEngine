@@ -36,9 +36,7 @@ namespace Prometheus{
         GameObject* prev = nullptr;
         bool moved = false;
 
-        GameObject(std::string texturePath,std::string modelPath,int req_comp, 
-            VkDevice& device, VkPhysicalDevice& physicalDevice,VkQueue& graphicsQueue,
-            VkCommandPool& commandPool);
+        GameObject(std::string texturePath,std::string modelPath);
         GameObject();
         virtual ~GameObject();
         void terminate(VkDevice& device);
@@ -49,6 +47,8 @@ namespace Prometheus{
         virtual void updateInstanceInfo(uint64_t textureIndex);
         virtual void scale(glm::vec3 scale);
         virtual void rotate(glm::quat rotation);
+        virtual void instantiate(VkCommandPool& commandPool, VkDevice& device, VkPhysicalDevice& physicalDevice,
+            VkQueue& graphicsQueue, int req_comp);
 
         void drawOBB(glm::vec3 color = COLOR_MAGENTA);
         static glm::vec3 hsvToRgb(float h, float s, float v);
@@ -58,7 +58,7 @@ namespace Prometheus{
         std::string toString();
         void animateCircularMotion(float centerX, float centerY, float centerZ, float radius, float speed, float offset);
         
-        static void createObjectThreaded(std::string texturePath,std::string modelPath,VkDevice& device, VkPhysicalDevice& physicalDevice,VkQueue& graphicsQueue);
+        static void createObjectThreaded(VkDevice& device, VkPhysicalDevice& physicalDevice,VkQueue& graphicsQueue, GameObject* obj);
         static void deleteObjectThreaded(VkDevice &device, GameObject* object);
 
         bool sphereTest(glm::vec3 center,glm::vec3 radius);

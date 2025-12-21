@@ -15,7 +15,7 @@
 
 namespace Prometheus
 {
-    void createObject(std::string texturePath, std::string modelPath, 
+    void createObject(GameObject* obj,
         VkDevice& device, VkPhysicalDevice& physicalDevice, VkQueue& graphicsQueue,
         VkCommandPool& commandPool);
 

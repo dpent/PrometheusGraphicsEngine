@@ -9,13 +9,12 @@ using namespace Prometheus;
 
 namespace Prometheus{
 
-    void createObject(std::string texturePath, std::string modelPath, 
+	void createObject(GameObject* obj,
         VkDevice &device, VkPhysicalDevice &physicalDevice, VkQueue &graphicsQueue,
         VkCommandPool& commandPool
     ){
 
-        new GameObject(texturePath,modelPath,STBI_rgb_alpha,
-        device,physicalDevice,graphicsQueue, commandPool);
+		obj->instantiate(commandPool, device, physicalDevice, graphicsQueue, 4);
     }
 
     void deleteObject(GameObject* object,VkDevice& device){
@@ -252,10 +251,10 @@ namespace Prometheus{
         }
 
         for(size_t i=0; i<objectPieces.size(); i++){
-            Job j = Job(UPDATE_GAME_OBJECTS);
-            j.data.emplace_back(std::in_place_type<std::unordered_map<std::string,std::unordered_map<uint64_t,GameObject*>>*>, &objectPieces[i]);
-            j.data.emplace_back(std::in_place_type<std::unordered_map<std::string,MeshBatch>*>, &batchPieces[i]);
-            j.data.emplace_back(std::in_place_type<Latch*>, &latch);
+            UpdateGameObjectsJob* j = new UpdateGameObjectsJob();
+            j->data.emplace_back(std::in_place_type<std::unordered_map<std::string,std::unordered_map<uint64_t,GameObject*>>*>, &objectPieces[i]);
+            j->data.emplace_back(std::in_place_type<std::unordered_map<std::string,MeshBatch>*>, &batchPieces[i]);
+            j->data.emplace_back(std::in_place_type<Latch*>, &latch);
             
             Engine::queueMutex.lock();
             Engine::jobQueue.push(j);

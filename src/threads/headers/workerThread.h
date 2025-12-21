@@ -6,7 +6,6 @@
 #include <GLFW/glfw3.h>
 #include <queue>
 #include <thread>
-#include "job.h"
 #include <semaphore>
 #include <iostream>
 #include <chrono>
@@ -15,10 +14,12 @@
 
 namespace Prometheus{
 
+    struct Job;
+
     class WorkerThread{
     
     public:
-        std::queue<Job> jobs;
+        std::queue<Job*> jobs;
         std::mutex jobsMutex;
         std::thread::id id;
         std::thread thread;
