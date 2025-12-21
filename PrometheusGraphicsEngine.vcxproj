@@ -231,6 +231,19 @@
     <ClCompile Include="src\threads\cpps\threadSafeNumber.cpp" />
     <ClCompile Include="src\threads\cpps\workerThread.cpp" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="shaders\debug.frag" />
+    <None Include="shaders\debug.vert" />
+    <None Include="shaders\graphics.frag" />
+    <None Include="shaders\graphics.vert" />
+    <None Include="shaders\lighting.frag" />
+    <None Include="shaders\lighting.vert" />
+    <None Include="shaders\particleGraphics.frag" />
+    <None Include="shaders\particleGraphics.vert" />
+    <None Include="shaders\particles.comp" />
+    <None Include="shaders\pregraphics.frag" />
+    <None Include="shaders\pregraphics.vert" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

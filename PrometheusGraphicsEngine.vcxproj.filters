@@ -49,6 +49,9 @@
     <Filter Include="Source Files\threads">
       <UniqueIdentifier>{82900e2d-bb2e-40e2-a09a-1d93763b859a}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\shaders">
+      <UniqueIdentifier>{35e98495-24d9-4841-9082-b61d641950f0}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\debug\headers\debug.h">
@@ -320,5 +323,40 @@
     <ClCompile Include="src\main.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="shaders\debug.frag">
+      <Filter>Source Files\shaders</Filter>
+    </None>
+    <None Include="shaders\debug.vert">
+      <Filter>Source Files\shaders</Filter>
+    </None>
+    <None Include="shaders\graphics.frag">
+      <Filter>Source Files\shaders</Filter>
+    </None>
+    <None Include="shaders\graphics.vert">
+      <Filter>Source Files\shaders</Filter>
+    </None>
+    <None Include="shaders\lighting.frag">
+      <Filter>Source Files\shaders</Filter>
+    </None>
+    <None Include="shaders\lighting.vert">
+      <Filter>Source Files\shaders</Filter>
+    </None>
+    <None Include="shaders\particleGraphics.frag">
+      <Filter>Source Files\shaders</Filter>
+    </None>
+    <None Include="shaders\particleGraphics.vert">
+      <Filter>Source Files\shaders</Filter>
+    </None>
+    <None Include="shaders\particles.comp">
+      <Filter>Source Files\shaders</Filter>
+    </None>
+    <None Include="shaders\pregraphics.frag">
+      <Filter>Source Files\shaders</Filter>
+    </None>
+    <None Include="shaders\pregraphics.vert">
+      <Filter>Source Files\shaders</Filter>
+    </None>
   </ItemGroup>
 </Project>
