@@ -41,6 +41,7 @@ namespace Prometheus
     constexpr glm::vec3 COLOR_LIGHT_RED   = glm::vec3(1.0f, 0.5f, 0.5f);
     constexpr glm::vec3 COLOR_LIGHT_GREEN = glm::vec3(0.565f, 0.933f, 0.565f);
     constexpr glm::vec3 COLOR_LIGHT_BLUE  = glm::vec3(0.678f, 0.847f, 0.902f);
+    constexpr glm::vec3 COLOR_SUN = glm::vec3(1.0f, 204.0f / 255.0f, 51.0f / 255.0f);
 
     // Dark variants
     constexpr glm::vec3 COLOR_DARK_RED    = glm::vec3(0.545f, 0.0f, 0.0f);

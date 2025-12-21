@@ -140,6 +140,12 @@ VkImage Engine::depthImage;
 VkDeviceMemory Engine::depthImageMemory;
 VkImageView Engine::depthImageView;
 
+VkImage Engine::shadowImage;
+VkDeviceMemory Engine::shadowImageMemory;
+VkImageView Engine::shadowImageView;
+
+uint32_t Engine::shadowRes = 1024;
+
 bool Engine::recreateVertexIndexBuffer=true;
 bool Engine::recreateInstanceBuffer=true;
 bool Engine::recreateDescriptors=true;
@@ -311,10 +317,8 @@ namespace Prometheus{
 
     void Engine::mainLoop() {
 
-        new PointLight(glm::vec4(2.0f), glm::vec4(COLOR_RED, 1.0f), 90.0f, LIGHT_POINT);
         new PointLight(glm::vec4(2.0f), glm::vec4(COLOR_BLUE, 1.0f), 90.0f, LIGHT_POINT);
-        new DirectionalLight(glm::vec4(10.0f), glm::vec4(COLOR_GREEN, 1.0f), 10.0f, LIGHT_DIRECTIONAL);
-        new DirectionalLight(glm::vec4(-10.0f,10.0f,-10.0f,10.0f), glm::vec4(COLOR_MAGENTA, 1.0f), 10.0f, LIGHT_DIRECTIONAL);
+        new DirectionalLight(glm::vec4(10.0f), glm::vec4(COLOR_SUN, 1.0f), 10.0f, LIGHT_DIRECTIONAL);
 
         BufferManager::createUniformBuffers(this->device,this->physicalDevice);
 

@@ -28,12 +28,25 @@ void main() {
     for (uint i = 0; i < lightsUBO.lightCount; i++) {
 
     
-        uint idx     = i / 4u;  // which uint
-        uint bytePos = i % 4u;  // which byte inside it
+        uint idx     = i / 4u; // which uint
+        uint bytePos = i % 4u; // which byte
+
         uint packed = lightsUBO.types[idx];
-        uint type   = (packed >> (8u * bytePos)) & 0xFFu;
+        uint type   = (packed >> (8u * (3u - bytePos))) & 0xFFu;
 
         if(type == 0u){ //DIRECTIONAL = 0
+            vec3 directionToLight = lightsUBO.positions[i].xyz - vec3(0.0);
+
+            vec3 lightColor = ((lightsUBO.colors[i].xyz) * lightsUBO.colors[i].w) * lightsUBO.intensities[i].x;
+            lightColor = lightColor/10.0;
+
+            vec3 diffuseLight = lightColor * max(dot(normalize(fragWorldNormal), normalize(directionToLight)), 0);
+
+            totalLight += diffuseLight;
+            totalAmbient += lightsUBO.ambientColors[i].xyz * lightsUBO.ambientColors[i].w;
+
+        }else if(type == 1u){ //POINT LIGHT = 1
+
             vec3 directionToLight = lightsUBO.positions[i].xyz - fragWorldPos;
             float distance2 = dot(directionToLight, directionToLight);
             float attenuation = 1.0 / max(distance2, 0.001); // avoid divide by zero
@@ -43,17 +56,6 @@ void main() {
             vec3 diffuseLight = lightColor * max(dot(normalize(fragWorldNormal), normalize(directionToLight)), 0);
 
             totalLight += diffuseLight * attenuation;
-            totalAmbient += lightsUBO.ambientColors[i].xyz * lightsUBO.ambientColors[i].w;
-
-        }else if(type == 1u){ //POINT LIGHT = 1
-            vec3 directionToLight = lightsUBO.positions[i].xyz - vec3(0.0);
-
-            vec3 lightColor = ((lightsUBO.colors[i].xyz) * lightsUBO.colors[i].w) * lightsUBO.intensities[i].x;
-            lightColor = lightColor/10.0;
-
-            vec3 diffuseLight = lightColor * max(dot(normalize(fragWorldNormal), normalize(directionToLight)), 0);
-
-            totalLight += diffuseLight;
             totalAmbient += lightsUBO.ambientColors[i].xyz * lightsUBO.ambientColors[i].w;
         }
     }

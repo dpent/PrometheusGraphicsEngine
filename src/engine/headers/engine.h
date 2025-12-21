@@ -196,6 +196,12 @@ namespace Prometheus{
         static VkDeviceMemory depthImageMemory;
         static VkImageView depthImageView;
 
+        static VkImage shadowImage; // Should contain important shadows (only directional lighting)
+        static VkDeviceMemory shadowImageMemory;
+        static VkImageView shadowImageView;
+
+        static uint32_t shadowRes;
+
         static bool recreateVertexIndexBuffer;
         static bool recreateInstanceBuffer;
         static bool recreateInstBuffer;
