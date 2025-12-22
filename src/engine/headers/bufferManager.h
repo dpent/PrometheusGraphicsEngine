@@ -77,10 +77,15 @@ namespace Prometheus{
 
         static void createDepthResources(VkDevice& device,VkPhysicalDevice& physicalDevice);
         static void createColorResources(VkDevice& device, VkPhysicalDevice& physicalDevice);
+        static void createShadowMapResources(VkDevice& device, VkPhysicalDevice& physicalDevice);
+        static void createShadowFrameBuffers(VkDevice& device);
+
+        static void recreateShadowMapResources(VkDevice& device, VkPhysicalDevice& physicalDevice);
 
         static VkFormat findSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features,
             VkPhysicalDevice& physicalDevice);
         static VkFormat findDepthFormat(VkPhysicalDevice& physicalDevice);
+        static VkFormat findShadowFormat(VkPhysicalDevice& physicalDevice);
         static bool hasStencilComponent(VkFormat format);
 
         template <typename T> static void createSSBOs(VkDevice& device, VkPhysicalDevice& physicalDevice,

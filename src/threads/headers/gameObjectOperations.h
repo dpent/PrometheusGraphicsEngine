@@ -25,7 +25,7 @@ namespace Prometheus
 
     void updateGameObjects(Latch* latch, std::binary_semaphore* setReady);
 
-    void updateObjectsAndDescriptors(VkDevice& device, std::binary_semaphore* jobDoneSem, std::binary_semaphore* safeToMakeInstanceBuffer,
+    void updateObjectsAndDescriptors(VkDevice& device, std::counting_semaphore<INT_MAX>* jobDoneSem, std::binary_semaphore* safeToMakeInstanceBuffer,
         Latch* latch, std::binary_semaphore* setReady);
     void splitObjectsAndCreateJobs(uint64_t& objectsPerThread,
         std::vector<std::unordered_map<std::string,std::unordered_map<uint64_t,GameObject*>>>& objectPieces,

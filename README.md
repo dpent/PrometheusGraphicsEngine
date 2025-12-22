@@ -4,7 +4,7 @@ This is a graphics engine i made using libraries and tools mentioned in the tech
 In this project, i am using [Dear ImGui](https://github.com/ocornut/imgui) (Copyright (c) 2014-2025 Omar Cornut) for some of the ui elements like helper windows in the editor.
 
 ## Features (And planned)
-- ✅ Linux support
+- ✅ Linux support (I guess)
 - ✅ Multisampling
 - ✅ Vsync
 - ✅ Culling
@@ -21,6 +21,8 @@ In this project, i am using [Dear ImGui](https://github.com/ocornut/imgui) (Copy
 | Make    | Any recent version is ok     |
 | Vulkan packages | Get all the packages for linux using sudo apt install |
 | Dear ImGui | 1.92.4 |
+
+# I HAVE NO IDEA IF THIS WORKS ON OTHER PCS
 
 ## Installation
 I used a tutorial to set up this project so it will be a lot more convinient for you to do the same by following this link 

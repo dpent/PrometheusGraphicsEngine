@@ -19,7 +19,8 @@ namespace Prometheus{
             VkDevice& device,
             VkPhysicalDevice& physicalDevice,
             uint32_t mipLevels,
-            VkSampleCountFlagBits numSamples
+            VkSampleCountFlagBits numSamples,
+            uint32_t maxLayers = 1
         );
         
         static void transitionImageLayout(VkImage& image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout,

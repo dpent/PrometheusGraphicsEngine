@@ -145,17 +145,18 @@ namespace Prometheus{
 
         for (size_t i = 0; i < Engine::swapChainImages.size(); i++) {
             Engine::swapChainImageViews[i]=SwapChainManager::createImageView(device,Engine::swapChainImages[i],
-            Engine::swapChainImageFormat,VK_IMAGE_ASPECT_COLOR_BIT, 1);
+            Engine::swapChainImageFormat,VK_IMAGE_ASPECT_COLOR_BIT, 1, VK_IMAGE_VIEW_TYPE_2D_ARRAY);
 
         }
     }
 
-    VkImageView SwapChainManager::createImageView(VkDevice& device, VkImage& image, VkFormat format, VkImageAspectFlags aspectFlags, uint32_t mipLevels){
+    VkImageView SwapChainManager::createImageView(VkDevice& device, VkImage& image, VkFormat format, VkImageAspectFlags aspectFlags, uint32_t mipLevels,
+        VkImageViewType viewType, uint32_t layerCount, uint32_t baseArrayLayer){
         
         VkImageViewCreateInfo createInfo{};
         createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
         createInfo.image = image;
-        createInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+        createInfo.viewType = viewType;
         createInfo.format = format;
         createInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
         createInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
@@ -164,8 +165,8 @@ namespace Prometheus{
         createInfo.subresourceRange.aspectMask = aspectFlags;
         createInfo.subresourceRange.baseMipLevel = 0;
         createInfo.subresourceRange.levelCount = mipLevels;
-        createInfo.subresourceRange.baseArrayLayer = 0;
-        createInfo.subresourceRange.layerCount = 1;
+        createInfo.subresourceRange.baseArrayLayer = baseArrayLayer;
+        createInfo.subresourceRange.layerCount = layerCount;
 
         VkImageView imageView;
         if (vkCreateImageView(device, &createInfo, nullptr, &imageView) != VK_SUCCESS) {

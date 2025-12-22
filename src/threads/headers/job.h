@@ -26,6 +26,7 @@ namespace Prometheus{
         VkQueue*, 
         uint64_t,
         std::binary_semaphore*,
+        std::counting_semaphore<INT_MAX>*,
         std::unordered_map<std::string,std::unordered_map<uint64_t,GameObject*>>*,
         std::unordered_map<std::string,MeshBatch>*, 
         Latch*,

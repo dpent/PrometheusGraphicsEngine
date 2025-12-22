@@ -43,7 +43,7 @@
 #include "particle.h"
 #include "../../physics/headers/light.h"
 
-#define EDITOR //Enables editor specific features like grid plane
+//#define EDITOR //Enables editor specific features like grid plane
 
 namespace Prometheus{
 
@@ -91,8 +91,11 @@ namespace Prometheus{
 
         static VkDescriptorSetLayout descriptorSetLayout;
         static VkDescriptorSetLayout computeSetLayout;
-        static VkPipelineLayout pipelineLayout;
+        
         static VkRenderPass renderPass;
+        static VkRenderPass shadowRenderPass;
+
+        static VkPipelineLayout pipelineLayout;
         static VkPipeline graphicsPipeline;
         static VkPipeline preGraphicsPipeline;
         static VkPipelineLayout preGraphicsLayout;
@@ -121,7 +124,7 @@ namespace Prometheus{
         static std::vector<VkSemaphore> computeFinishedSemaphores;
         static std::vector<VkFence> inFlightFences;
         static std::vector<VkFence> computeInFlightFences;
-        static std::binary_semaphore descriptorsReadySemaphore;
+        static std::counting_semaphore<INT_MAX> descriptorsReadySemaphore;
         static std::binary_semaphore safeToMakeInstanceBuffer;
         static std::binary_semaphore verIndBufferComplete;
         static std::binary_semaphore instanceBufferReady;
@@ -198,9 +201,12 @@ namespace Prometheus{
 
         static VkImage shadowImage; // Should contain important shadows (only directional lighting)
         static VkDeviceMemory shadowImageMemory;
-        static VkImageView shadowImageView;
+        static std::vector<VkImageView> shadowImageViews;
+        static std::vector<VkFramebuffer> shadowFrameBuffers;
 
         static uint32_t shadowRes;
+        static uint32_t shadowCreatingLights;
+        static bool recreateShadowResources;
 
         static bool recreateVertexIndexBuffer;
         static bool recreateInstanceBuffer;
@@ -322,5 +328,6 @@ namespace Prometheus{
         void updateLightSources();
         void updateParticleSSBOs();
 		void remakeComputeDescriptorSetsAndPool();
+        void handleComputeCommandBufferRecording(uint32_t& imageIndex);
     };
 }

@@ -570,7 +570,7 @@ namespace Prometheus{
             Engine::depthImageMemory, device, physicalDevice,1,Engine::msaaSamples
         );
 
-        Engine::depthImageView=SwapChainManager::createImageView(device,Engine::depthImage,depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT,1);
+        Engine::depthImageView=SwapChainManager::createImageView(device,Engine::depthImage,depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT,1, VK_IMAGE_VIEW_TYPE_2D);
         //No need for transitioning this image since the render pass will take care of it
     }
 
@@ -604,6 +604,19 @@ namespace Prometheus{
         VK_IMAGE_TILING_OPTIMAL,
         VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT,
         physicalDevice);
+    }
+
+    VkFormat BufferManager::findShadowFormat(VkPhysicalDevice& physicalDevice) {
+
+        return findSupportedFormat(
+            {
+                VK_FORMAT_D32_SFLOAT
+            },
+            VK_IMAGE_TILING_OPTIMAL,
+            VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT |
+            VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT,
+            physicalDevice
+        );
     }
 
     bool BufferManager::hasStencilComponent(VkFormat format){
@@ -674,7 +687,7 @@ namespace Prometheus{
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, Engine::colorImage, Engine::colorImageMemory, device,
         physicalDevice, 1, Engine::msaaSamples);
 
-    Engine::colorImageView = SwapChainManager::createImageView(device,Engine::colorImage, colorFormat, VK_IMAGE_ASPECT_COLOR_BIT, 1);
+    Engine::colorImageView = SwapChainManager::createImageView(device,Engine::colorImage, colorFormat, VK_IMAGE_ASPECT_COLOR_BIT, 1, VK_IMAGE_VIEW_TYPE_2D);
 
     }
 
@@ -782,5 +795,63 @@ namespace Prometheus{
             throw std::runtime_error("failed to record command buffer!");
         }
     }   
+
+    void BufferManager::createShadowMapResources(VkDevice& device, VkPhysicalDevice& physicalDevice) {
+        VkFormat depthFormat = BufferManager::findShadowFormat(physicalDevice);
+
+        TextureManager::createImage(Engine::shadowRes,
+            Engine::shadowRes, depthFormat,
+            VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT |
+            VK_IMAGE_USAGE_SAMPLED_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, Engine::shadowImage,
+            Engine::shadowImageMemory, device, physicalDevice, 1, VK_SAMPLE_COUNT_1_BIT, Engine::shadowCreatingLights //NO MSSA ON SHADOW MAPS RESOLUTION CHANGES IS WHAT MAKES IT BETTER
+        );
+        Engine::shadowImageViews.resize(Engine::shadowCreatingLights);
+        for (uint32_t i = 0; i < Engine::shadowCreatingLights; i++){
+        
+            Engine::shadowImageViews[i] = SwapChainManager::createImageView(device, Engine::shadowImage, depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT, 1, VK_IMAGE_VIEW_TYPE_2D_ARRAY, 1, i);
+        }
+
+        BufferManager::createShadowFrameBuffers(device);
+
+    }
+
+    void BufferManager::recreateShadowMapResources(VkDevice& device, VkPhysicalDevice& physicalDevice) {
+        
+        vkDestroyImage(device, Engine::shadowImage, nullptr);
+        vkFreeMemory(device, Engine::shadowImageMemory, nullptr);
+        for (size_t i = 0; i < Engine::shadowImageViews.size(); i++) {
+
+            vkDestroyImageView(device, Engine::shadowImageViews[i], nullptr);
+            vkDestroyFramebuffer(device, Engine::shadowFrameBuffers[i], nullptr);
+
+        }
+
+        BufferManager::createShadowMapResources(device, physicalDevice);
+
+        Engine::recreateShadowResources = false;
+    }
+
+    void BufferManager::createShadowFrameBuffers(VkDevice& device) {
+        Engine::shadowFrameBuffers.resize(Engine::shadowCreatingLights);
+
+        for (size_t i = 0; i < Engine::shadowCreatingLights; i++) {
+            std::array<VkImageView, 1> attachments = {
+                Engine::shadowImageViews[i]
+            };
+
+            VkFramebufferCreateInfo framebufferInfo{};
+            framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+            framebufferInfo.renderPass = Engine::shadowRenderPass;
+            framebufferInfo.attachmentCount = static_cast<uint32_t>(attachments.size());;
+            framebufferInfo.pAttachments = attachments.data();
+            framebufferInfo.width = Engine::shadowRes;
+            framebufferInfo.height = Engine::shadowRes;
+            framebufferInfo.layers = 1;
+
+            if (vkCreateFramebuffer(device, &framebufferInfo, nullptr, &Engine::shadowFrameBuffers[i]) != VK_SUCCESS) {
+                throw std::runtime_error("failed to create shadow framebuffer!");
+            }
+        }
+    }
 
 }

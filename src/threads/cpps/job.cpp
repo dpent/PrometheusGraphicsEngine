@@ -93,7 +93,7 @@ namespace Prometheus{
 
     void RecreateDescriptorsJob::execute(WorkerThread& worker) {
         recreateDescriptorSetsAndPool(*std::get<VkDevice*>(this->data[0]),
-            std::get<std::binary_semaphore*>(this->data[1]));
+            std::get<std::counting_semaphore<INT_MAX>*>(this->data[1]));
     }
 
     std::string RecreateDescriptorsJob::name() {
@@ -117,7 +117,7 @@ namespace Prometheus{
 
     void UpdateGameObjectsAndDescriptorsJob::execute(WorkerThread& worker) {
         updateObjectsAndDescriptors(*std::get<VkDevice*>(this->data[0]),
-            std::get<std::binary_semaphore*>(this->data[1]),
+            std::get<std::counting_semaphore<INT_MAX>*>(this->data[1]),
             std::get<std::binary_semaphore*>(this->data[2]),
             std::get<Latch*>(this->data[3]),
             std::get<std::binary_semaphore*>(this->data[4])

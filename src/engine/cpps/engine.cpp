@@ -35,8 +35,11 @@ VkSwapchainKHR Engine::swapChain;
 
 VkDescriptorSetLayout Engine::descriptorSetLayout;
 VkDescriptorSetLayout Engine::computeSetLayout;
-VkPipelineLayout Engine::pipelineLayout;
+
 VkRenderPass Engine::renderPass;
+VkRenderPass Engine::shadowRenderPass;
+
+VkPipelineLayout Engine::pipelineLayout;
 VkPipeline Engine::graphicsPipeline;
 VkPipeline Engine::preGraphicsPipeline;
 VkPipelineLayout Engine::preGraphicsLayout;
@@ -65,7 +68,7 @@ std::vector<VkSemaphore> Engine::renderFinishedSemaphores;
 std::vector<VkSemaphore> Engine::computeFinishedSemaphores;
 std::vector<VkFence> Engine::computeInFlightFences;
 std::vector<VkFence> Engine::inFlightFences;
-std::binary_semaphore Engine::descriptorsReadySemaphore{ 0 };
+std::counting_semaphore<INT_MAX> Engine::descriptorsReadySemaphore(0);
 std::binary_semaphore Engine::safeToMakeInstanceBuffer{ 0 };
 std::binary_semaphore Engine::verIndBufferComplete{ 0 };
 std::binary_semaphore Engine::instanceBufferReady{ 0 };
@@ -142,9 +145,12 @@ VkImageView Engine::depthImageView;
 
 VkImage Engine::shadowImage;
 VkDeviceMemory Engine::shadowImageMemory;
-VkImageView Engine::shadowImageView;
+std::vector<VkImageView> Engine::shadowImageViews;
+std::vector<VkFramebuffer> Engine::shadowFrameBuffers;
 
 uint32_t Engine::shadowRes = 1024;
+uint32_t Engine::shadowCreatingLights = 1;
+bool Engine::recreateShadowResources = false;
 
 bool Engine::recreateVertexIndexBuffer=true;
 bool Engine::recreateInstanceBuffer=true;
@@ -261,6 +267,7 @@ namespace Prometheus{
         SwapChainManager::createImageViews(this->device);
 
         RenderPassManager::createRenderPass(this->device, this->physicalDevice);
+        RenderPassManager::createShadowMapRenderPass(this->device, this->physicalDevice);
 
         //Particle::addDemoParticles(4096);
 
@@ -283,7 +290,9 @@ namespace Prometheus{
 
         BufferManager::createColorResources(this->device,this->physicalDevice);
         BufferManager::createDepthResources(this->device,this->physicalDevice);
+        BufferManager::createShadowMapResources(this->device, this->physicalDevice);
         BufferManager::createFrameBuffers(this->device);
+
         BufferManager::createCommandPool(this->physicalDevice, this->surface,
             this->device,Engine::commandPool);
         BufferManager::createCommandBuffers(this->device, 
@@ -295,17 +304,6 @@ namespace Prometheus{
 
         createSpatialHash(glm::vec3(200.0f), glm::vec3(-200.0f));
 
-        TextureManager::createSolidColorTextureFile("./textures/blue.png",0,0,255);
-        TextureManager::createSolidColorTextureFile("./textures/red.png",255,0,0);
-        TextureManager::createSolidColorTextureFile("./textures/magenta.png",0,255,0);
-        TextureManager::createSolidColorTextureFile("./textures/magenta.png",255,0,255);
-        TextureManager::createSolidColorTextureFile("./textures/white.png",255,255,255);
-
-
-		GameObject::createObjectThreaded(device, physicalDevice, graphicsQueue, new GameObject("./textures/red.png", "./models/stanford_dragon.obj"));
-
-        GameObject::createObjectThreaded(device, physicalDevice, graphicsQueue, new MapFloor("./textures/white.png", "./models/square.obj", glm::vec3(0.0f), glm::vec3(10.0f)));
-
         Engine::instanceBuffers.resize(Engine::MAX_FRAMES_IN_FLIGHT);
         Engine::instanceBufferMemories.resize(Engine::MAX_FRAMES_IN_FLIGHT);
         Engine::instanceBuffersMapped.resize(Engine::MAX_FRAMES_IN_FLIGHT);
@@ -313,11 +311,23 @@ namespace Prometheus{
 		Engine::shaderStorageBuffers.resize(Engine::MAX_FRAMES_IN_FLIGHT);
 		Engine::shaderStorageBuffersMemories.resize(Engine::MAX_FRAMES_IN_FLIGHT);
 
+        Engine::shadowCreatingLights = 0; //Used to be 1 just so i could create the shadow map resources
+
     }
 
     void Engine::mainLoop() {
 
-        new PointLight(glm::vec4(2.0f), glm::vec4(COLOR_BLUE, 1.0f), 90.0f, LIGHT_POINT);
+        TextureManager::createSolidColorTextureFile("./textures/blue.png", 0, 0, 255);
+        TextureManager::createSolidColorTextureFile("./textures/red.png", 255, 0, 0);
+        TextureManager::createSolidColorTextureFile("./textures/magenta.png", 0, 255, 0);
+        TextureManager::createSolidColorTextureFile("./textures/magenta.png", 255, 0, 255);
+        TextureManager::createSolidColorTextureFile("./textures/white.png", 255, 255, 255);
+
+        GameObject::createObjectThreaded(device, physicalDevice, graphicsQueue, new GameObject("./textures/red.png", "./models/stanford_dragon.obj"));
+
+        GameObject::createObjectThreaded(device, physicalDevice, graphicsQueue, new MapFloor("./textures/white.png", "./models/square.obj", glm::vec3(0.0f), glm::vec3(10.0f)));
+
+        new DirectionalLight(glm::vec4(-10.0f, 10.0f, -10.0f, 10.0f), glm::vec4(COLOR_BLUE, 1.0f), 10.0f, LIGHT_DIRECTIONAL);
         new DirectionalLight(glm::vec4(10.0f), glm::vec4(COLOR_SUN, 1.0f), 10.0f, LIGHT_DIRECTIONAL);
 
         BufferManager::createUniformBuffers(this->device,this->physicalDevice);
@@ -346,8 +356,11 @@ namespace Prometheus{
 
             WindowManager::startNewFrame();
 
-            drawSpatialHash();
+            if (Engine::recreateShadowResources) {
+                BufferManager::recreateShadowMapResources(device, physicalDevice);
+            }
 
+            drawSpatialHash();
             drawFrame();
 
             //objectLoadingTest(frameZeroTime);
@@ -428,6 +441,10 @@ namespace Prometheus{
         
         WindowManager::cleanup();
 
+        for (VkDescriptorPool pool : Engine::descriptorDeleteQueue) {
+            vkDestroyDescriptorPool(device, pool, nullptr);
+        }
+
         vkDestroyDescriptorPool(device, Engine::imGUIPool, nullptr);
 
         vkDestroyDescriptorSetLayout(device,Engine::computeSetLayout, nullptr);
@@ -446,7 +463,6 @@ namespace Prometheus{
         }
 
         vkDestroyDescriptorSetLayout(device, Engine::descriptorSetLayout, nullptr);
-
         vkDestroyDescriptorPool(device, Engine::descriptorPool, nullptr);
 
         vkDestroyBuffer(device, Engine::indexVertexBuffer, nullptr);
@@ -568,38 +584,7 @@ namespace Prometheus{
 			Engine::particlesChanged = false;
         }
 
-        VkSubmitInfo submitInfo{};
-
-        if (Engine::particles.size() != 0) {
-
-            BufferManager::recordComputeCommandBuffer(Engine::computeCommandBuffers[Engine::currentFrame], imageIndex,
-                device, physicalDevice);
-
-            submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-            submitInfo.commandBufferCount = 1;
-            submitInfo.pCommandBuffers = &Engine::computeCommandBuffers[Engine::currentFrame];
-            submitInfo.signalSemaphoreCount = 1;
-            submitInfo.pSignalSemaphores = &Engine::computeFinishedSemaphores[Engine::currentFrame];
-
-            if (vkQueueSubmit(computeQueue, 1, &submitInfo, Engine::computeInFlightFences[currentFrame]) != VK_SUCCESS) {
-                throw std::runtime_error("failed to submit compute command buffer!");
-            };
-        }
-        else {
-
-            vkWaitForFences(device, 1, &Engine::computeInFlightFences[Engine::currentFrame], VK_TRUE, UINT64_MAX);
-            vkResetFences(device, 1, &Engine::computeInFlightFences[Engine::currentFrame]);
-
-            submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-            submitInfo.commandBufferCount = 0;
-            submitInfo.pCommandBuffers = nullptr;
-            submitInfo.signalSemaphoreCount = 1;
-            submitInfo.pSignalSemaphores = &Engine::computeFinishedSemaphores[Engine::currentFrame];
-
-            if (vkQueueSubmit(computeQueue, 1, &submitInfo, Engine::computeInFlightFences[currentFrame]) != VK_SUCCESS) {
-                throw std::runtime_error("failed to submit compute command buffer!");
-            };
-        }
+        handleComputeCommandBufferRecording(imageIndex);
 
         Engine::canDeleteObjectMutex.lock();
         Engine::gameObjectMutex.lock();
@@ -613,11 +598,11 @@ namespace Prometheus{
             Engine::verIndBufferComplete.release();
         }
 
-        #ifndef EDITOR
+        /*#ifndef EDITOR //USED TO USE MULTITHREADING TO DO IT UNTIL descriptorsReadySemaphore wouldnt release and i couldnt fix it so fuck me i made it single threaded
             handleCommandBufferRecording(imageIndex);
         #else
             Engine::wasPlacedInThread = false;
-        #endif
+        #endif*/
 
 		Engine::verIndBufferComplete.acquire();
 
@@ -629,19 +614,17 @@ namespace Prometheus{
         
         Engine::meshMutex.unlock();
 
-        if(!Engine::wasPlacedInThread){
-            Engine::commandPoolMutex.lock();
-            BufferManager::recordCommandBuffer(Engine::commandBuffers[Engine::currentFrame], imageIndex,device,
-            physicalDevice);
-            Engine::commandPoolMutex.unlock();
-        }
+        Engine::commandPoolMutex.lock();
+        BufferManager::recordCommandBuffer(Engine::commandBuffers[Engine::currentFrame], imageIndex,device,
+        physicalDevice);
+        Engine::commandPoolMutex.unlock();
 
 		Engine::commandBufferRecorded.acquire();
         
         Engine::gameObjectMutex.unlock();
         Engine::canDeleteObjectMutex.unlock();
 
-        submitInfo = {};
+        VkSubmitInfo submitInfo{};
         submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
         VkSemaphore waitSemaphores[] = 
@@ -845,7 +828,7 @@ namespace Prometheus{
 
         UpdateGameObjectsAndDescriptorsJob* j = new UpdateGameObjectsAndDescriptorsJob();
         j->data.emplace_back(std::in_place_type<VkDevice*>, &device);
-        j->data.emplace_back(std::in_place_type<std::binary_semaphore*>,&Engine::descriptorsReadySemaphore);
+        j->data.emplace_back(std::in_place_type<std::counting_semaphore<INT_MAX>*>,&Engine::descriptorsReadySemaphore);
         j->data.emplace_back(std::in_place_type<std::binary_semaphore*>,&Engine::safeToMakeInstanceBuffer);
         j->data.emplace_back(std::in_place_type<Latch*>, l);
         j->data.emplace_back(std::in_place_type<std::binary_semaphore*>, &Engine::setReady);
@@ -931,18 +914,18 @@ namespace Prometheus{
     }
 
     void Engine::updateDescriptors(){
+        std::cout << "Update descriptors" << std::endl;
         if(Engine::descriptorSets.size()==0 || Engine::meshBatches.size()!=Engine::descriptorSets[0].size() || Engine::recreateDescriptors){
-
             Engine::queueMutex.lock();
             if(Engine::jobQueue.size()<Engine::threadsAvailable.getValue()){
-                
+                std::cout << "In thread" << std::endl;
                 DescriptorManager::recreateDescriptors(this->device);
 
                 Engine::queueMutex.unlock();
             }else{
                 
                 Engine::queueMutex.unlock();
-
+                std::cout << "Out of thread" << std::endl;
                 recreateDescriptorSetsAndPool(device,&Engine::descriptorsReadySemaphore);
             }
 
@@ -988,12 +971,12 @@ namespace Prometheus{
 
             createRecordCommandBufferJob(imageIndex);
 
-            Engine::queueMutex.unlock();
         }else{
-            Engine::queueMutex.unlock();
 
             Engine::wasPlacedInThread=false;
         }
+
+        Engine::queueMutex.unlock();
     }
 
     void Engine::objectLoadingTest(std::chrono::system_clock::time_point frameZeroTime){
@@ -1262,7 +1245,6 @@ namespace Prometheus{
     }
 
     void Engine::handleObjectUpdates(){
-
         if(Engine::objectDQueue.size==0){
             Engine::descriptorsReadySemaphore.release();
 			Engine::instanceBufferReady.release();
@@ -1279,7 +1261,6 @@ namespace Prometheus{
 
             Engine::descriptorsReadySemaphore.release();
             Engine::instanceBufferReady.release();
-            
             return;
 
         }
@@ -1293,9 +1274,8 @@ namespace Prometheus{
                 Latch* l = new Latch(1);
                 createUpdateObjDescrJob(l);
             }else{
-    
                 Engine::updateGameObjects();
-        
+
                 Engine::updateDescriptors();
             }
         }
@@ -1368,5 +1348,41 @@ namespace Prometheus{
 
         DescriptorManager::createComputeDescriptorPool(device);
         DescriptorManager::createComputeDescriptorSets(device);
+    }
+
+    void Engine::handleComputeCommandBufferRecording(uint32_t& imageIndex) {
+
+        VkSubmitInfo submitInfo{};
+
+        if (Engine::particles.size() != 0) {
+
+            BufferManager::recordComputeCommandBuffer(Engine::computeCommandBuffers[Engine::currentFrame], imageIndex,
+                device, physicalDevice);
+
+            submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+            submitInfo.commandBufferCount = 1;
+            submitInfo.pCommandBuffers = &Engine::computeCommandBuffers[Engine::currentFrame];
+            submitInfo.signalSemaphoreCount = 1;
+            submitInfo.pSignalSemaphores = &Engine::computeFinishedSemaphores[Engine::currentFrame];
+
+            if (vkQueueSubmit(computeQueue, 1, &submitInfo, Engine::computeInFlightFences[currentFrame]) != VK_SUCCESS) {
+                throw std::runtime_error("failed to submit compute command buffer!");
+            };
+        }
+        else {
+
+            vkWaitForFences(device, 1, &Engine::computeInFlightFences[Engine::currentFrame], VK_TRUE, UINT64_MAX);
+            vkResetFences(device, 1, &Engine::computeInFlightFences[Engine::currentFrame]);
+
+            submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+            submitInfo.commandBufferCount = 0;
+            submitInfo.pCommandBuffers = nullptr;
+            submitInfo.signalSemaphoreCount = 1;
+            submitInfo.pSignalSemaphores = &Engine::computeFinishedSemaphores[Engine::currentFrame];
+
+            if (vkQueueSubmit(computeQueue, 1, &submitInfo, Engine::computeInFlightFences[currentFrame]) != VK_SUCCESS) {
+                throw std::runtime_error("failed to submit compute command buffer!");
+            };
+        }
     }
 }

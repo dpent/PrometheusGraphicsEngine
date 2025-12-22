@@ -29,7 +29,7 @@ namespace Prometheus::Hyperion {
         UniformBufferObject(glm::vec4 pos, glm::vec4 color, float intensity, LightType type);
         UniformBufferObject();
 
-        virtual ~UniformBufferObject();
+        ~UniformBufferObject();
 
         virtual void update();
     };
@@ -46,7 +46,7 @@ namespace Prometheus::Hyperion {
 
         DirectionalLight();
         DirectionalLight(glm::vec4 pos, glm::vec4 color, float intensity, LightType type);
-
+        ~DirectionalLight();
         void update() override;
     };
 

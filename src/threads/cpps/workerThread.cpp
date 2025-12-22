@@ -44,7 +44,7 @@ namespace Prometheus{
                 Engine::jobQueue.pop();
 
 
-                //std::cout << "OP ID " << jobs.back().opId << " grabbed. There are " << Engine::jobQueue.size() << " jobs in queue" << std::endl;
+                //std::cout << "OP ID " << jobs.back()->name() << " grabbed. There are " << Engine::jobQueue.size() << " jobs in queue" << std::endl;
                 //Engine::printJobQueue();
 
                 Engine::queueMutex.unlock();

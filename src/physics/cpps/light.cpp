@@ -62,7 +62,14 @@ namespace Prometheus::Hyperion {
 
     DirectionalLight::DirectionalLight(glm::vec4 pos, glm::vec4 color, float intensity, LightType type)
         : UniformBufferObject::UniformBufferObject(pos, color, intensity, type) {
-        return;
+        
+        Engine::shadowCreatingLights++;
+        Engine::recreateShadowResources = true;
+    }
+
+    DirectionalLight::~DirectionalLight() {
+        Engine::shadowCreatingLights--;
+        Engine::recreateShadowResources = true;
     }
 
     void DirectionalLight::update() {

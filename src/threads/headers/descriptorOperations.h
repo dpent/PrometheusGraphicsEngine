@@ -7,5 +7,5 @@
 namespace Prometheus{
     void updateDescriptorDeleteQueue(VkDevice& device);
 
-    void recreateDescriptorSetsAndPool(VkDevice& device, std::binary_semaphore* jobDoneSem);
+    void recreateDescriptorSetsAndPool(VkDevice& device, std::counting_semaphore<INT_MAX>* jobDoneSem);
 }

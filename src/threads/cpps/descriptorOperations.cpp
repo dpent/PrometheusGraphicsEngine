@@ -31,11 +31,10 @@ namespace Prometheus{
         Engine::descriptorQueuedMutex.unlock();
     }
 
-    void recreateDescriptorSetsAndPool(VkDevice& device, std::binary_semaphore* jobDoneSem){
+    void recreateDescriptorSetsAndPool(VkDevice& device, std::counting_semaphore<INT_MAX>* jobDoneSem){
 
         Engine::graphicsQueueMutex.lock();
         vkDeviceWaitIdle(device);
-
         Engine::graphicsQueueMutex.unlock();
 
         Engine::descriptorQueuedMutex.lock();
@@ -46,15 +45,13 @@ namespace Prometheus{
 
         //Engine::meshMutex.lock();
         if(Engine::meshBatches.size()==0){
-			Engine::descriptorsReadySemaphore.release();
+			jobDoneSem->release();
             return;
         }
 
         //Engine::meshMutex.unlock();
-
         DescriptorManager::createDescriptorPool(device);
         DescriptorManager::createDescriptorSets(device);
-
 		jobDoneSem->release();
     }
 }

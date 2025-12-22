@@ -78,8 +78,10 @@ namespace Prometheus{
             VkDevice& device,
             VkPhysicalDevice& physicalDevice,
             uint32_t mipLevels,
-            VkSampleCountFlagBits numSamples
+            VkSampleCountFlagBits numSamples,
+            uint32_t maxLayers
     ){
+
         VkImageCreateInfo imageInfo{};
         imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
         imageInfo.imageType = VK_IMAGE_TYPE_2D;
@@ -87,7 +89,7 @@ namespace Prometheus{
         imageInfo.extent.height = height;
         imageInfo.extent.depth = 1;
         imageInfo.mipLevels = mipLevels;
-        imageInfo.arrayLayers = 1;
+        imageInfo.arrayLayers = maxLayers;
         imageInfo.format = format;
         imageInfo.tiling = tiling;
         imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
@@ -200,7 +202,7 @@ namespace Prometheus{
 
     void TextureManager::createTextureImageView(VkDevice& device, VkImage& image, VkImageView& imageView, uint32_t mipLevels){
         
-        imageView=SwapChainManager::createImageView(device,image,VK_FORMAT_R8G8B8A8_SRGB,VK_IMAGE_ASPECT_COLOR_BIT, mipLevels);
+        imageView=SwapChainManager::createImageView(device,image,VK_FORMAT_R8G8B8A8_SRGB,VK_IMAGE_ASPECT_COLOR_BIT, mipLevels, VK_IMAGE_VIEW_TYPE_2D);
     }
 
     void TextureManager::createTextureSampler(VkDevice& device, VkSampler& sampler){

@@ -135,7 +135,7 @@ namespace Prometheus{
         latch->post();
     }
 
-    void updateObjectsAndDescriptors(VkDevice& device, std::binary_semaphore* jobDoneSem, std::binary_semaphore* safeToMakeInstanceBuffer,
+    void updateObjectsAndDescriptors(VkDevice& device, std::counting_semaphore<INT_MAX>* jobDoneSem, std::binary_semaphore* safeToMakeInstanceBuffer,
         Latch* latch, std::binary_semaphore* setReady){
 
         for(size_t i=0; i<Engine::meshBatches.size(); i++){
@@ -145,7 +145,6 @@ namespace Prometheus{
         Engine::meshSet.clear();
         Engine::textureIndices.clear();
         uint64_t objectsToCheck = 0;
-
         Engine::meshBatches.reserve(Engine::objectsByMesh.size());
         for(auto& meshName : Engine::objectsByMesh){
             Engine::meshBatches.push_back(new MeshBatch(meshName.first));
@@ -214,11 +213,9 @@ namespace Prometheus{
         safeToMakeInstanceBuffer->release();
 
         if(Engine::descriptorSets.size()==0 || Engine::meshBatches.size()!=Engine::descriptorSets.size() || Engine::recreateDescriptors){
-
             recreateDescriptorSetsAndPool(device,jobDoneSem);
         }else{
-            std::cout << "thread ready" << std::endl;
-            Engine::descriptorsReadySemaphore.release();
+            jobDoneSem->release();
         }
     }
 

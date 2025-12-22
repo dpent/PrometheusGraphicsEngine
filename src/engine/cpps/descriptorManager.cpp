@@ -128,7 +128,7 @@ namespace Prometheus{
 
         RecreateDescriptorsJob* j = new RecreateDescriptorsJob();
         j->data.emplace_back(std::in_place_type<VkDevice*>, &device);
-        j->data.emplace_back(std::in_place_type<std::binary_semaphore*>,&Engine::descriptorsReadySemaphore);
+        j->data.emplace_back(std::in_place_type<std::counting_semaphore<INT_MAX>*>,&Engine::descriptorsReadySemaphore);
 
         Engine::jobQueue.push(j);
 
