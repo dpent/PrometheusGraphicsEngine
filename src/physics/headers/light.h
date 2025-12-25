@@ -26,12 +26,16 @@ namespace Prometheus::Hyperion {
         float intensity;
         LightType type;
 
+        UniformBufferObject* next;
+        UniformBufferObject* prev;
+
         UniformBufferObject(glm::vec4 pos, glm::vec4 color, float intensity, LightType type);
         UniformBufferObject();
 
         ~UniformBufferObject();
 
         virtual void update();
+        virtual glm::mat4 getLightVP();
     };
 
     struct PointLight : public UniformBufferObject {
@@ -48,6 +52,7 @@ namespace Prometheus::Hyperion {
         DirectionalLight(glm::vec4 pos, glm::vec4 color, float intensity, LightType type);
         ~DirectionalLight();
         void update() override;
+        glm::mat4 getLightVP() override;
     };
 
     struct UBOData {
@@ -55,6 +60,7 @@ namespace Prometheus::Hyperion {
         glm::vec4 colors[128];
         glm::vec4 ambientLightColors[128];
         glm::vec4 intensities[128];
+        glm::mat4 lightMVPs[128];
         alignas(16) uint64_t lightCount;
         alignas(16) uint32_t types[128 / 4] = {};
     };

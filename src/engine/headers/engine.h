@@ -107,6 +107,8 @@ namespace Prometheus{
         static VkPipelineLayout computePipelineLayout;
         static VkPipeline particleGraphicsPipeline;
         static VkPipelineLayout particlePipelineLayout;
+        static VkPipelineLayout shadowMapPipelineLayout;
+        static VkPipeline shadowMapPipeline;
 
         static std::vector<VkFramebuffer> swapChainFramebuffers;
 
@@ -203,6 +205,7 @@ namespace Prometheus{
         static VkDeviceMemory shadowImageMemory;
         static std::vector<VkImageView> shadowImageViews;
         static std::vector<VkFramebuffer> shadowFrameBuffers;
+        static VkSampler shadowMapSampler;
 
         static uint32_t shadowRes;
         static uint32_t shadowCreatingLights;
@@ -259,6 +262,7 @@ namespace Prometheus{
         static std::unordered_map<std::string,uint64_t> textureIndices;
 
         static DoubleEndedQueue<Hyperion::UBOContainer*> lights;
+        static DoubleEndedQueue<Hyperion::UniformBufferObject*> shadowCreatingLightsQueue;
         static bool recreateUBO;
 
         static std::vector<Particle> particles;

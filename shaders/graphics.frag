@@ -10,12 +10,14 @@ layout(location = 4) in vec3 fragWorldPos;
 layout(location = 0) out vec4 outColor;
 
 layout(set = 0, binding = 1) uniform sampler2D textures[64];
+layout(set = 0, binding = 2) uniform sampler2D shadowMaps[64];
 
 layout(set = 0, binding = 0) uniform Lights {
     vec4 positions[128]; // or vec4 array for your lights
     vec4 colors[128];
     vec4 ambientColors[128];
     vec4 intensities[128];
+    mat4 lightVPs[128];
     uint lightCount;
     uint types[128/4];
 } lightsUBO;
@@ -26,7 +28,8 @@ void main() {
     vec3 totalAmbient = vec3(0.0);
 
     for (uint i = 0; i < lightsUBO.lightCount; i++) {
-
+    
+        float shadow = 1.0;
     
         uint idx     = i / 4u; // which uint
         uint bytePos = i % 4u; // which byte
@@ -35,14 +38,42 @@ void main() {
         uint type   = (packed >> (8u * (3u - bytePos))) & 0xFFu;
 
         if(type == 0u){ //DIRECTIONAL = 0
-            vec3 directionToLight = lightsUBO.positions[i].xyz - vec3(0.0);
+            vec3 directionToLight = -lightsUBO.positions[i].xyz;
 
             vec3 lightColor = ((lightsUBO.colors[i].xyz) * lightsUBO.colors[i].w) * lightsUBO.intensities[i].x;
             lightColor = lightColor/10.0;
 
             vec3 diffuseLight = lightColor * max(dot(normalize(fragWorldNormal), normalize(directionToLight)), 0);
 
-            totalLight += diffuseLight;
+            vec4 fragLightSpace = lightsUBO.lightVPs[i] * vec4(fragWorldPos, 1.0);
+
+            vec3 projCoords = fragLightSpace.xyz / fragLightSpace.w;
+
+            if (projCoords.x < -1.0 || projCoords.x > 1.0 ||
+                projCoords.y < -1.0 || projCoords.y > 1.0 ||
+                projCoords.z <  0.0 || projCoords.z > 1.0)
+            {
+            
+                shadow = 1.0;
+            }else{
+
+                projCoords = projCoords * 0.5 + 0.5;
+
+                float closestDepth =
+                    texture(shadowMaps[i], projCoords.xy).r;
+
+                float currentDepth = projCoords.z;
+
+                float bias = 0.001;
+
+                if (currentDepth - bias > closestDepth)
+                {
+                    shadow = 0.1;
+                }
+            
+            }
+
+            totalLight += diffuseLight * shadow;
             totalAmbient += lightsUBO.ambientColors[i].xyz * lightsUBO.ambientColors[i].w;
 
         }else if(type == 1u){ //POINT LIGHT = 1
@@ -55,12 +86,12 @@ void main() {
 
             vec3 diffuseLight = lightColor * max(dot(normalize(fragWorldNormal), normalize(directionToLight)), 0);
 
-            totalLight += diffuseLight * attenuation;
+            totalLight += diffuseLight * attenuation * shadow;
             totalAmbient += lightsUBO.ambientColors[i].xyz * lightsUBO.ambientColors[i].w;
         }
     }
 
     vec4 lightColor = vec4(totalAmbient + totalLight, 1.0) / lightsUBO.lightCount;
-
+    
     outColor = lightColor + texColor;
 }

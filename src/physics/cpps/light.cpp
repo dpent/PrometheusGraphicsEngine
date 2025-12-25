@@ -23,6 +23,10 @@ namespace Prometheus::Hyperion {
         return;
     }
 
+    glm::mat4 UniformBufferObject::getLightVP() {
+        return glm::mat4();
+    }
+
     UBOContainer::UBOContainer(UniformBufferObject* ubo) {
         this->ubo = ubo;
     }
@@ -64,15 +68,34 @@ namespace Prometheus::Hyperion {
         : UniformBufferObject::UniformBufferObject(pos, color, intensity, type) {
         
         Engine::shadowCreatingLights++;
+        Engine::shadowCreatingLightsQueue.push(this);
         Engine::recreateShadowResources = true;
     }
 
     DirectionalLight::~DirectionalLight() {
         Engine::shadowCreatingLights--;
+        Engine::shadowCreatingLightsQueue.popItem(this);
         Engine::recreateShadowResources = true;
     }
 
     void DirectionalLight::update() {
         return;
+    }
+
+    glm::mat4 DirectionalLight::getLightVP() {
+
+        glm::mat4 view = glm::lookAt(
+            glm::vec3(position.x, position.y,position.z) * 5.0f, 
+            glm::vec3(0.0f), 
+            glm::vec3(0.0f, 1.0f, 0.0f)
+        );
+        
+        glm::mat4 proj = glm::orthoZO(
+            -10.0f, 10.0f,
+            -10.0f, 10.0f,
+            0.1f, 96.0f
+        );
+
+        return proj * view;
     }
 }

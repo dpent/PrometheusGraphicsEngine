@@ -51,6 +51,8 @@ VkPipeline Engine::computePipeline;
 VkPipelineLayout Engine::computePipelineLayout;
 VkPipeline Engine::particleGraphicsPipeline;
 VkPipelineLayout Engine::particlePipelineLayout;
+VkPipelineLayout Engine::shadowMapPipelineLayout;
+VkPipeline Engine::shadowMapPipeline;
 
 VkCommandPool Engine::commandPool;
 std::vector<VkCommandBuffer> Engine::commandBuffers;
@@ -147,6 +149,7 @@ VkImage Engine::shadowImage;
 VkDeviceMemory Engine::shadowImageMemory;
 std::vector<VkImageView> Engine::shadowImageViews;
 std::vector<VkFramebuffer> Engine::shadowFrameBuffers;
+VkSampler Engine::shadowMapSampler;
 
 uint32_t Engine::shadowRes = 1024;
 uint32_t Engine::shadowCreatingLights = 1;
@@ -207,6 +210,7 @@ std::unordered_map<std::string, MeshBatch*> Engine::meshSet;
 std::unordered_map<std::string,uint64_t> Engine::textureIndices;
 
 DoubleEndedQueue<Hyperion::UBOContainer*> Engine::lights;
+DoubleEndedQueue<UniformBufferObject*> Engine::shadowCreatingLightsQueue;
 bool Engine::recreateUBO = false;
 
 std::vector<Particle> Engine::particles;
@@ -282,6 +286,7 @@ namespace Prometheus{
         GraphicsPipelineManager::createLightBillBoardPipeline(this->device);
         ComputePipelineManager::createComputePipeline(this->device);
         GraphicsPipelineManager::createParticleGraphicsPipeline(this->device);
+        GraphicsPipelineManager::createShadowMapPipeline(this->device);
 
         #ifdef EDITOR
             GraphicsPipelineManager::createEditorPreGraphicsPipeline(this->device);
@@ -325,10 +330,10 @@ namespace Prometheus{
 
         GameObject::createObjectThreaded(device, physicalDevice, graphicsQueue, new GameObject("./textures/red.png", "./models/stanford_dragon.obj"));
 
-        GameObject::createObjectThreaded(device, physicalDevice, graphicsQueue, new MapFloor("./textures/white.png", "./models/square.obj", glm::vec3(0.0f), glm::vec3(10.0f)));
+        GameObject::createObjectThreaded(device, physicalDevice, graphicsQueue, new MapFloor("./textures/white.png", "./models/square.obj", glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(10.0f,0.5f,10.0f)));
 
-        new DirectionalLight(glm::vec4(-10.0f, 10.0f, -10.0f, 10.0f), glm::vec4(COLOR_BLUE, 1.0f), 10.0f, LIGHT_DIRECTIONAL);
-        new DirectionalLight(glm::vec4(10.0f), glm::vec4(COLOR_SUN, 1.0f), 10.0f, LIGHT_DIRECTIONAL);
+        new DirectionalLight(glm::vec4(10.0f, -10.0f, 10.0f, -10.0f), glm::vec4(COLOR_BLUE, 1.0f), 10.0f, LIGHT_DIRECTIONAL);
+        new DirectionalLight(glm::vec4(-10.0f), glm::vec4(COLOR_SUN, 1.0f), 10.0f, LIGHT_DIRECTIONAL);
 
         BufferManager::createUniformBuffers(this->device,this->physicalDevice);
 

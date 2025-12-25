@@ -52,6 +52,33 @@ namespace Prometheus{
             }
         }
 
+        void popItem(T item) {
+            if (size == 1) {
+                head = nullptr;
+                tail = nullptr;
+
+                size--;
+            }
+            else if (size == 2) {
+                if (item->next == nullptr) {
+                    head = item->prev;
+                    tail = item->prev;
+                }
+
+                if (item->prev == nullptr) {
+                    head = item->next;
+                    tail = item->next;
+                }
+
+                size--;
+            }
+            else {
+                item->next->prev = item->prev;
+                item->prev->next = item->next;
+                size--;
+            }
+        }
+
         T pop_back(){
 
             if(size == 0){

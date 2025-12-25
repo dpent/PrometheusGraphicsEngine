@@ -11,6 +11,7 @@ layout(set = 0, binding = 0) uniform Lights {
     vec4 colors[128];
     vec4 ambientColors[128];
     vec4 intensities[128];
+    mat4 lightMVPs[128];
     uint lightCount;
     uint types[128/4];
 } lightsUBO;
@@ -30,7 +31,7 @@ void main() {
     vec3 cameraUp = vec3(pc.view[0][1], pc.view[1][1], pc.view[2][1]);
     
     // Light properties
-    vec3 lightPos = lightsUBO.positions[lightIndex].xyz;
+    vec3 lightPos = -lightsUBO.positions[lightIndex].xyz;
     float lightSize = (lightsUBO.intensities[lightIndex].x) / 10.0;
     
     // Billboard the quad to face camera

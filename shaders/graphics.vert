@@ -10,6 +10,7 @@ layout(set = 0, binding = 0) uniform Lights {
     vec4 colors[128];
     vec4 ambientColors[128];
     vec4 intensities[128];
+    mat4 lightVPs[128];
     uint lightCount;
     uint types[128/4];
 } lightsUBO;

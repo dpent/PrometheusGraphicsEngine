@@ -370,5 +370,8 @@
     <None Include="shaders\pregraphics.vert">
       <Filter>Source Files\shaders</Filter>
     </None>
+    <None Include="shaders\shadowMap.vert">
+      <Filter>Source Files\shaders</Filter>
+    </None>
   </ItemGroup>
 </Project>

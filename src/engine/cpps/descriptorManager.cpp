@@ -21,9 +21,16 @@ namespace Prometheus{
         samplerLayoutBinding.pImmutableSamplers = nullptr;
         samplerLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 
-        std::array<VkDescriptorSetLayoutBinding, 2> bindings = {
+        VkDescriptorSetLayoutBinding shadowMapBinding{};
+        shadowMapBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        shadowMapBinding.binding = 2;
+        shadowMapBinding.descriptorCount = 64;
+        shadowMapBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+
+        std::array<VkDescriptorSetLayoutBinding, 3> bindings = {
             uboLayoutBinding,
             samplerLayoutBinding,
+            shadowMapBinding
         };
 
         VkDescriptorSetLayoutCreateInfo layoutInfo{};
@@ -37,13 +44,16 @@ namespace Prometheus{
     }
 
     void DescriptorManager::createDescriptorPool(VkDevice& device){
-        std::array<VkDescriptorPoolSize, 2> poolSizes{};
+        std::array<VkDescriptorPoolSize, 3> poolSizes{};
 
         poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
         poolSizes[0].descriptorCount = static_cast<uint32_t>(Engine::meshBatches.size() * Engine::MAX_FRAMES_IN_FLIGHT);
 
         poolSizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
         poolSizes[1].descriptorCount = static_cast<uint32_t>(Engine::meshBatches.size() * 64 * Engine::MAX_FRAMES_IN_FLIGHT); // max 64 textures per batch
+
+        poolSizes[2].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        poolSizes[2].descriptorCount = static_cast<uint32_t>(Engine::meshBatches.size() * 64 * Engine::MAX_FRAMES_IN_FLIGHT);
 
         VkDescriptorPoolCreateInfo poolInfo{};
         poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
@@ -70,6 +80,17 @@ namespace Prometheus{
             bufferInfo.buffer = Engine::uniformBuffers[j]; // VkBuffer for UBO
             bufferInfo.offset = 0;
             bufferInfo.range  = sizeof(UBOData);
+
+            std::vector<VkDescriptorImageInfo> shadowInfos;
+
+            for (uint32_t k = 0; k < Engine::shadowCreatingLights; k++) {
+                VkDescriptorImageInfo shadowInfo{};
+                shadowInfo.imageView = Engine::shadowImageViews[k];
+                shadowInfo.imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
+                shadowInfo.sampler = Engine::shadowMapSampler;
+
+                shadowInfos.push_back(shadowInfo);
+            }
 
             for (auto &batch : Engine::meshBatches) {
     
@@ -115,8 +136,17 @@ namespace Prometheus{
                 textureWrite.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
                 textureWrite.descriptorCount = static_cast<uint32_t>(imageInfos.size());
                 textureWrite.pImageInfo = imageInfos.data();
+
+                VkWriteDescriptorSet shadowWrite{};
+                shadowWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+                shadowWrite.dstSet = Engine::descriptorSets[j][i];
+                shadowWrite.dstBinding = 2;
+                shadowWrite.dstArrayElement = 0;
+                shadowWrite.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+                shadowWrite.descriptorCount = static_cast<uint32_t>(shadowInfos.size());
+                shadowWrite.pImageInfo = shadowInfos.data();
     
-                std::array<VkWriteDescriptorSet, 2> writes = { uboWrite, textureWrite };
+                std::array<VkWriteDescriptorSet, 3> writes = { uboWrite, textureWrite, shadowWrite };
                 vkUpdateDescriptorSets(device, static_cast<uint32_t>(writes.size()), writes.data(), 0, nullptr);
                 i++;
             }

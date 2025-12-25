@@ -87,6 +87,98 @@ namespace Prometheus{
             throw std::runtime_error("failed to begin recording command buffer!");
         }
 
+        Engine::descriptorsReadySemaphore.acquire();
+        Engine::instanceBufferReady.acquire();
+
+        UniformBufferObject* light = Engine::shadowCreatingLightsQueue.head;
+
+        for (uint32_t i = 0; i < Engine::shadowCreatingLights; i++) {
+
+            VkExtent2D extent;
+            extent.height = Engine::shadowRes;
+            extent.width = Engine::shadowRes;
+
+            VkClearValue clearValues[2]{};
+            clearValues[0].depthStencil = { 1.0f, 0 };
+
+            VkRenderPassBeginInfo shadowPassInfo{};
+            shadowPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+            shadowPassInfo.renderPass = Engine::shadowRenderPass;
+            shadowPassInfo.framebuffer = Engine::shadowFrameBuffers[i];
+            shadowPassInfo.renderArea.offset = { 0,0 };
+            shadowPassInfo.renderArea.extent = extent;
+            shadowPassInfo.clearValueCount = 1;
+            shadowPassInfo.pClearValues = clearValues;
+
+            vkCmdBeginRenderPass(commandBuffer, &shadowPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+
+            VkViewport viewport{}; //Viewport and Scissor was set to dynamic in createGraphicsPipeline (graphicsPipeline.cpp)
+            viewport.x = 0.0f;
+            viewport.y = 0.0f;
+            viewport.width = static_cast<float>(Engine::shadowRes);
+            viewport.height = static_cast<float>(Engine::shadowRes);
+            viewport.minDepth = 0.0f;
+            viewport.maxDepth = 1.0f;
+            vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
+
+            VkRect2D scissor{};
+            scissor.offset = { 0, 0 };
+            scissor.extent = extent;
+
+            vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
+
+            vkCmdSetDepthBias(
+                commandBuffer,
+                1.25f,
+                0.0f,
+                1.75f);
+
+            glm::mat4 lightVP = light->getLightVP();
+
+            vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, Engine::shadowMapPipeline);
+
+            if (Engine::indexVertexBuffer != VK_NULL_HANDLE && Engine::objectDQueue.size != 0) {
+
+                BufferManager::updateInstanceBuffer(Engine::currentFrame);
+
+                VkBuffer vertexBuffers[] = { Engine::indexVertexBuffer,Engine::instanceBuffers[Engine::currentFrame] };
+                VkDeviceSize offsets[] = { 0,0 };
+
+                vkCmdBindVertexBuffers(commandBuffer, 0, 2, vertexBuffers, offsets);
+                vkCmdBindIndexBuffer(commandBuffer, Engine::indexVertexBuffer, Engine::indexOffset, VK_INDEX_TYPE_UINT32);
+
+                vkCmdPushConstants(
+                    commandBuffer,
+                    Engine::shadowMapPipelineLayout,
+                    VK_SHADER_STAGE_VERTEX_BIT,
+                    0,
+                    sizeof(lightVP),
+                    &lightVP
+                );
+
+                uint32_t instanceCount = 0;
+                for (uint32_t i = 0; i < Engine::meshBatches.size(); i++) {
+
+                    vkCmdBindDescriptorSets(
+                        commandBuffer,
+                        VK_PIPELINE_BIND_POINT_GRAPHICS,
+                        Engine::shadowMapPipelineLayout,
+                        0,                              // first set
+                        1,                              // number of sets
+                        &Engine::descriptorSets[Engine::currentFrame][i],     // pointer to descriptor set
+                        0,
+                        nullptr
+                    );
+                    Engine::meshBatches[i]->objects[0]->draw(commandBuffer, static_cast<uint32_t>(Engine::meshBatches[i]->instances.size()), instanceCount);
+                    instanceCount += static_cast<uint32_t>(Engine::meshBatches[i]->instances.size());
+                }
+            }
+
+            vkCmdEndRenderPass(commandBuffer);
+
+            light = light->next;
+        }
+
         VkRenderPassBeginInfo renderPassInfo{};
         renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
         renderPassInfo.renderPass = Engine::renderPass;
@@ -129,8 +221,6 @@ namespace Prometheus{
         cameraPushConstants->view=viewMatrix;
         cameraPushConstants->proj=projMatrix;
         
-        Engine::descriptorsReadySemaphore.acquire();
-        Engine::instanceBufferReady.acquire();
         #ifdef EDITOR
 
             Engine::debugBuffersReady.acquire();
@@ -189,8 +279,6 @@ namespace Prometheus{
         );
 
         if(Engine::indexVertexBuffer!=VK_NULL_HANDLE && Engine::objectDQueue.size!=0){
-
-            BufferManager::updateInstanceBuffer(Engine::currentFrame);
 
             VkBuffer vertexBuffers[] = {Engine::indexVertexBuffer,Engine::instanceBuffers[Engine::currentFrame]};
             VkDeviceSize offsets[] = {0,0};
@@ -469,6 +557,7 @@ namespace Prometheus{
             data.colors[i] = light->ubo->color;
             data.ambientLightColors[i] = light->ubo->ambientLightColor;
             data.intensities[i] = glm::vec4(light->ubo->intensity);
+            data.lightMVPs[i] = light->ubo->getLightVP();
 
             size_t idx = i / 4;        // which uint32_t
             size_t bytePos = i % 4;    // which byte in that uint32_t
@@ -610,6 +699,7 @@ namespace Prometheus{
 
         return findSupportedFormat(
             {
+                VK_FORMAT_D16_UNORM,
                 VK_FORMAT_D32_SFLOAT
             },
             VK_IMAGE_TILING_OPTIMAL,
@@ -808,10 +898,12 @@ namespace Prometheus{
         Engine::shadowImageViews.resize(Engine::shadowCreatingLights);
         for (uint32_t i = 0; i < Engine::shadowCreatingLights; i++){
         
-            Engine::shadowImageViews[i] = SwapChainManager::createImageView(device, Engine::shadowImage, depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT, 1, VK_IMAGE_VIEW_TYPE_2D_ARRAY, 1, i);
+            Engine::shadowImageViews[i] = SwapChainManager::createImageView(device, Engine::shadowImage, depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT, 1, VK_IMAGE_VIEW_TYPE_2D, 1, i);
         }
 
         BufferManager::createShadowFrameBuffers(device);
+
+        TextureManager::createShadowMapSampler(device, Engine::shadowMapSampler);
 
     }
 
@@ -825,6 +917,7 @@ namespace Prometheus{
             vkDestroyFramebuffer(device, Engine::shadowFrameBuffers[i], nullptr);
 
         }
+        vkDestroySampler(device, Engine::shadowMapSampler, nullptr);
 
         BufferManager::createShadowMapResources(device, physicalDevice);
 

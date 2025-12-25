@@ -32,6 +32,7 @@ namespace Prometheus{
         static void createTextureImageView(VkDevice& device, VkImage& image, VkImageView& imageView, uint32_t mipLevels);
 
         static void createTextureSampler(VkDevice& device, VkSampler& sampler);
+        static void createShadowMapSampler(VkDevice& device, VkSampler& sampler);
 
         static void generateMipMaps(VkImage& image, int32_t& texWidth, 
             int32_t& texHeight, uint32_t& mipLevels, 
