@@ -85,14 +85,14 @@ namespace Prometheus::Hyperion {
     glm::mat4 DirectionalLight::getLightVP() {
 
         glm::mat4 view = glm::lookAt(
-            glm::vec3(position.x, position.y,position.z) * 5.0f, 
+            glm::vec3(position.x, position.y,position.z) , 
             glm::vec3(0.0f), 
             glm::vec3(0.0f, 1.0f, 0.0f)
         );
         
         glm::mat4 proj = glm::orthoZO(
             -10.0f, 10.0f,
-            -10.0f, 10.0f,
+            -15.0f, 15.0f,
             0.1f, 96.0f
         );
 

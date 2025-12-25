@@ -27,9 +27,11 @@ void main() {
     vec3 totalLight = vec3(0.0);
     vec3 totalAmbient = vec3(0.0);
 
+    float shadow = 1.0;
+
     for (uint i = 0; i < lightsUBO.lightCount; i++) {
     
-        float shadow = 1.0;
+        shadow = 1.0;
     
         uint idx     = i / 4u; // which uint
         uint bytePos = i % 4u; // which byte
@@ -64,11 +66,11 @@ void main() {
 
                 float currentDepth = projCoords.z;
 
-                float bias = 0.001;
+                float bias = 0.1;
 
-                if (currentDepth - bias > closestDepth)
+                if (currentDepth > closestDepth + bias)
                 {
-                    shadow = 0.1;
+                    shadow = currentDepth - (closestDepth + bias);
                 }
             
             }
@@ -86,12 +88,12 @@ void main() {
 
             vec3 diffuseLight = lightColor * max(dot(normalize(fragWorldNormal), normalize(directionToLight)), 0);
 
-            totalLight += diffuseLight * attenuation * shadow;
+            totalLight += diffuseLight * attenuation;
             totalAmbient += lightsUBO.ambientColors[i].xyz * lightsUBO.ambientColors[i].w;
         }
     }
 
     vec4 lightColor = vec4(totalAmbient + totalLight, 1.0) / lightsUBO.lightCount;
     
-    outColor = lightColor + texColor;
+    outColor = lightColor + texColor;//vec4(vec3(shadow), 1.0);
 }
