@@ -8,9 +8,10 @@ using namespace std;
 
 int main()
 {
-	cout << "Hello CMake." << endl;
+	Engine* engine = new Engine();
 
-	Engine::run();
+	Engine::run(engine);
 
+	delete engine;
 	return 0;
 }
