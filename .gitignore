@@ -1,12 +1,2 @@
-# Visual Studio
-.vs/
-*.user
-*.suo
-
-# Build output
-x64/
-bin/
-obj/
-
-# Temporary / random files
-Promethe.001cac7a
+out/build
+.vs

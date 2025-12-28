@@ -1,7 +1,0 @@
-<Solution>
-  <Configurations>
-    <Platform Name="x64" />
-    <Platform Name="x86" />
-  </Configurations>
-  <Project Path="PrometheusGraphicsEngine.vcxproj" Id="001cac7a-c501-47d5-b8bf-b05591924918" />
-</Solution>
