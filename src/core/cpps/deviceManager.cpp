@@ -159,7 +159,7 @@ void DeviceManager::createLogicalDevice() {
         queueCreateInfos.push_back(queueCreateInfo);
     }
 
-    VkPhysicalDeviceFeatures deviceFeatures{};//TODO FILL THE FIELDS RIGHT NOW ALL ARE FALSE
+    VkPhysicalDeviceFeatures deviceFeatures{};
     if (!Engine::deviceInfo.physicalFeatures.samplerAnisotropy) {
         deviceFeatures.samplerAnisotropy = VK_FALSE;
     }
@@ -167,6 +167,15 @@ void DeviceManager::createLogicalDevice() {
         deviceFeatures.samplerAnisotropy = VK_TRUE;
     } //We need this if we use it
     //deviceFeatures.sampleRateShading = VK_TRUE; //Enable sample shading feature for the device
+
+    VkPhysicalDeviceDescriptorIndexingFeatures indexing{};
+    indexing.sType =
+        VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES;
+    indexing.descriptorBindingSampledImageUpdateAfterBind = VK_TRUE;
+    indexing.shaderSampledImageArrayNonUniformIndexing = VK_TRUE;
+    indexing.runtimeDescriptorArray = VK_TRUE;
+    indexing.descriptorBindingPartiallyBound = VK_TRUE;
+    indexing.descriptorBindingVariableDescriptorCount = VK_TRUE;
 
     VkDeviceCreateInfo createInfo{};
     createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
@@ -178,6 +187,8 @@ void DeviceManager::createLogicalDevice() {
 
     createInfo.enabledExtensionCount = static_cast<uint32_t>(Engine::deviceExtensions.size());
     createInfo.ppEnabledExtensionNames = Engine::deviceExtensions.data();
+
+    createInfo.pNext = &indexing;
 
     if (InstanceManager::enableValidationLayers) {
         createInfo.enabledLayerCount = static_cast<uint32_t>(InstanceManager::validationLayers.size());
@@ -203,4 +214,6 @@ uint32_t DeviceManager::findMemoryType(uint32_t& typeFilter, VkMemoryPropertyFla
             return i;
         }
     }
+
+    return -1;
 }

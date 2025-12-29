@@ -4,6 +4,8 @@
 #include "deviceManager.h"
 #include "renderPassManager.h"
 #include "bufferManager.h"
+#include "pipelineManager.h"
+#include "descriptorManager.h"
 
 class WorkerThread;
 struct Job;
@@ -19,10 +21,14 @@ public:
 
 	static const int MAX_FRAMES_IN_FLIGHT = 2;
 
+	static std::filesystem::path exeDir;
+
+	static const uint32_t MAX_TEXTURES = 1024;
+
 	//CORE
-	static VulkanInstanceInfo vkInstanceInfo;
+	static VulkanInstance vkInstanceInfo;
 	static DeviceInfo deviceInfo;
-	static SwapChainInfo swapChainInfo;
+	static SwapChain swapChainInfo;
 
 	static VkSampleCountFlagBits msaaSamples;
 
@@ -31,6 +37,11 @@ public:
 	static VkRenderPass graphicsRenderPass;
 	static Image depthResource;
 	static Image colorResource;
+
+	static Pipeline graphicsPipeLine;
+	static Descriptor graphicsDescriptor;
+
+	static std::deque<Image*> textures;
 
 	//WINDOW
 	static GLFWwindow* window;
@@ -56,6 +67,14 @@ public:
 	
 	static void createSurface();
 	static VkSampleCountFlagBits getMaxUsableSampleCount();
+	
+	static std::vector<char> readFile(const std::string& filename);
+	static VkShaderModule createShaderModule(const std::vector<char>& code);
+	static VkPipelineShaderStageCreateInfo createShaderStageInfo(VkStructureType sType,
+		VkShaderStageFlagBits stage,
+		VkShaderModule& module,
+		const char* pName,
+		const VkSpecializationInfo* pSpecializationInfo = nullptr);
 
 	//USED BY GLFW TO NOTIFY WINDOW RESIZE
 	static void frameBufferResizeCallback(GLFWwindow* window, int width, int height);

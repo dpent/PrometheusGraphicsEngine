@@ -153,3 +153,58 @@ void SwapChainManager::createSwapChainImageViews() {
 
     }
 }
+
+void SwapChainManager::cleanupSwapChainDependents() {
+
+    /*for (auto framebuffer : Engine::swapChainFramebuffers) {
+        vkDestroyFramebuffer(device, framebuffer, nullptr);
+    }*/
+
+    for (auto imageView : Engine::swapChainInfo.imageViews) {
+        vkDestroyImageView(Engine::deviceInfo.logicalDevice, imageView, nullptr);
+    }
+
+    vkDestroyImageView(Engine::deviceInfo.logicalDevice, Engine::depthResource.view, nullptr);
+    Engine::depthResource.view = VK_NULL_HANDLE;
+    vkDestroyImage(Engine::deviceInfo.logicalDevice, Engine::depthResource.image, nullptr);
+    Engine::depthResource.image = VK_NULL_HANDLE;
+    vkFreeMemory(Engine::deviceInfo.logicalDevice, Engine::depthResource.memory, nullptr);
+    Engine::depthResource.memory = VK_NULL_HANDLE;
+
+    vkDestroyImageView(Engine::deviceInfo.logicalDevice, Engine::colorResource.view, nullptr);
+    Engine::colorResource.view = VK_NULL_HANDLE;
+    vkDestroyImage(Engine::deviceInfo.logicalDevice, Engine::colorResource.image, nullptr);
+    Engine::colorResource.image = VK_NULL_HANDLE;
+    vkFreeMemory(Engine::deviceInfo.logicalDevice, Engine::colorResource.memory, nullptr);
+    Engine::colorResource.memory = VK_NULL_HANDLE;
+}
+
+void SwapChainManager::recreateSwapChain() {
+    int width = 0, height = 0;
+    glfwGetFramebufferSize(Engine::window, &width, &height);
+    while (width == 0 || height == 0) {
+        glfwGetFramebufferSize(Engine::window, &width, &height);
+        glfwWaitEvents();
+    }
+
+    VkSwapchainKHR oldSwapChain = Engine::swapChainInfo.chain;
+
+
+    vkQueueWaitIdle(Engine::queues.present);
+
+
+    SwapChainManager::cleanupSwapChainDependents();
+
+    SwapChainManager::createSwapChain(oldSwapChain);
+
+    SwapChainManager::createSwapChainImageViews();
+
+    ImageManager::createColorResources();
+    ImageManager::createDepthResources();
+    //BufferManager::createFrameBuffers(device);
+
+    if (oldSwapChain != VK_NULL_HANDLE) {
+        vkDestroySwapchainKHR(Engine::deviceInfo.logicalDevice, oldSwapChain, nullptr);
+        oldSwapChain = VK_NULL_HANDLE;
+    }
+}

@@ -11,6 +11,8 @@ endif()
 
 project ("Prometheus")
 
+set(BIN_DIR "${CMAKE_SOURCE_DIR}/bin")
+
 file(GLOB_RECURSE SOURCES "src/*.cpp" "src/*.h")
 
 # Add source to this project's executable.
@@ -28,5 +30,6 @@ target_link_libraries(Prometheus PUBLIC
 )
 
 target_compile_features(Prometheus PUBLIC cxx_std_23)
+target_compile_definitions(Prometheus PRIVATE BIN_DIR="${BIN_DIR}")
 
 # TODO: Add tests and install targets if needed.

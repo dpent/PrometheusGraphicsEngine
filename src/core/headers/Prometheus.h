@@ -17,4 +17,10 @@
 #include <algorithm>
 #include <set>
 #include <array>
+#include <filesystem>
+#include <fstream>
+#define GLM_ENABLE_EXPERIMENTAL
+#include <glm/gtx/hash.hpp>
+#include <glm/glm.hpp>
+#include <deque>
 // TODO: Reference additional headers your program requires here.

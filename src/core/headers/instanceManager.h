@@ -40,7 +40,7 @@ public:
     static void populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo);
 };
 
-struct VulkanInstanceInfo {
+struct VulkanInstance {
 public:
 	VkInstance instance;
 	VkDebugUtilsMessengerEXT debugMessenger;

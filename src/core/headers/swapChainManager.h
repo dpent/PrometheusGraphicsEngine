@@ -11,7 +11,7 @@ struct SwapChainSupportDetails {
     static SwapChainSupportDetails querySwapChainSupport(const VkPhysicalDevice& device, const VkSurfaceKHR& surface);
 };
 
-struct SwapChainInfo {
+struct SwapChain {
     std::vector<VkImage> images;
     std::vector<VkImageView> imageViews;
     VkExtent2D extent;
@@ -29,4 +29,7 @@ public:
     static VkExtent2D chooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities);
 
     static void createSwapChainImageViews();
+
+    static void recreateSwapChain();
+    static void cleanupSwapChainDependents();
 };

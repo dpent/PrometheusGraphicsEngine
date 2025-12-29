@@ -2,10 +2,16 @@
 #include "../../threads/headers/workerThread.h"
 #include "../../threads/headers/job.h"
 
+#ifdef __linux__
+    std::filesystem::path Engine::exeDir = std::filesystem::canonical("/proc/self/exe").parent_path();
+#elif _WIN32
+    std::filesystem::path Engine::exeDir = std::filesystem::current_path();
+#endif
+
 //CORE
-VulkanInstanceInfo Engine::vkInstanceInfo;
+VulkanInstance Engine::vkInstanceInfo;
 DeviceInfo Engine::deviceInfo;
-SwapChainInfo Engine::swapChainInfo;
+SwapChain Engine::swapChainInfo;
 
 VkSampleCountFlagBits Engine::msaaSamples;
 
@@ -14,6 +20,11 @@ QueueHolder Engine::queues;
 VkRenderPass Engine::graphicsRenderPass;
 Image Engine::depthResource;
 Image Engine::colorResource;
+
+Pipeline Engine::graphicsPipeLine;
+Descriptor Engine::graphicsDescriptor;
+
+std::deque<Image*> Engine::textures;
 
 //WINDOW
 GLFWwindow* Engine::window = nullptr;
@@ -74,9 +85,19 @@ void Engine::initVulkan() {
 
     ImageManager::createDepthResources();
     ImageManager::createColorResources();
+
+    DescriptorManager::createGraphicsDescriptorSetLayout();
+    
+    PipelineManager::createGraphicsPipeline();
+
 }
 
 void Engine::mainLoop() {
+
+    Engine::textures.push_back(&Engine::depthResource);
+
+    DescriptorManager::createGraphicsDescriptorPool();
+    DescriptorManager::createGraphicsDescriptorSets();
     
     while (!glfwWindowShouldClose(Engine::window)) {
         glfwPollEvents();
@@ -180,4 +201,61 @@ VkFormat Engine::findSupportedFormat(const std::vector<VkFormat>& candidates, Vk
     }
 
     throw std::runtime_error("failed to find supported format!");
+}
+
+std::vector<char> Engine::readFile(const std::string& filename) {
+
+    std::ifstream file((Engine::exeDir / filename).lexically_normal().string(),
+        std::ios::ate | std::ios::binary);
+
+    if (!file.is_open()) {
+        throw std::runtime_error("failed to open file!");
+    }
+
+    size_t fileSize = (size_t)file.tellg();
+    std::vector<char> buffer(fileSize);
+
+    file.seekg(0);
+    file.read(buffer.data(), fileSize);
+
+    file.close();
+
+    return buffer;
+}
+
+VkShaderModule Engine::createShaderModule(const std::vector<char>& code) {
+
+    VkShaderModuleCreateInfo createInfo{};
+    createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+    createInfo.codeSize = code.size();
+    createInfo.pCode = reinterpret_cast<const uint32_t*>(code.data());
+
+    VkShaderModule shaderModule;
+    if (vkCreateShaderModule(Engine::deviceInfo.logicalDevice, &createInfo, nullptr, &shaderModule) != VK_SUCCESS) {
+        throw std::runtime_error("failed to create shader module!");
+    }
+    return shaderModule;
+}
+
+VkPipelineShaderStageCreateInfo Engine::createShaderStageInfo(VkStructureType sType,
+    VkShaderStageFlagBits stage,
+    VkShaderModule& module,
+    const char* pName,
+    const VkSpecializationInfo* pSpecializationInfo
+) 
+{
+    VkPipelineShaderStageCreateInfo ShaderStageInfo{};
+    ShaderStageInfo.sType = sType;
+    ShaderStageInfo.stage = stage;
+    ShaderStageInfo.module = module;
+    ShaderStageInfo.pName = pName; //Define the entrypoint function (for us its main())
+    ShaderStageInfo.pSpecializationInfo = pSpecializationInfo; /*It allows you to specify values for shader constants.
+                                                        You can use a single shader module where its behavior
+                                                        can be configured at pipeline creation by specifying
+                                                        different values for the constants used in it. This
+                                                        is more efficient than configuring the shader using
+                                                        variables at render time, because the compiler can do
+                                                        optimizations like eliminating if statements that depend
+                                                        on these values. */
+    return ShaderStageInfo;
 }
