@@ -34,6 +34,7 @@ void DeviceManager::pickPhysicalDevice() {
 
     vkGetPhysicalDeviceProperties(Engine::deviceInfo.physicalDevice, &Engine::deviceInfo.physicalProperties);
     vkGetPhysicalDeviceFeatures(Engine::deviceInfo.physicalDevice, &Engine::deviceInfo.physicalFeatures);
+    vkGetPhysicalDeviceMemoryProperties(Engine::deviceInfo.physicalDevice, &Engine::deviceInfo.physicalMemProperties);
 
     Engine::msaaSamples = Engine::getMaxUsableSampleCount();
 
@@ -193,4 +194,13 @@ void DeviceManager::createLogicalDevice() {
     vkGetDeviceQueue(Engine::deviceInfo.logicalDevice, indices.graphicsFamily.value(), 0, &Engine::queues.graphics); //The 0 means we get the 0th queue from each family
     vkGetDeviceQueue(Engine::deviceInfo.logicalDevice, indices.presentFamily.value(), 0, &Engine::queues.present);
     vkGetDeviceQueue(Engine::deviceInfo.logicalDevice, indices.computeFamily.value(), 0, &Engine::queues.compute);
+}
+
+uint32_t DeviceManager::findMemoryType(uint32_t& typeFilter, VkMemoryPropertyFlags properties) {
+
+    for (uint32_t i = 0; i < Engine::deviceInfo.physicalMemProperties.memoryTypeCount; i++) {
+        if ((typeFilter & (1 << i)) && (Engine::deviceInfo.physicalMemProperties.memoryTypes[i].propertyFlags & properties) == properties) {
+            return i;
+        }
+    }
 }

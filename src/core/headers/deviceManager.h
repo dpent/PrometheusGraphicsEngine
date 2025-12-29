@@ -13,11 +13,12 @@ public:
 
     static bool checkDeviceExtensionSupport(const VkPhysicalDevice& device);
 
-    //Logical device
     static void createLogicalDevice();
 
     static const char* deviceTypeToString(VkPhysicalDeviceType& deviceType);
     static const char* vendorIdToString(uint32_t& vendorId);
+
+	static uint32_t findMemoryType(uint32_t& typeFilter, VkMemoryPropertyFlags properties);
 };
 
 struct DeviceInfo {
@@ -26,5 +27,6 @@ public:
 	VkDevice logicalDevice;
 
 	VkPhysicalDeviceProperties physicalProperties;
+	VkPhysicalDeviceMemoryProperties physicalMemProperties;
 	VkPhysicalDeviceFeatures physicalFeatures;
 };

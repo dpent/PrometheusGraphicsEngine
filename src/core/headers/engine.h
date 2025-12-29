@@ -2,6 +2,8 @@
 #include "Prometheus.h"
 #include "instanceManager.h"
 #include "deviceManager.h"
+#include "renderPassManager.h"
+#include "bufferManager.h"
 
 class WorkerThread;
 struct Job;
@@ -10,10 +12,12 @@ struct PrepareForJoinJob;
 class Engine {
 
 public:
-	//EXTENSIONS
+	//IMPORTANT CONSTANTS
 	inline static const std::vector<const char*> deviceExtensions = {
 	VK_KHR_SWAPCHAIN_EXTENSION_NAME
 	};
+
+	static const int MAX_FRAMES_IN_FLIGHT = 2;
 
 	//CORE
 	static VulkanInstanceInfo vkInstanceInfo;
@@ -23,6 +27,10 @@ public:
 	static VkSampleCountFlagBits msaaSamples;
 
 	static QueueHolder queues;
+
+	static VkRenderPass graphicsRenderPass;
+	static Image depthResource;
+	static Image colorResource;
 
 	//WINDOW
 	static GLFWwindow* window;
@@ -55,4 +63,8 @@ public:
 	//THREADS
 	static void initThreadPool(uint16_t poolSize);
 	static void killThreadPool();
+
+	//FORMATS
+	static VkFormat findDepthFormat();
+	static VkFormat findSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features);
 };
