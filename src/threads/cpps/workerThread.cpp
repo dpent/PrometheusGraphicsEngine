@@ -6,6 +6,8 @@ WorkerThread::WorkerThread() {
 
 	this->thread = std::thread(&WorkerThread::workerLoop, this);
 	this->id = thread.get_id();
+
+	this->thread.detach();
 }
 
 void WorkerThread::detach() {

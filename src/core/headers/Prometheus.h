@@ -3,6 +3,8 @@
 
 #pragma once
 
+//#define RELEASE
+
 #include <iostream>
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
@@ -12,4 +14,6 @@
 #include <unordered_map>
 #include <queue>
 #include <string>
+#include <algorithm>
+#include <set>
 // TODO: Reference additional headers your program requires here.

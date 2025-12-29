@@ -28,7 +28,6 @@ PrepareForJoinJob::~PrepareForJoinJob() {
 }
 
 void PrepareForJoinJob::execute() {
-	std::cout << "Ready to join" << std::endl;
 }
 
 std::string PrepareForJoinJob::toString() {

@@ -2,12 +2,22 @@
 #include "../../threads/headers/workerThread.h"
 #include "../../threads/headers/job.h"
 
+//CORE
+VulkanInstanceInfo Engine::vkInstanceInfo;
+DeviceInfo Engine::deviceInfo;
+SwapChainInfo Engine::swapChainInfo;
+
+VkSampleCountFlagBits Engine::msaaSamples;
+
+QueueHolder Engine::queues;
+
 //WINDOW
 GLFWwindow* Engine::window = nullptr;
 const int Engine::WIDTH = 1280;
 const int Engine::HEIGHT = 720;
 
 bool Engine::framebufferResized = false;
+VkSurfaceKHR Engine::surface;
 
 //SYNC OBJECTS
 std::counting_semaphore<INT_MAX> Engine::jobInQueueSem(0);
@@ -45,13 +55,22 @@ void Engine::initVulkan() {
 
     Engine::initThreadPool(std::thread::hardware_concurrency() - 1);
 
+    InstanceManager::createInstance(Engine::vkInstanceInfo.instance);
+    InstanceManager::setupDebugMessenger(Engine::vkInstanceInfo.instance, Engine::vkInstanceInfo.debugMessenger);
+
+    Engine::createSurface();
+
+    DeviceManager::pickPhysicalDevice();
+    DeviceManager::createLogicalDevice();
+
+    SwapChainManager::createSwapChain(Engine::swapChainInfo.chain);
+    SwapChainManager::createSwapChainImageViews();
 }
 
 void Engine::mainLoop() {
     
     while (!glfwWindowShouldClose(Engine::window)) {
         glfwPollEvents();
-        break;
     }
 
     Engine::killThreadPool();
@@ -108,4 +127,24 @@ void Engine::killThreadPool() {
         delete pair.second;
     }
 
+}
+
+void Engine::createSurface() {
+    if (glfwCreateWindowSurface(Engine::vkInstanceInfo.instance, Engine::window, nullptr, &Engine::surface) != VK_SUCCESS) {
+        throw std::runtime_error("failed to create window surface!");
+    }
+}
+
+
+VkSampleCountFlagBits Engine::getMaxUsableSampleCount() {
+
+    VkSampleCountFlags counts = Engine::deviceInfo.physicalProperties.limits.framebufferColorSampleCounts & Engine::deviceInfo.physicalProperties.limits.framebufferDepthSampleCounts;
+    if (counts & VK_SAMPLE_COUNT_64_BIT) { return VK_SAMPLE_COUNT_64_BIT; }
+    if (counts & VK_SAMPLE_COUNT_32_BIT) { return VK_SAMPLE_COUNT_32_BIT; }
+    if (counts & VK_SAMPLE_COUNT_16_BIT) { return VK_SAMPLE_COUNT_16_BIT; }
+    if (counts & VK_SAMPLE_COUNT_8_BIT) { return VK_SAMPLE_COUNT_8_BIT; }
+    if (counts & VK_SAMPLE_COUNT_4_BIT) { return VK_SAMPLE_COUNT_4_BIT; }
+    if (counts & VK_SAMPLE_COUNT_2_BIT) { return VK_SAMPLE_COUNT_2_BIT; }
+
+    return VK_SAMPLE_COUNT_1_BIT;
 }
