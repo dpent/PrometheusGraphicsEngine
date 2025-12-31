@@ -25,6 +25,21 @@ Pipeline Engine::graphicsPipeLine;
 Descriptor Engine::graphicsDescriptor;
 
 std::deque<Image*> Engine::textures;
+std::deque<GameObject*> Engine::gameObjects;
+std::deque<Mesh*> Engine::meshes;
+
+CommandPool Engine::command;
+
+VertexData Engine::vertexIndexData;
+Buffer Engine::vertexIndexBuffer;
+
+Buffer Engine::stagingBuffer;
+
+uint8_t Engine::currentFrame;
+
+std::vector<VkFence> Engine::inFlightFences;
+std::vector<VkSemaphore> Engine::imageAvailableSemaphores;
+std::vector<VkSemaphore> Engine::renderFinishedSemaphores;
 
 //WINDOW
 GLFWwindow* Engine::window = nullptr;
@@ -78,6 +93,8 @@ void Engine::initVulkan() {
     DeviceManager::pickPhysicalDevice();
     DeviceManager::createLogicalDevice();
 
+    Engine::createSyncObjects();
+
     SwapChainManager::createSwapChain(Engine::swapChainInfo.chain);
     SwapChainManager::createSwapChainImageViews();
 
@@ -86,9 +103,20 @@ void Engine::initVulkan() {
     ImageManager::createDepthResources();
     ImageManager::createColorResources();
 
+    BufferManager::createFrameBuffers(
+        Engine::swapChainInfo.frameBuffers,
+        Engine::swapChainInfo.imageViews,
+        Engine::swapChainInfo.extent,
+        Engine::graphicsRenderPass,
+        Engine::colorResource.view,
+        Engine::depthResource.view
+    );
+
     DescriptorManager::createGraphicsDescriptorSetLayout();
     
     PipelineManager::createGraphicsPipeline();
+
+    Engine::command.initialize();
 
 }
 
@@ -96,11 +124,27 @@ void Engine::mainLoop() {
 
     Engine::textures.push_back(&Engine::depthResource);
 
+    GameObject* gb = new GameObject("cube.obj");
+
+    for (size_t i = 0; i < gb->mesh->vertices.size(); i++) {
+        Engine::vertexIndexData.vertices.push_back(gb->mesh->vertices[i]);
+    }
+
+    for (size_t i = 0; i < gb->mesh->indices.size(); i++) {
+        Engine::vertexIndexData.indices.push_back(gb->mesh->indices[i]);
+    }
+
     DescriptorManager::createGraphicsDescriptorPool();
     DescriptorManager::createGraphicsDescriptorSets();
-    
+
+    BufferManager::createStagingBuffer(2048);
+
+    BufferManager::createVertexIndexBuffer(Engine::vertexIndexData.vertices.size() * sizeof(Vertex) + Engine::vertexIndexData.indices.size() * sizeof(uint32_t));
+
     while (!glfwWindowShouldClose(Engine::window)) {
         glfwPollEvents();
+
+        Engine::drawFrame();
     }
 
     Engine::killThreadPool();
@@ -258,4 +302,103 @@ VkPipelineShaderStageCreateInfo Engine::createShaderStageInfo(VkStructureType sT
                                                         optimizations like eliminating if statements that depend
                                                         on these values. */
     return ShaderStageInfo;
+}
+
+void Engine::drawFrame() {
+
+    vkWaitForFences(Engine::deviceInfo.logicalDevice, 1, &Engine::inFlightFences[Engine::currentFrame], VK_TRUE, UINT64_MAX);
+
+    uint32_t imageIndex;
+    VkResult result = vkAcquireNextImageKHR(Engine::deviceInfo.logicalDevice, Engine::swapChainInfo.chain, UINT64_MAX,
+        Engine::imageAvailableSemaphores[Engine::currentFrame],
+        VK_NULL_HANDLE, &imageIndex);
+
+    if (result == VK_ERROR_OUT_OF_DATE_KHR) {
+        SwapChainManager::recreateSwapChain();
+        framebufferResized = false;
+        return;
+    }
+    else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) { //Lacks logic for suboptimal swap chains
+        throw std::runtime_error("failed to acquire swap chain image!");
+    }
+
+
+    vkResetFences(Engine::deviceInfo.logicalDevice, 1, &Engine::inFlightFences[Engine::currentFrame]);
+
+
+    BufferManager::recordCommandBuffer(Engine::command.buffers[Engine::currentFrame], imageIndex);
+
+    VkSubmitInfo submitInfo{};
+    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+
+    VkSemaphore waitSemaphores[] =
+    {
+        Engine::imageAvailableSemaphores[Engine::currentFrame]
+    };
+
+    VkPipelineStageFlags waitStages[] =
+    {
+        VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT
+    };
+
+    submitInfo.waitSemaphoreCount = 1;
+    submitInfo.pWaitSemaphores = waitSemaphores;
+    submitInfo.pWaitDstStageMask = waitStages;
+    submitInfo.commandBufferCount = 1;
+    submitInfo.pCommandBuffers = &Engine::command.buffers[Engine::currentFrame];
+
+    VkSemaphore signalSemaphores[] = { Engine::renderFinishedSemaphores[Engine::currentFrame] };
+    submitInfo.signalSemaphoreCount = 1;
+    submitInfo.pSignalSemaphores = signalSemaphores;
+
+    if (vkQueueSubmit(Engine::queues.graphics, 1, &submitInfo, Engine::inFlightFences[Engine::currentFrame]) != VK_SUCCESS) {
+        throw std::runtime_error("failed to submit draw command buffer!");
+    }
+
+    VkPresentInfoKHR presentInfo{};
+    presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+
+    presentInfo.waitSemaphoreCount = 1;
+    presentInfo.pWaitSemaphores = signalSemaphores;
+
+    VkSwapchainKHR swapChains[] = { Engine::swapChainInfo.chain };
+    presentInfo.swapchainCount = 1;
+    presentInfo.pSwapchains = swapChains;
+    presentInfo.pImageIndices = &imageIndex;
+    presentInfo.pResults = nullptr; // Optional
+
+    result = vkQueuePresentKHR(Engine::queues.present, &presentInfo);
+
+    if (result == VK_ERROR_OUT_OF_DATE_KHR || Engine::framebufferResized) {
+        SwapChainManager::recreateSwapChain();
+        framebufferResized = false;
+    }
+    else if (result != VK_SUCCESS) {
+        throw std::runtime_error("failed to present swap chain image!");
+    }
+
+    Engine::currentFrame = (Engine::currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
+}
+
+void Engine::createSyncObjects() {
+
+    Engine::imageAvailableSemaphores.resize(Engine::MAX_FRAMES_IN_FLIGHT);
+    Engine::renderFinishedSemaphores.resize(Engine::MAX_FRAMES_IN_FLIGHT);
+    Engine::inFlightFences.resize(Engine::MAX_FRAMES_IN_FLIGHT);
+
+    VkSemaphoreCreateInfo semaphoreInfo{};
+    semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+
+    VkFenceCreateInfo fenceInfo{};
+    fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+    fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+
+    for (size_t i = 0; i < Engine::MAX_FRAMES_IN_FLIGHT; i++) {
+        if (vkCreateSemaphore(Engine::deviceInfo.logicalDevice, &semaphoreInfo, nullptr, &Engine::imageAvailableSemaphores[i]) != VK_SUCCESS ||
+            vkCreateSemaphore(Engine::deviceInfo.logicalDevice, &semaphoreInfo, nullptr, &Engine::renderFinishedSemaphores[i]) != VK_SUCCESS ||
+            vkCreateFence(Engine::deviceInfo.logicalDevice, &fenceInfo, nullptr, &Engine::inFlightFences[i]) != VK_SUCCESS) {
+
+            throw std::runtime_error("failed to create synchronization objects for a frame!");
+        }
+    }
 }

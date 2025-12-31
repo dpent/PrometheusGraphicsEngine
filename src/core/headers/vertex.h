@@ -18,6 +18,12 @@ public:
     }
 };
 
+struct CameraObject
+{
+    glm::mat4 view;
+    glm::mat4 proj;
+};
+
 namespace std {
     template<> struct hash<Vertex> {
         size_t operator()(Vertex const& vertex) const {

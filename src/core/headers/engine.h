@@ -6,6 +6,7 @@
 #include "bufferManager.h"
 #include "pipelineManager.h"
 #include "descriptorManager.h"
+#include "../../gameObjects/headers/gameObject.h"
 
 class WorkerThread;
 struct Job;
@@ -42,6 +43,21 @@ public:
 	static Descriptor graphicsDescriptor;
 
 	static std::deque<Image*> textures;
+	static std::deque<GameObject*> gameObjects;
+	static std::deque<Mesh*> meshes;
+
+	static CommandPool command;
+
+	static VertexData vertexIndexData;
+	static Buffer vertexIndexBuffer;
+
+	static Buffer stagingBuffer;
+
+	static uint8_t currentFrame;
+
+	static std::vector<VkFence> inFlightFences;
+	static std::vector<VkSemaphore> imageAvailableSemaphores;
+	static std::vector<VkSemaphore> renderFinishedSemaphores;
 
 	//WINDOW
 	static GLFWwindow* window;
@@ -75,6 +91,10 @@ public:
 		VkShaderModule& module,
 		const char* pName,
 		const VkSpecializationInfo* pSpecializationInfo = nullptr);
+
+	static void drawFrame();
+
+	static void createSyncObjects();
 
 	//USED BY GLFW TO NOTIFY WINDOW RESIZE
 	static void frameBufferResizeCallback(GLFWwindow* window, int width, int height);

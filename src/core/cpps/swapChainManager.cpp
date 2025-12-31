@@ -156,9 +156,9 @@ void SwapChainManager::createSwapChainImageViews() {
 
 void SwapChainManager::cleanupSwapChainDependents() {
 
-    /*for (auto framebuffer : Engine::swapChainFramebuffers) {
-        vkDestroyFramebuffer(device, framebuffer, nullptr);
-    }*/
+    for (auto framebuffer : Engine::swapChainInfo.frameBuffers) {
+        vkDestroyFramebuffer(Engine::deviceInfo.logicalDevice, framebuffer, nullptr);
+    }
 
     for (auto imageView : Engine::swapChainInfo.imageViews) {
         vkDestroyImageView(Engine::deviceInfo.logicalDevice, imageView, nullptr);
@@ -201,7 +201,14 @@ void SwapChainManager::recreateSwapChain() {
 
     ImageManager::createColorResources();
     ImageManager::createDepthResources();
-    //BufferManager::createFrameBuffers(device);
+    BufferManager::createFrameBuffers(
+        Engine::swapChainInfo.frameBuffers, 
+        Engine::swapChainInfo.imageViews, 
+        Engine::swapChainInfo.extent, 
+        Engine::graphicsRenderPass, 
+        Engine::colorResource.view, 
+        Engine::depthResource.view
+    );
 
     if (oldSwapChain != VK_NULL_HANDLE) {
         vkDestroySwapchainKHR(Engine::deviceInfo.logicalDevice, oldSwapChain, nullptr);

@@ -23,4 +23,6 @@
 #include <glm/gtx/hash.hpp>
 #include <glm/glm.hpp>
 #include <deque>
+#include "../../gameObjects/headers/tiny_obj_loader.h"
+#include <stdexcept>
 // TODO: Reference additional headers your program requires here.

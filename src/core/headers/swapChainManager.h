@@ -14,6 +14,7 @@ struct SwapChainSupportDetails {
 struct SwapChain {
     std::vector<VkImage> images;
     std::vector<VkImageView> imageViews;
+    std::vector<VkFramebuffer> frameBuffers;
     VkExtent2D extent;
     VkFormat imageFormat;
     VkSwapchainKHR chain;

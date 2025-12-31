@@ -12,6 +12,8 @@ endif()
 project ("Prometheus")
 
 set(BIN_DIR "${CMAKE_SOURCE_DIR}/bin")
+set(MODEL_DIR "${CMAKE_SOURCE_DIR}/models")
+set(TEXTURE_DIR "${CMAKE_SOURCE_DIR}/textures")
 
 file(GLOB_RECURSE SOURCES "src/*.cpp" "src/*.h")
 
@@ -31,5 +33,7 @@ target_link_libraries(Prometheus PUBLIC
 
 target_compile_features(Prometheus PUBLIC cxx_std_23)
 target_compile_definitions(Prometheus PRIVATE BIN_DIR="${BIN_DIR}")
+target_compile_definitions(Prometheus PRIVATE MODEL_DIR="${MODEL_DIR}")
+target_compile_definitions(Prometheus PRIVATE TEXTURE_DIR="${TEXTURE_DIR}")
 
 # TODO: Add tests and install targets if needed.
