@@ -35,15 +35,29 @@ void GUIManager::initImGUI() {
 	ImGui_ImplVulkan_Init(&initInfo);
 
 	ImGuiStyle& style = ImGui::GetStyle();
-	style.Colors[ImGuiCol_WindowBg] = Engine::IMGUI_BACKGTOUND_COLOR; // window background
+	style.Colors[ImGuiCol_WindowBg] = Engine::IMGUI_BACKGROUND_COLOR; // window background
 	style.Colors[ImGuiCol_TitleBg] = Engine::IMGUI_ACTIVE_COLOR; // title bar
 	style.Colors[ImGuiCol_TitleBgActive] = Engine::IMGUI_HIGHLIGHT_COLOR; // active title bar
-	style.Colors[ImGuiCol_Button] = Engine::IMGUI_BACKGTOUND_COLOR; // button
+	style.Colors[ImGuiCol_Button] = Engine::IMGUI_BACKGROUND_COLOR; // button
 	style.Colors[ImGuiCol_ButtonHovered] = Engine::IMGUI_ACTIVE_COLOR;
 	style.Colors[ImGuiCol_ButtonActive] = Engine::IMGUI_HIGHLIGHT_COLOR;
 	style.Colors[ImGuiCol_ResizeGrip] = Engine::IMGUI_DARK_COLOR; // resize grib
 	style.Colors[ImGuiCol_ResizeGripHovered] = Engine::IMGUI_ACTIVE_COLOR;
 	style.Colors[ImGuiCol_ResizeGripActive] = Engine::IMGUI_HIGHLIGHT_COLOR;
+	style.Colors[ImGuiCol_ScrollbarBg].w = 0.2f;
+	style.Colors[ImGuiCol_ScrollbarGrab].w = 0.5f;
+	style.Colors[ImGuiCol_ScrollbarGrabHovered].w = 0.7f;
+	style.Colors[ImGuiCol_ScrollbarGrabActive].w = 0.9f;
+	style.Colors[ImGuiCol_SliderGrab] = Engine::IMGUI_HIGHLIGHT_COLOR;
+	style.Colors[ImGuiCol_SliderGrabActive] = Engine::IMGUI_HIGHLIGHT_COLOR;
+	style.Colors[ImGuiCol_FrameBg] = Engine::IMGUI_DARK_COLOR;
+	style.Colors[ImGuiCol_FrameBgHovered] = Engine::IMGUI_ACTIVE_COLOR;
+	style.Colors[ImGuiCol_FrameBgActive] = Engine::IMGUI_ACTIVE_COLOR;
+	style.Colors[ImGuiCol_Tab] = Engine::IMGUI_DARK_COLOR; // inactive tab
+	style.Colors[ImGuiCol_TabHovered] = Engine::IMGUI_HIGHLIGHT_COLOR; // hover
+	style.Colors[ImGuiCol_TabActive] = Engine::IMGUI_BACKGROUND_COLOR; // active tab
+	style.Colors[ImGuiCol_TabUnfocused] = Engine::IMGUI_ACTIVE_COLOR; // inactive when window unfocused
+	style.Colors[ImGuiCol_TabUnfocusedActive] = Engine::IMGUI_HIGHLIGHT_COLOR;
 }
 
 void GUIManager::check_vk_result(VkResult err)
@@ -81,6 +95,7 @@ void GUIManager::startNewFrame() {
 void GUIManager::renderGUI(uint32_t& imageIndex) {
 
 	GUIManager::createInfoWindow();
+	GUIManager::createCameraInfoWindow();
 
 	ImGui::Render();
 	ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), Engine::command.buffers[Engine::currentFrame]);
@@ -106,4 +121,17 @@ void GUIManager::createInfoWindow() {
 
 	ImGui::End();
 
+}
+
+void GUIManager::createCameraInfoWindow() {
+
+	ImGui::Begin("Camera");
+
+	ImGui::SliderFloat("Max speed", &Engine::camera.maxSpeed, 0.0f, 200.0f);
+	ImGui::SliderFloat("FOV", &Engine::camera.fov, 0.0f, 180.0f);
+	ImGui::Text("Position: X: %.2f Y: %.2f Z: %.2f", Engine::camera.position.x, Engine::camera.position.y, Engine::camera.position.z);
+	ImGui::Text("Front: X: %.2f Y: %.2f Z: %.2f", Engine::camera.front.x, Engine::camera.front.y, Engine::camera.front.z);
+	ImGui::Text("Yaw: %.2f Pitch: %.2f", Engine::camera.yaw, Engine::camera.pitch);
+	ImGui::SliderFloat("Far", &Engine::camera.far, 0.0f, 5000.0f);
+	ImGui::End();
 }

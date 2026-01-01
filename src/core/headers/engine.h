@@ -8,6 +8,8 @@
 #include "descriptorManager.h"
 #include "../../gameObjects/headers/gameObject.h"
 #include "../../imgui/guiManager.h"
+#include "../../gameObjects/headers/camera.h"
+#include "inputManager.h"
 
 class WorkerThread;
 struct Job;
@@ -27,10 +29,12 @@ public:
 
 	static const uint32_t MAX_TEXTURES = 1024;
 
-	inline static const ImVec4 IMGUI_BACKGTOUND_COLOR = ImVec4(0.2f, 0.0f, 0.0f, 3.0f);
+	inline static const ImVec4 IMGUI_BACKGROUND_COLOR = ImVec4(0.2f, 0.0f, 0.0f, 3.0f);
 	inline static const ImVec4 IMGUI_ACTIVE_COLOR = ImVec4(0.6f, 0.0f, 0.0f, 1.0f);
 	inline static const ImVec4 IMGUI_HIGHLIGHT_COLOR = ImVec4(0.8f, 0.0f, 0.0f, 1.0f);
 	inline static const ImVec4 IMGUI_DARK_COLOR = ImVec4(0.05f, 0.0f, 0.0f, 1.0f);
+
+	inline static const glm::vec3 WORLD_UP = glm::vec3(0.0f, 1.0f, 0.0f);
 
 	//CORE
 	static VulkanInstance vkInstanceInfo;
@@ -70,13 +74,26 @@ public:
 
 	static VkSampler linearSampler;
 
+	static std::vector<bool> pressed;
+
+	static glm::vec3 worldUp;
+
 	//WINDOW
 	static GLFWwindow* window;
+	static GLFWcursor* cursor;
 	static const int WIDTH;
 	static const int HEIGHT;
 
+	static std::pair<double, double> lastKnownMousePos;
+	static bool rightMouseFirstPress;
+	static bool rightMousePressedLastFrame;
+
 	static bool framebufferResized;
 	static VkSurfaceKHR surface;
+
+	static Camera camera;
+
+	static bool displayGUI;
 
 	//SYNC OBJECTS
 	static std::counting_semaphore<INT_MAX> jobInQueueSem;

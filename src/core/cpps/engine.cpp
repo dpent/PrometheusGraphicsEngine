@@ -46,13 +46,24 @@ std::vector<VkSemaphore> Engine::renderFinishedSemaphores;
 
 VkSampler Engine::linearSampler;
 
+std::vector<bool> Engine::pressed;
+
 //WINDOW
 GLFWwindow* Engine::window = nullptr;
+GLFWcursor* Engine::cursor = nullptr;
 const int Engine::WIDTH = 1280;
 const int Engine::HEIGHT = 720;
 
+std::pair<double, double> Engine::lastKnownMousePos;
+bool Engine::rightMouseFirstPress;
+bool Engine::rightMousePressedLastFrame;
+
 bool Engine::framebufferResized = false;
 VkSurfaceKHR Engine::surface;
+
+Camera Engine::camera;
+
+bool Engine::displayGUI = true;
 
 //SYNC OBJECTS
 std::counting_semaphore<INT_MAX> Engine::jobInQueueSem(0);
@@ -78,12 +89,14 @@ void Engine::initWindow(Engine* engine) {
     glfwSetWindowUserPointer(Engine::window, engine);
     glfwSetFramebufferSizeCallback(Engine::window, frameBufferResizeCallback);
 
-    /*Engine::cursor = glfwCreateStandardCursor(GLFW_HRESIZE_CURSOR);
+    Engine::cursor = glfwCreateStandardCursor(GLFW_HRESIZE_CURSOR);
     glfwSetCursor(Engine::window, Engine::cursor);
 
     Engine::lastKnownMousePos = std::pair<double, double>(0.0f, 0.0f);
-    Engine::rightMouseFirstPress = true;
-    Engine::rightMousePressedLastFrame = false;*/
+    Engine::rightMouseFirstPress = true;    
+    Engine::rightMousePressedLastFrame = false;
+
+    InputManager::initInputMode(false, false, false, false, false, Engine::window);
 }
 
 void Engine::initVulkan() {
@@ -150,6 +163,8 @@ void Engine::mainLoop() {
 
     while (!glfwWindowShouldClose(Engine::window)) {
         glfwPollEvents();
+        InputManager::consumeInput(Engine::window);
+        Engine::camera.updateCameraVectors();
 
         Engine::drawFrame();
     }
@@ -313,7 +328,9 @@ VkPipelineShaderStageCreateInfo Engine::createShaderStageInfo(VkStructureType sT
 
 void Engine::drawFrame() {
 
-    GUIManager::startNewFrame();
+    if (Engine::displayGUI) {
+        GUIManager::startNewFrame();
+    }
 
     vkWaitForFences(Engine::deviceInfo.logicalDevice, 1, &Engine::inFlightFences[Engine::currentFrame], VK_TRUE, UINT64_MAX);
 

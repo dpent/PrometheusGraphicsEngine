@@ -189,14 +189,9 @@ void BufferManager::recordCommandBuffer(VkCommandBuffer& commandBuffer, uint32_t
 
     vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
-    glm::mat4 viewMatrix = glm::lookAt(glm::vec3(3.0f), glm::vec3(0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-    glm::mat4 projMatrix = glm::perspective(glm::radians(45.0f), (float)Engine::swapChainInfo.extent.width / (float)Engine::swapChainInfo.extent.height, 0.1f , 200.0f);
-
-    projMatrix[1][1] *= -1;
-
     CameraObject* cameraPushConstants = new CameraObject();
-    cameraPushConstants->view = viewMatrix;
-    cameraPushConstants->proj = projMatrix;
+    cameraPushConstants->view = Engine::camera.getViewMatrix();
+    cameraPushConstants->proj = Engine::camera.getProjectionMatrix();
 
     vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, Engine::graphicsPipeLine.pipeline);
 
@@ -228,7 +223,9 @@ void BufferManager::recordCommandBuffer(VkCommandBuffer& commandBuffer, uint32_t
 
     vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(Engine::vertexIndexData.indices.size()), 1, 0, 0, 0);
 
-    GUIManager::renderGUI(imageIndex);
+    if (Engine::displayGUI) {
+        GUIManager::renderGUI(imageIndex);
+    }
 
     vkCmdEndRenderPass(commandBuffer);
     if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS) {
