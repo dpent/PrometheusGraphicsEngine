@@ -43,3 +43,9 @@ struct Image {
 	VkDeviceMemory memory;
 	VkImageView view;
 };
+
+struct ImageVector {
+    std::vector<VkImage> images;
+    std::vector<VkDeviceMemory> memories;
+    std::vector<VkImageView> views;
+};

@@ -33,6 +33,17 @@ void GUIManager::initImGUI() {
 	initInfo.CheckVkResultFn = check_vk_result;
 
 	ImGui_ImplVulkan_Init(&initInfo);
+
+	ImGuiStyle& style = ImGui::GetStyle();
+	style.Colors[ImGuiCol_WindowBg] = Engine::IMGUI_BACKGTOUND_COLOR; // window background
+	style.Colors[ImGuiCol_TitleBg] = Engine::IMGUI_ACTIVE_COLOR; // title bar
+	style.Colors[ImGuiCol_TitleBgActive] = Engine::IMGUI_HIGHLIGHT_COLOR; // active title bar
+	style.Colors[ImGuiCol_Button] = Engine::IMGUI_BACKGTOUND_COLOR; // button
+	style.Colors[ImGuiCol_ButtonHovered] = Engine::IMGUI_ACTIVE_COLOR;
+	style.Colors[ImGuiCol_ButtonActive] = Engine::IMGUI_HIGHLIGHT_COLOR;
+	style.Colors[ImGuiCol_ResizeGrip] = Engine::IMGUI_DARK_COLOR; // resize grib
+	style.Colors[ImGuiCol_ResizeGripHovered] = Engine::IMGUI_ACTIVE_COLOR;
+	style.Colors[ImGuiCol_ResizeGripActive] = Engine::IMGUI_HIGHLIGHT_COLOR;
 }
 
 void GUIManager::check_vk_result(VkResult err)
@@ -69,22 +80,30 @@ void GUIManager::startNewFrame() {
 
 void GUIManager::renderGUI(uint32_t& imageIndex) {
 
-	SwapChainManager::createImGuiTexture(imageIndex);
-
-	ImGui::Begin("Viewport");
-
-	ImVec2 imageSize = ImVec2(256, 256);
-
-	// ImTextureID is VkDescriptorSet for Vulkan backend
-	ImGui::Image(
-		(ImTextureID)Engine::swapChainInfo.imGuiIds[imageIndex],
-		imageSize
-	);
-
-	ImGui::End();
+	GUIManager::createInfoWindow();
 
 	ImGui::Render();
 	ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), Engine::command.buffers[Engine::currentFrame]);
 	ImGui::UpdatePlatformWindows();
 	ImGui::RenderPlatformWindowsDefault();
+}
+
+void GUIManager::createInfoWindow() {
+
+	ImGui::Begin("Info");
+
+	ImGui::SeparatorText("GPU INFO");
+	ImGui::Text("Selected GPU: %s", Engine::deviceInfo.physicalProperties.deviceName);
+	ImGui::Text("Driver version: %u", Engine::deviceInfo.physicalProperties.driverVersion);
+	ImGui::Text("Device Type: %s", DeviceManager::deviceTypeToString(Engine::deviceInfo.physicalProperties.deviceType));
+	ImGui::Text("Vendor ID: %u", Engine::deviceInfo.physicalProperties.vendorID);
+	ImGui::Text("Device ID: %u", Engine::deviceInfo.physicalProperties.deviceID);
+	ImGui::Text("MSAA: x%d", Engine::msaaSamples);
+
+	ImGui::SeparatorText("THREADS");
+	ImGui::Text("Worker Threads: %zu", Engine::threadPool.size());
+	ImGui::Text("Jobs in Queue: %zu", Engine::jobQueue.size());
+
+	ImGui::End();
+
 }

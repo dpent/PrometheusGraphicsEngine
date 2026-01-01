@@ -15,4 +15,6 @@ public:
 
 	static void startNewFrame();
 	static void renderGUI(uint32_t& imageIndex);
+
+	static void createInfoWindow();
 };

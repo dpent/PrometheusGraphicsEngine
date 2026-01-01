@@ -1141,9 +1141,7 @@ bool ImGui_ImplVulkan_CreateDeviceObjects()
     }
 
     // Create pipeline
-    std::cout << v->PipelineInfoMain.RenderPass << std::endl;
     bool create_main_pipeline = (v->PipelineInfoMain.RenderPass != VK_NULL_HANDLE);
-    std::cout << "Create main pipeline: " << create_main_pipeline << std::endl;
 #ifdef IMGUI_IMPL_VULKAN_HAS_DYNAMIC_RENDERING
     create_main_pipeline |= (v->UseDynamicRendering && v->PipelineInfoMain.PipelineRenderingCreateInfo.sType == VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR);
 #endif

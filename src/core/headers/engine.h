@@ -27,11 +27,16 @@ public:
 
 	static const uint32_t MAX_TEXTURES = 1024;
 
+	inline static const ImVec4 IMGUI_BACKGTOUND_COLOR = ImVec4(0.2f, 0.0f, 0.0f, 3.0f);
+	inline static const ImVec4 IMGUI_ACTIVE_COLOR = ImVec4(0.6f, 0.0f, 0.0f, 1.0f);
+	inline static const ImVec4 IMGUI_HIGHLIGHT_COLOR = ImVec4(0.8f, 0.0f, 0.0f, 1.0f);
+	inline static const ImVec4 IMGUI_DARK_COLOR = ImVec4(0.05f, 0.0f, 0.0f, 1.0f);
+
 	//CORE
 	static VulkanInstance vkInstanceInfo;
 	static DeviceInfo deviceInfo;
 	static SwapChain swapChainInfo;
-	static std::vector<Image> imGuiHelperImages;
+	static ImageVector imGuiHelperImages;
 
 	static VkSampleCountFlagBits msaaSamples;
 

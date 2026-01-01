@@ -12,6 +12,7 @@
 VulkanInstance Engine::vkInstanceInfo;
 DeviceInfo Engine::deviceInfo;
 SwapChain Engine::swapChainInfo;
+ImageVector Engine::imGuiHelperImages;
 
 VkSampleCountFlagBits Engine::msaaSamples;
 
@@ -330,9 +331,7 @@ void Engine::drawFrame() {
         throw std::runtime_error("failed to acquire swap chain image!");
     }
 
-
     vkResetFences(Engine::deviceInfo.logicalDevice, 1, &Engine::inFlightFences[Engine::currentFrame]);
-
 
     BufferManager::recordCommandBuffer(Engine::command.buffers[Engine::currentFrame], imageIndex);
 
