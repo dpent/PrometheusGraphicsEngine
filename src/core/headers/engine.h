@@ -7,7 +7,7 @@
 #include "pipelineManager.h"
 #include "descriptorManager.h"
 #include "../../gameObjects/headers/gameObject.h"
-//#include "../../imgui/windowManager.h"
+#include "../../imgui/guiManager.h"
 
 class WorkerThread;
 struct Job;
@@ -31,6 +31,7 @@ public:
 	static VulkanInstance vkInstanceInfo;
 	static DeviceInfo deviceInfo;
 	static SwapChain swapChainInfo;
+	static std::vector<Image> imGuiHelperImages;
 
 	static VkSampleCountFlagBits msaaSamples;
 

@@ -102,12 +102,12 @@ void Engine::initVulkan() {
 
     Engine::command.initialize();
 
-    //WindowManager::initImGUI();
+    RenderPassManager::createRenderPass();
+
+    GUIManager::initImGUI();
     ImageManager::createImageSampler(Engine::linearSampler);
 
     SwapChainManager::createSwapChainImageViews();
-
-    RenderPassManager::createRenderPass();
 
     ImageManager::createDepthResources();
     ImageManager::createColorResources();
@@ -311,6 +311,8 @@ VkPipelineShaderStageCreateInfo Engine::createShaderStageInfo(VkStructureType sT
 }
 
 void Engine::drawFrame() {
+
+    GUIManager::startNewFrame();
 
     vkWaitForFences(Engine::deviceInfo.logicalDevice, 1, &Engine::inFlightFences[Engine::currentFrame], VK_TRUE, UINT64_MAX);
 

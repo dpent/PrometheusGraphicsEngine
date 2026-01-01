@@ -228,7 +228,7 @@ void BufferManager::recordCommandBuffer(VkCommandBuffer& commandBuffer, uint32_t
 
     vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(Engine::vertexIndexData.indices.size()), 1, 0, 0, 0);
 
-    //WindowManager::renderGUI(imageIndex);
+    GUIManager::renderGUI(imageIndex);
 
     vkCmdEndRenderPass(commandBuffer);
 

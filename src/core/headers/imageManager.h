@@ -6,8 +6,16 @@ class Engine;
 
 class ImageManager {
 public:
-	static void createImageView(VkImage& image, VkFormat format, VkImageAspectFlags aspectFlags, uint32_t mipLevels,
-		VkImageViewType viewType, uint32_t layerCount, uint32_t baseArrayLayer, VkImageView& imageView);
+	static void createImageView(
+        VkImage& image, 
+        VkFormat format, 
+        VkImageAspectFlags aspectFlags, 
+        uint32_t mipLevels,
+		VkImageViewType viewType, 
+        uint32_t layerCount, 
+        uint32_t baseArrayLayer, 
+        VkImageView& imageView
+    );
 
 	static void createImage(
         uint32_t width, 
