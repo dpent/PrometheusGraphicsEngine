@@ -15,6 +15,7 @@ struct SwapChain {
     std::vector<VkImage> images;
     std::vector<VkImageView> imageViews;
     std::vector<VkFramebuffer> frameBuffers;
+    std::vector<VkDescriptorSet> imGuiIds;
     VkExtent2D extent;
     VkFormat imageFormat;
     VkSwapchainKHR chain;
@@ -33,4 +34,6 @@ public:
 
     static void recreateSwapChain();
     static void cleanupSwapChainDependents();
+
+    static void createImGuiTexture(uint32_t imageIndex);
 };

@@ -16,6 +16,9 @@ struct QueueFamilyIndices {
 
 struct QueueHolder {
     VkQueue graphics;
+    uint32_t graphicsIndex;
     VkQueue compute;
+    uint32_t computeIndex;
     VkQueue present;
+    uint32_t presentIndex;
 };

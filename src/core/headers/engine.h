@@ -7,6 +7,7 @@
 #include "pipelineManager.h"
 #include "descriptorManager.h"
 #include "../../gameObjects/headers/gameObject.h"
+//#include "../../imgui/windowManager.h"
 
 class WorkerThread;
 struct Job;
@@ -42,6 +43,8 @@ public:
 	static Pipeline graphicsPipeLine;
 	static Descriptor graphicsDescriptor;
 
+	static Descriptor imGuiDescriptor;
+
 	static std::deque<Image*> textures;
 	static std::deque<GameObject*> gameObjects;
 	static std::deque<Mesh*> meshes;
@@ -58,6 +61,8 @@ public:
 	static std::vector<VkFence> inFlightFences;
 	static std::vector<VkSemaphore> imageAvailableSemaphores;
 	static std::vector<VkSemaphore> renderFinishedSemaphores;
+
+	static VkSampler linearSampler;
 
 	//WINDOW
 	static GLFWwindow* window;

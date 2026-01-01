@@ -21,14 +21,14 @@ file(GLOB_RECURSE SOURCES "src/*.cpp" "src/*.h")
 add_executable (Prometheus ${SOURCES})
 
 target_include_directories(Prometheus PUBLIC
-    "C:/Users/Dimitris/Documents/Libraries/VulkanSDK/1.4.335.0/Include"
-    "C:/Users/Dimitris/Documents/Libraries/glfw-3.4/include"
-    "C:/Users/Dimitris/Documents/Libraries/glm1.0.2"
+    "C:/Users/dimpe/Documents/Libraries/VulkanSDK/1.4.335.0/Include"
+    "C:/Users/dimpe/Documents/Libraries/glfw-3.4.bin.WIN64/include"
+    "C:/Users/dimpe/Documents/Libraries/glm1.0.2"
 )
 
 target_link_libraries(Prometheus PUBLIC
-    "C:/Users/Dimitris/Documents/Libraries/VulkanSDK/1.4.335.0/Lib/vulkan-1.lib"
-    "C:/Users/Dimitris/Documents/Libraries/glfw-3.4/lib-vc2022/glfw3.lib"
+    "C:/Users/dimpe/Documents/Libraries/VulkanSDK/1.4.335.0/Lib/vulkan-1.lib"
+    "C:/Users/dimpe/Documents/Libraries/glfw-3.4.bin.WIN64/lib-vc2022/glfw3.lib"
 )
 
 target_compile_features(Prometheus PUBLIC cxx_std_23)

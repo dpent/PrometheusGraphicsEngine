@@ -1,4 +1,5 @@
 #include "../headers/queueInfo.h"
+#include "../headers/engine.h"
 
 QueueFamilyIndices QueueFamilyIndices::findQueueFamilies(const VkPhysicalDevice& device, const VkSurfaceKHR& surface) {
     QueueFamilyIndices indices;
@@ -16,12 +17,15 @@ QueueFamilyIndices QueueFamilyIndices::findQueueFamilies(const VkPhysicalDevice&
 
         if (presentSupport) {
             indices.presentFamily = i;
+            Engine::queues.presentIndex = i;
         }
 
         if (queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT &&
             (queueFamily.queueFlags & VK_QUEUE_COMPUTE_BIT)) {
             indices.graphicsFamily = i;
+            Engine::queues.graphicsIndex = i;
             indices.computeFamily = i;
+            Engine::queues.computeIndex = i;
         }
         if (indices.isComplete()) {
             break;

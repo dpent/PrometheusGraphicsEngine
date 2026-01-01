@@ -23,6 +23,8 @@ public:
         uint32_t maxLayers = 1
     );
 
+    static void createImageSampler(VkSampler& sampler);
+
 
     static void createDepthResources();
     static void createColorResources();

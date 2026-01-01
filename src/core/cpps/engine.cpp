@@ -24,6 +24,8 @@ Image Engine::colorResource;
 Pipeline Engine::graphicsPipeLine;
 Descriptor Engine::graphicsDescriptor;
 
+Descriptor Engine::imGuiDescriptor;
+
 std::deque<Image*> Engine::textures;
 std::deque<GameObject*> Engine::gameObjects;
 std::deque<Mesh*> Engine::meshes;
@@ -40,6 +42,8 @@ uint8_t Engine::currentFrame;
 std::vector<VkFence> Engine::inFlightFences;
 std::vector<VkSemaphore> Engine::imageAvailableSemaphores;
 std::vector<VkSemaphore> Engine::renderFinishedSemaphores;
+
+VkSampler Engine::linearSampler;
 
 //WINDOW
 GLFWwindow* Engine::window = nullptr;
@@ -82,7 +86,6 @@ void Engine::initWindow(Engine* engine) {
 }
 
 void Engine::initVulkan() {
-
     Engine::initThreadPool(std::thread::hardware_concurrency() - 1);
 
     InstanceManager::createInstance(Engine::vkInstanceInfo.instance);
@@ -96,6 +99,12 @@ void Engine::initVulkan() {
     Engine::createSyncObjects();
 
     SwapChainManager::createSwapChain(Engine::swapChainInfo.chain);
+
+    Engine::command.initialize();
+
+    //WindowManager::initImGUI();
+    ImageManager::createImageSampler(Engine::linearSampler);
+
     SwapChainManager::createSwapChainImageViews();
 
     RenderPassManager::createRenderPass();
@@ -115,9 +124,6 @@ void Engine::initVulkan() {
     DescriptorManager::createGraphicsDescriptorSetLayout();
     
     PipelineManager::createGraphicsPipeline();
-
-    Engine::command.initialize();
-
 }
 
 void Engine::mainLoop() {

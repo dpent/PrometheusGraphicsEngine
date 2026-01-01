@@ -49,7 +49,8 @@ void SwapChainManager::createSwapChain(VkSwapchainKHR oldSwapChain) {
     createInfo.imageColorSpace = surfaceFormat.colorSpace;
     createInfo.imageExtent = extent;
     createInfo.imageArrayLayers = 1;
-    createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;/*It is also possible that you'll render images to a separate
+    createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+                                                                /*It is also possible that you'll render images to a separate
                                                                 image first to perform operations like post-processing. In that
                                                                 case you may use a value like VK_IMAGE_USAGE_TRANSFER_DST_BIT
                                                                 instead and use a memory operation to transfer the rendered image
@@ -138,6 +139,7 @@ VkExtent2D SwapChainManager::chooseSwapExtent(const VkSurfaceCapabilitiesKHR& ca
 
 void SwapChainManager::createSwapChainImageViews() {
     Engine::swapChainInfo.imageViews.resize(Engine::swapChainInfo.images.size());
+    Engine::swapChainInfo.imGuiIds.resize(Engine::swapChainInfo.images.size());
 
     for (size_t i = 0; i < Engine::swapChainInfo.images.size(); i++) {
         ImageManager::createImageView(
@@ -145,12 +147,11 @@ void SwapChainManager::createSwapChainImageViews() {
             Engine::swapChainInfo.imageFormat, 
             VK_IMAGE_ASPECT_COLOR_BIT, 
             1, 
-            VK_IMAGE_VIEW_TYPE_2D_ARRAY,
+            VK_IMAGE_VIEW_TYPE_2D,
             1,
             0,
             Engine::swapChainInfo.imageViews[i]
         );
-
     }
 }
 
@@ -214,4 +215,12 @@ void SwapChainManager::recreateSwapChain() {
         vkDestroySwapchainKHR(Engine::deviceInfo.logicalDevice, oldSwapChain, nullptr);
         oldSwapChain = VK_NULL_HANDLE;
     }
+}
+
+void SwapChainManager::createImGuiTexture(uint32_t imageIndex) {
+    /*Engine::swapChainInfo.imGuiIds[imageIndex] = ImGui_ImplVulkan_AddTexture(
+        Engine::linearSampler,
+        Engine::swapChainInfo.imageViews[imageIndex],
+        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+    );*/
 }
