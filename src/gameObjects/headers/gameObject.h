@@ -3,6 +3,7 @@
 #include "../../core/headers/Prometheus.h"
 #include "mesh.h"
 #include "transform.h"
+#include "material.h"
 
 class GameObject {
 public:
@@ -12,8 +13,11 @@ public:
 	uint64_t id;
 	Mesh* mesh;
 	Transform* transform;
+	Material* material;
 
 	GameObject();
-	GameObject(Mesh* mesh);
-	GameObject(std::string modelFilename);
+	GameObject(Mesh* mesh, Material* material);
+	GameObject(Mesh* mesh, std::string textureFilename);
+	GameObject(std::string modelFilename, Material* material);
+	GameObject(std::string modelFilename, std::string textureFilename);
 };

@@ -91,12 +91,16 @@ void DescriptorManager::createGraphicsDescriptorSets() {
         throw std::runtime_error("failed to allocate descriptor set!");
     }
 
+    uint32_t count = 0;
     for (auto texture : Engine::textures) {
         VkDescriptorImageInfo imageInfo{};
-        imageInfo.imageView = texture->view;
+        imageInfo.imageView = texture->image.view;
         imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
         textures.push_back(imageInfo);
+        texture->index = 0;
+
+        count++;
     }
 
     VkWriteDescriptorSet write{};

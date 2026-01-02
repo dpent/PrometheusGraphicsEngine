@@ -10,6 +10,7 @@
 #include "../../imgui/guiManager.h"
 #include "../../gameObjects/headers/camera.h"
 #include "inputManager.h"
+#include "../../gameObjects/headers/material.h"
 
 class WorkerThread;
 struct Job;
@@ -55,7 +56,8 @@ public:
 
 	static Descriptor imGuiDescriptor;
 
-	static std::deque<Image*> textures;
+	static std::deque<Material*> materials;
+	static std::deque<Texture*> textures;
 	static std::deque<GameObject*> gameObjects;
 	static std::deque<Mesh*> meshes;
 

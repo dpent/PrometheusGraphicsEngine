@@ -27,7 +27,8 @@ Descriptor Engine::graphicsDescriptor;
 
 Descriptor Engine::imGuiDescriptor;
 
-std::deque<Image*> Engine::textures;
+std::deque<Material*> Engine::materials;
+std::deque<Texture*> Engine::textures;
 std::deque<GameObject*> Engine::gameObjects;
 std::deque<Mesh*> Engine::meshes;
 
@@ -152,9 +153,7 @@ void Engine::initVulkan() {
 
 void Engine::mainLoop() {
 
-    Engine::textures.push_back(&Engine::depthResource);
-
-    GameObject* gb = new GameObject("cube.obj");
+    GameObject* gb = new GameObject("cube.obj", "white.png");
 
     while (!glfwWindowShouldClose(Engine::window)) {
         glfwPollEvents();
