@@ -78,6 +78,10 @@ public:
 
 	static glm::vec3 worldUp;
 
+	static bool firstFrame;
+	static bool remakeDescriptors;
+	static bool remakeVertexIndexBuffer;
+
 	//WINDOW
 	static GLFWwindow* window;
 	static GLFWcursor* cursor;
@@ -121,8 +125,11 @@ public:
 		const VkSpecializationInfo* pSpecializationInfo = nullptr);
 
 	static void drawFrame();
+	static void prepareFrameData();
 
 	static void createSyncObjects();
+
+	static void recreateVertexIndexData();
 
 	//USED BY GLFW TO NOTIFY WINDOW RESIZE
 	static void frameBufferResizeCallback(GLFWwindow* window, int width, int height);

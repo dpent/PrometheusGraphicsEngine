@@ -154,7 +154,7 @@ void InputManager::consumeInput(GLFWwindow* window) {
     Engine::camera.position += Engine::camera.velocity;
 
     if (reduceCameraSpeed) {
-        Engine::camera.velocity -= Engine::camera.velocity * 0.5f;
+        Engine::camera.velocity -= Engine::camera.velocity * 0.7f;
     }
 
     float speed = glm::length(Engine::camera.velocity);

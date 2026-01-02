@@ -22,6 +22,8 @@
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/hash.hpp>
 #include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtx/quaternion.hpp>
 #include <deque>
 #include "../../gameObjects/headers/tiny_obj_loader.h"
 #include <stdexcept>
@@ -29,4 +31,5 @@
 #include "../../imgui/imgui_stdlib.h"
 #include "../../imgui/imgui_impl_vulkan.h"
 #include "../../imgui/imgui_impl_glfw.h"
+#include "../../imgui/imgui_internal.h"
 // TODO: Reference additional headers your program requires here.

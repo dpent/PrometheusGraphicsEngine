@@ -12,6 +12,8 @@ public:
     std::vector<Vertex> vertices;
     std::vector<uint32_t> indices;
 
+    uint32_t instances;
+
     Mesh();
     Mesh(std::string meshPath);
     std::string toString();

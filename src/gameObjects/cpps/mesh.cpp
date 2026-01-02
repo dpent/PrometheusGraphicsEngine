@@ -7,8 +7,10 @@ Mesh::Mesh() {
 
 Mesh::Mesh(std::string meshPath) {
     this->meshPath = meshPath;
-
+    this->instances = 0;
     load();
+	Engine::meshes.push_back(this);
+    Engine::remakeVertexIndexBuffer = true;
 }
 
 void Mesh::load() {

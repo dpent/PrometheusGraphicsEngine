@@ -221,7 +221,13 @@ void BufferManager::recordCommandBuffer(VkCommandBuffer& commandBuffer, uint32_t
         nullptr
     );
 
-    vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(Engine::vertexIndexData.indices.size()), 1, 0, 0, 0);
+    uint32_t instanceNum = 0;
+
+    for (auto mesh : Engine::meshes) {
+
+        vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(mesh->indices.size()), mesh->instances, mesh->indexOffset, mesh->vertexOffset, instanceNum);
+        instanceNum += mesh->instances;
+    }
 
     if (Engine::displayGUI) {
         GUIManager::renderGUI(imageIndex);

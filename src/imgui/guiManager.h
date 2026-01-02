@@ -18,4 +18,5 @@ public:
 
 	static void createInfoWindow();
 	static void createCameraInfoWindow();
+	static void createDockSpaceWindow();
 };

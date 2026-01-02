@@ -4,6 +4,10 @@
 
 void DescriptorManager::createGraphicsDescriptorSetLayout() {
 
+    if (Engine::graphicsDescriptor.layout != VK_NULL_HANDLE) {
+        vkDestroyDescriptorSetLayout(Engine::deviceInfo.logicalDevice, Engine::graphicsDescriptor.layout, nullptr);
+    }
+
     VkDescriptorSetLayoutBinding texturesBinding{}; //Textures
     texturesBinding.binding = 0;
     texturesBinding.descriptorCount = Engine::MAX_TEXTURES;
@@ -40,6 +44,11 @@ void DescriptorManager::createGraphicsDescriptorSetLayout() {
 }
 
 void DescriptorManager::createGraphicsDescriptorPool() {
+
+    if (Engine::graphicsDescriptor.pool != VK_NULL_HANDLE) {
+        vkDestroyDescriptorPool(Engine::deviceInfo.logicalDevice, Engine::graphicsDescriptor.pool, nullptr);
+    }
+
     std::array<VkDescriptorPoolSize, 1> poolSizes{};
 
     poolSizes[0].type = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;

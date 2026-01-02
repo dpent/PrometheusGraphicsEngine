@@ -94,6 +94,7 @@ void GUIManager::startNewFrame() {
 
 void GUIManager::renderGUI(uint32_t& imageIndex) {
 
+	GUIManager::createDockSpaceWindow();
 	GUIManager::createInfoWindow();
 	GUIManager::createCameraInfoWindow();
 
@@ -133,5 +134,36 @@ void GUIManager::createCameraInfoWindow() {
 	ImGui::Text("Front: X: %.2f Y: %.2f Z: %.2f", Engine::camera.front.x, Engine::camera.front.y, Engine::camera.front.z);
 	ImGui::Text("Yaw: %.2f Pitch: %.2f", Engine::camera.yaw, Engine::camera.pitch);
 	ImGui::SliderFloat("Far", &Engine::camera.far, 0.0f, 5000.0f);
+	ImGui::SliderFloat("Acceleration", &Engine::camera.acceleration, 0.0f, 10.0f);
+	
 	ImGui::End();
+}
+
+void GUIManager::createDockSpaceWindow() {
+
+	ImGui::Begin("Debug");
+
+	ImGuiID dockspaceId = ImGui::GetID("Debug");
+	ImGui::DockSpace(dockspaceId, ImVec2(0.0f, 0.0f));
+
+	ImGui::End();
+
+	if (Engine::firstFrame)
+	{
+		Engine::firstFrame = false;
+
+		ImGui::DockBuilderRemoveNode(dockspaceId); // clear any previous layout
+		ImGui::DockBuilderAddNode(dockspaceId, ImGuiDockNodeFlags_DockSpace);
+		ImGui::DockBuilderSetNodeSize(dockspaceId, ImGui::GetIO().DisplaySize);
+
+		// Split the dockspace vertically: top 70% for Info, bottom 30% for Camera Info
+		ImGuiID dock_id_main = dockspaceId;
+		ImGuiID dock_id_bottom = ImGui::DockBuilderSplitNode(dock_id_main, ImGuiDir_Down, 0.3f, nullptr, &dock_id_main);
+
+		// Dock your windows
+		ImGui::DockBuilderDockWindow("Info", dock_id_main);
+		ImGui::DockBuilderDockWindow("Camera", dock_id_bottom);
+
+		ImGui::DockBuilderFinish(dockspaceId);
+	}
 }

@@ -48,6 +48,10 @@ VkSampler Engine::linearSampler;
 
 std::vector<bool> Engine::pressed;
 
+bool Engine::firstFrame = true;
+bool Engine::remakeDescriptors = true;
+bool Engine::remakeVertexIndexBuffer = false;
+
 //WINDOW
 GLFWwindow* Engine::window = nullptr;
 GLFWcursor* Engine::cursor = nullptr;
@@ -63,7 +67,11 @@ VkSurfaceKHR Engine::surface;
 
 Camera Engine::camera;
 
-bool Engine::displayGUI = true;
+#ifdef RELEASE
+    bool Engine::displayGUI = false;
+#else
+    bool Engine::displayGUI = true;
+#endif
 
 //SYNC OBJECTS
 std::counting_semaphore<INT_MAX> Engine::jobInQueueSem(0);
@@ -138,6 +146,8 @@ void Engine::initVulkan() {
     DescriptorManager::createGraphicsDescriptorSetLayout();
     
     PipelineManager::createGraphicsPipeline();
+
+    BufferManager::createStagingBuffer(8192); //8KB TO START
 }
 
 void Engine::mainLoop() {
@@ -146,26 +156,12 @@ void Engine::mainLoop() {
 
     GameObject* gb = new GameObject("cube.obj");
 
-    for (size_t i = 0; i < gb->mesh->vertices.size(); i++) {
-        Engine::vertexIndexData.vertices.push_back(gb->mesh->vertices[i]);
-    }
-
-    for (size_t i = 0; i < gb->mesh->indices.size(); i++) {
-        Engine::vertexIndexData.indices.push_back(gb->mesh->indices[i]);
-    }
-
-    DescriptorManager::createGraphicsDescriptorPool();
-    DescriptorManager::createGraphicsDescriptorSets();
-
-    BufferManager::createStagingBuffer(2048);
-
-    BufferManager::createVertexIndexBuffer(Engine::vertexIndexData.vertices.size() * sizeof(Vertex) + Engine::vertexIndexData.indices.size() * sizeof(uint32_t));
-
     while (!glfwWindowShouldClose(Engine::window)) {
         glfwPollEvents();
         InputManager::consumeInput(Engine::window);
         Engine::camera.updateCameraVectors();
 
+        Engine::prepareFrameData();
         Engine::drawFrame();
     }
 
@@ -404,6 +400,25 @@ void Engine::drawFrame() {
     Engine::currentFrame = (Engine::currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
 }
 
+void Engine::prepareFrameData() {
+
+    if (Engine::remakeVertexIndexBuffer) {
+        
+        Engine::recreateVertexIndexData();
+        BufferManager::createVertexIndexBuffer(Engine::vertexIndexData.vertices.size() * sizeof(Vertex) + Engine::vertexIndexData.indices.size() * sizeof(uint32_t));
+        
+        Engine::remakeVertexIndexBuffer = false;
+    }
+
+    if (Engine::remakeDescriptors) {
+
+        DescriptorManager::createGraphicsDescriptorPool();
+        DescriptorManager::createGraphicsDescriptorSets();
+
+        Engine::remakeDescriptors = false;
+    }
+}
+
 void Engine::createSyncObjects() {
 
     Engine::imageAvailableSemaphores.resize(Engine::MAX_FRAMES_IN_FLIGHT);
@@ -423,6 +438,26 @@ void Engine::createSyncObjects() {
             vkCreateFence(Engine::deviceInfo.logicalDevice, &fenceInfo, nullptr, &Engine::inFlightFences[i]) != VK_SUCCESS) {
 
             throw std::runtime_error("failed to create synchronization objects for a frame!");
+        }
+    }
+}
+
+void Engine::recreateVertexIndexData() {
+
+    Engine::vertexIndexData.vertices.clear();
+    Engine::vertexIndexData.indices.clear();
+
+    for (auto mesh : Engine::meshes) {
+
+        mesh->vertexOffset = (uint32_t)Engine::vertexIndexData.vertices.size();
+        mesh->indexOffset = (uint32_t)Engine::vertexIndexData.indices.size();
+
+        for (size_t i = 0; i < mesh->vertices.size(); i++) {
+            Engine::vertexIndexData.vertices.push_back(mesh->vertices[i]);
+        }
+
+        for (size_t i = 0; i < mesh->indices.size(); i++) {
+            Engine::vertexIndexData.indices.push_back(mesh->indices[i]);
         }
     }
 }
