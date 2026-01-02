@@ -21,7 +21,7 @@ public:
     float acceleration;
     float maxSpeed; 
 
-    Camera(glm::vec3 position = glm::vec3(3.0f, 3.0f, 3.0f),
+    Camera(glm::vec3 position = glm::vec3(8.0f, 8.0f, 8.0f),
         glm::vec3 front = glm::vec3(-0.577382f, -0.577288f, -0.577382f),
         glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f),
         glm::vec3 right = glm::vec3(-1.0f, 0.0f, 0.0f),

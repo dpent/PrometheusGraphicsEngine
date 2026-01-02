@@ -135,7 +135,7 @@ void PipelineManager::createGraphicsPipeline() {
     VkPushConstantRange pushConstantRange{};
     pushConstantRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT; // accessible in vertex shader
     pushConstantRange.offset = 0;
-    pushConstantRange.size = sizeof(glm::mat4) * 2;
+    pushConstantRange.size = sizeof(glm::mat4) * 2 + sizeof(uint32_t);
 
     VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
     pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;

@@ -31,6 +31,7 @@ std::deque<Material*> Engine::materials;
 std::deque<Texture*> Engine::textures;
 std::deque<GameObject*> Engine::gameObjects;
 std::deque<Mesh*> Engine::meshes;
+std::vector<InstanceInfo> Engine::instanceData;
 
 CommandPool Engine::command;
 
@@ -38,6 +39,7 @@ VertexData Engine::vertexIndexData;
 Buffer Engine::vertexIndexBuffer;
 
 Buffer Engine::stagingBuffer;
+Buffer Engine::instanceDataSSBO;
 
 uint8_t Engine::currentFrame;
 
@@ -153,7 +155,9 @@ void Engine::initVulkan() {
 
 void Engine::mainLoop() {
 
-    GameObject* gb = new GameObject("cube.obj", "white.png");
+    GameObject* gb = new GameObject("cottage_FREE.obj", "Cottage_Clean_Base_Color.png");
+
+    BufferManager::createSSBO(Engine::instanceDataSSBO, Engine::instanceData);
 
     while (!glfwWindowShouldClose(Engine::window)) {
         glfwPollEvents();
@@ -416,6 +420,10 @@ void Engine::prepareFrameData() {
 
         Engine::remakeDescriptors = false;
     }
+
+    Engine::updateObjects();
+
+    BufferManager::updateSSBO(Engine::instanceDataSSBO, Engine::instanceData);
 }
 
 void Engine::createSyncObjects() {
@@ -459,4 +467,14 @@ void Engine::recreateVertexIndexData() {
             Engine::vertexIndexData.indices.push_back(mesh->indices[i]);
         }
     }
+}
+
+void Engine::updateObjects() {
+
+    for (auto obj : Engine::gameObjects) {
+        obj->update();
+        obj->instanceInfo->modelMatrix = obj->transform->getModelMatrix();
+        obj->instanceInfo->materialIndex = obj->material->texture->index;
+    }
+
 }

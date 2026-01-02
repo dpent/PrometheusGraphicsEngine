@@ -1,6 +1,16 @@
 #version 450
+#extension GL_EXT_nonuniform_qualifier : enable
 
-layout(set = 0, binding = 0) uniform texture2D textures[];
+struct ObjectData {
+    mat4 model;
+    uint textureIndex;
+    // 12 bytes padding to align to 16 bytes
+};
+
+layout(std430, binding = 1) readonly buffer instanceData
+{
+    ObjectData instances[];
+};
 
 layout(location = 0) in vec3 inPosition;
 layout(location = 1) in vec3 inColor;
@@ -10,11 +20,23 @@ layout(location = 3) in vec3 inNormal;
 layout(push_constant) uniform CameraObject {
     mat4 view;
     mat4 proj;
+    uint instanceOffset;
 } pc;
 
-layout(location = 0) out vec3 fragColor;
+layout(location = 0) out vec3 vertColor;
+layout(location = 1) out uint objectIndex;
+layout(location = 2) out vec2 texCoord;
+layout(location = 3) out uint texIndex;
 
 void main() {
-	gl_Position = pc.proj * pc.view * vec4(inPosition, 1.0);
-	fragColor = vec3(inPosition);
+
+    objectIndex = gl_InstanceIndex + pc.instanceOffset;
+
+    ObjectData obj = instances[objectIndex];
+
+	gl_Position = pc.proj * pc.view * obj.model * vec4(inPosition, 1.0);
+
+    texIndex = obj.textureIndex;
+    vertColor = inColor;
+    texCoord = inTexCoord;
 }

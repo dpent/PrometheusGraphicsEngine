@@ -7,29 +7,45 @@ void DescriptorManager::createGraphicsDescriptorSetLayout() {
     if (Engine::graphicsDescriptor.layout != VK_NULL_HANDLE) {
         vkDestroyDescriptorSetLayout(Engine::deviceInfo.logicalDevice, Engine::graphicsDescriptor.layout, nullptr);
     }
+    
+    VkDescriptorSetLayoutBinding samplerBinding{};
+    samplerBinding.binding = 0;
+    samplerBinding.descriptorCount = 1;
+    samplerBinding.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER;
+    samplerBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+
+    VkDescriptorSetLayoutBinding instanceDataSSBO{};
+    instanceDataSSBO.binding = 1;
+    instanceDataSSBO.descriptorCount = 1;
+    instanceDataSSBO.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    instanceDataSSBO.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
 
     VkDescriptorSetLayoutBinding texturesBinding{}; //Textures
-    texturesBinding.binding = 0;
+    texturesBinding.binding = 2;
     texturesBinding.descriptorCount = Engine::MAX_TEXTURES;
     texturesBinding.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
     texturesBinding.pImmutableSamplers = nullptr;
     texturesBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 
-
-    std::array<VkDescriptorSetLayoutBinding, 1> bindings = {
+    std::array<VkDescriptorSetLayoutBinding, 3> bindings = {    
+    samplerBinding,
+    instanceDataSSBO,
     texturesBinding
     };
 
-    VkDescriptorBindingFlags flags =
-        VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT |
-        VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT |
-        VK_DESCRIPTOR_BINDING_VARIABLE_DESCRIPTOR_COUNT_BIT;
+    std::array<VkDescriptorBindingFlags, 3> bindingFlags = {
+    0, // samplerBinding (binding 0) no flags
+    0, // instanceDataSSBO (binding 1) no flags
+    VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT |
+    VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT |
+    VK_DESCRIPTOR_BINDING_VARIABLE_DESCRIPTOR_COUNT_BIT // texturesBinding (binding 2)
+    };
 
     VkDescriptorSetLayoutBindingFlagsCreateInfo flagsInfo{};
     flagsInfo.sType =
         VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO;
-    flagsInfo.bindingCount = 1;
-    flagsInfo.pBindingFlags = &flags;
+    flagsInfo.bindingCount = static_cast<uint32_t>(bindingFlags.size());
+    flagsInfo.pBindingFlags = bindingFlags.data();
 
     VkDescriptorSetLayoutCreateInfo layoutInfo{};
     layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
@@ -49,10 +65,16 @@ void DescriptorManager::createGraphicsDescriptorPool() {
         vkDestroyDescriptorPool(Engine::deviceInfo.logicalDevice, Engine::graphicsDescriptor.pool, nullptr);
     }
 
-    std::array<VkDescriptorPoolSize, 1> poolSizes{};
+    std::array<VkDescriptorPoolSize, 3> poolSizes{};
 
-    poolSizes[0].type = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
-    poolSizes[0].descriptorCount = Engine::MAX_TEXTURES;
+    poolSizes[0].type = VK_DESCRIPTOR_TYPE_SAMPLER;
+    poolSizes[0].descriptorCount = 1;
+
+    poolSizes[1].type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    poolSizes[1].descriptorCount = 1;
+
+    poolSizes[2].type = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+    poolSizes[2].descriptorCount = Engine::MAX_TEXTURES;
 
     VkDescriptorPoolCreateInfo poolInfo{};
     poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
@@ -103,14 +125,46 @@ void DescriptorManager::createGraphicsDescriptorSets() {
         count++;
     }
 
+    VkDescriptorImageInfo samplerInfo{};
+    samplerInfo.sampler = Engine::linearSampler;
+
+    VkDescriptorBufferInfo bufferInfo{};
+    bufferInfo.buffer = Engine::instanceDataSSBO.buffer; // your Buffer struct
+    bufferInfo.offset = 0;
+    bufferInfo.range = Engine::instanceDataSSBO.size;
+
     VkWriteDescriptorSet write{};
     write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
     write.dstSet = Engine::graphicsDescriptor.sets[0];
-    write.dstBinding = 0;
+    write.dstBinding = 2;
     write.dstArrayElement = 0;
     write.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
     write.descriptorCount = static_cast<uint32_t>(Engine::textures.size());
     write.pImageInfo = textures.data();
 
-    vkUpdateDescriptorSets(Engine::deviceInfo.logicalDevice, 1, &write, 0, nullptr);
+    VkWriteDescriptorSet samplerWrite{};
+    samplerWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    samplerWrite.dstSet = Engine::graphicsDescriptor.sets[0];
+    samplerWrite.dstBinding = 0;
+    samplerWrite.dstArrayElement = 0;
+    samplerWrite.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER;
+    samplerWrite.descriptorCount = 1;
+    samplerWrite.pImageInfo = &samplerInfo;
+
+    VkWriteDescriptorSet instanceSSBOWrite{};
+    instanceSSBOWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    instanceSSBOWrite.dstSet = Engine::graphicsDescriptor.sets[0];
+    instanceSSBOWrite.dstBinding = 1;                  // binding 0 in the shader
+    instanceSSBOWrite.dstArrayElement = 0;
+    instanceSSBOWrite.descriptorCount = 1;
+    instanceSSBOWrite.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    instanceSSBOWrite.pBufferInfo = &bufferInfo;
+
+    std::array<VkWriteDescriptorSet, 3> writes = {
+        write,
+        samplerWrite,
+        instanceSSBOWrite
+    };
+
+    vkUpdateDescriptorSets(Engine::deviceInfo.logicalDevice, static_cast<uint32_t>(writes.size()), writes.data(), 0, nullptr);
 }

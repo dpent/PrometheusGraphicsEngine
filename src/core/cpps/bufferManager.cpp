@@ -201,14 +201,6 @@ void BufferManager::recordCommandBuffer(VkCommandBuffer& commandBuffer, uint32_t
     vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
     vkCmdBindIndexBuffer(commandBuffer, Engine::vertexIndexBuffer.buffer, Engine::vertexIndexBuffer.offset, VK_INDEX_TYPE_UINT32);
 
-    vkCmdPushConstants(
-        commandBuffer,
-        Engine::graphicsPipeLine.layout,
-        VK_SHADER_STAGE_VERTEX_BIT,
-        0,
-        sizeof(*cameraPushConstants),
-        cameraPushConstants
-    );
 
     vkCmdBindDescriptorSets(
         commandBuffer,
@@ -225,6 +217,16 @@ void BufferManager::recordCommandBuffer(VkCommandBuffer& commandBuffer, uint32_t
 
     for (auto mesh : Engine::meshes) {
 
+        cameraPushConstants->instanceOffset = instanceNum;
+
+        vkCmdPushConstants(
+            commandBuffer,
+            Engine::graphicsPipeLine.layout,
+            VK_SHADER_STAGE_VERTEX_BIT,
+            0,
+            sizeof(*cameraPushConstants),
+            cameraPushConstants
+        );
         vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(mesh->indices.size()), mesh->instances, mesh->indexOffset, mesh->vertexOffset, instanceNum);
         instanceNum += mesh->instances;
     }

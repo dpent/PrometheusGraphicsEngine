@@ -60,6 +60,7 @@ public:
 	static std::deque<Texture*> textures;
 	static std::deque<GameObject*> gameObjects;
 	static std::deque<Mesh*> meshes;
+	static std::vector<InstanceInfo> instanceData;
 
 	static CommandPool command;
 
@@ -67,6 +68,7 @@ public:
 	static Buffer vertexIndexBuffer;
 
 	static Buffer stagingBuffer;
+	static Buffer instanceDataSSBO;
 
 	static uint8_t currentFrame;
 
@@ -132,6 +134,7 @@ public:
 	static void createSyncObjects();
 
 	static void recreateVertexIndexData();
+	static void updateObjects();
 
 	//USED BY GLFW TO NOTIFY WINDOW RESIZE
 	static void frameBufferResizeCallback(GLFWwindow* window, int width, int height);

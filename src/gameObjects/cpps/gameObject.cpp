@@ -1,4 +1,5 @@
 #include "../headers/gameObject.h"
+#include "../../core/headers/engine.h"
 
 uint64_t GameObject::incrementID = 0;
 
@@ -15,6 +16,10 @@ GameObject::GameObject(Mesh* mesh, Material* material) {
 	this->id = GameObject::incrementID;
 
 	GameObject::incrementID++;
+
+	Engine::instanceData.push_back(InstanceInfo());
+	this->instanceInfo = &Engine::instanceData.back();
+	Engine::gameObjects.push_back(this);
 }
 
 GameObject::GameObject(Mesh* mesh, std::string textureFilename) {
@@ -28,6 +33,10 @@ GameObject::GameObject(Mesh* mesh, std::string textureFilename) {
 	this->id = GameObject::incrementID;
 
 	GameObject::incrementID++;
+
+	Engine::instanceData.push_back(InstanceInfo());
+	this->instanceInfo = &Engine::instanceData.back();
+	Engine::gameObjects.push_back(this);
 }
 
 GameObject::GameObject(std::string modelFilename, Material* material) {
@@ -41,6 +50,10 @@ GameObject::GameObject(std::string modelFilename, Material* material) {
 	this->id = GameObject::incrementID;
 
 	GameObject::incrementID++;
+
+	Engine::instanceData.push_back(InstanceInfo());
+	this->instanceInfo = &Engine::instanceData.back();
+	Engine::gameObjects.push_back(this);
 }
 
 GameObject::GameObject(std::string modelFilename, std::string textureFilename) {
@@ -54,4 +67,16 @@ GameObject::GameObject(std::string modelFilename, std::string textureFilename) {
 	this->id = GameObject::incrementID;
 
 	GameObject::incrementID++;
+
+	Engine::instanceData.push_back(InstanceInfo());
+	this->instanceInfo = &Engine::instanceData.back();
+	Engine::gameObjects.push_back(this);
+}
+
+void GameObject::update() {
+	//rotate(glm::angleAxis(0.1f, glm::vec3(0.0f, 1.0f, 0.0f)));
+}
+
+void GameObject::rotate(glm::quat rotation) {
+	transform->rotation *= rotation;
 }
