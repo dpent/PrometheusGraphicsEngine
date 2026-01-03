@@ -120,8 +120,7 @@ void DescriptorManager::createGraphicsDescriptorSets() {
         imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
         textures.push_back(imageInfo);
-        texture->index = 0;
-
+        texture->index = count;
         count++;
     }
 

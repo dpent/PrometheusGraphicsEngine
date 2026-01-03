@@ -151,11 +151,16 @@ void Engine::initVulkan() {
     PipelineManager::createGraphicsPipeline();
 
     BufferManager::createStagingBuffer(8192); //8KB TO START
+
+    Engine::instanceData.reserve(256);
 }
 
 void Engine::mainLoop() {
 
-    GameObject* gb = new GameObject("cottage_FREE.obj", "Cottage_Clean_Base_Color.png");
+    GameObject* house = new GameObject("cottage_FREE.obj", "Cottage_Clean_Base_Color.png");
+    GameObject* floor = new GameObject("cube.obj", "marble.jpg");
+    floor->transform->position = glm::vec3(0.0f, -0.5f, 0.0f);
+    floor->scale(glm::vec3(10.0f, 0.5f, 10.0f));
 
     BufferManager::createSSBO(Engine::instanceDataSSBO, Engine::instanceData);
 
@@ -409,7 +414,6 @@ void Engine::prepareFrameData() {
         
         Engine::recreateVertexIndexData();
         BufferManager::createVertexIndexBuffer(Engine::vertexIndexData.vertices.size() * sizeof(Vertex) + Engine::vertexIndexData.indices.size() * sizeof(uint32_t));
-        
         Engine::remakeVertexIndexBuffer = false;
     }
 
@@ -471,10 +475,12 @@ void Engine::recreateVertexIndexData() {
 
 void Engine::updateObjects() {
 
+    int count = 0;
     for (auto obj : Engine::gameObjects) {
         obj->update();
-        obj->instanceInfo->modelMatrix = obj->transform->getModelMatrix();
-        obj->instanceInfo->materialIndex = obj->material->texture->index;
+        Engine::instanceData[obj->instanceIndex].modelMatrix = obj->transform->getModelMatrix();
+        Engine::instanceData[obj->instanceIndex].materialIndex = obj->material->texture->index;
+        count++;
     }
 
 }

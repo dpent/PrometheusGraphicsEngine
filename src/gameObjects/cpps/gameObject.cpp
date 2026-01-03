@@ -17,8 +17,8 @@ GameObject::GameObject(Mesh* mesh, Material* material) {
 
 	GameObject::incrementID++;
 
-	Engine::instanceData.push_back(InstanceInfo());
-	this->instanceInfo = &Engine::instanceData.back();
+	Engine::instanceData.push_back(InstanceInfo(this));
+	this->instanceIndex = static_cast<uint32_t>(Engine::instanceData.size() - 1);
 	Engine::gameObjects.push_back(this);
 }
 
@@ -34,8 +34,8 @@ GameObject::GameObject(Mesh* mesh, std::string textureFilename) {
 
 	GameObject::incrementID++;
 
-	Engine::instanceData.push_back(InstanceInfo());
-	this->instanceInfo = &Engine::instanceData.back();
+	Engine::instanceData.push_back(InstanceInfo(this));
+	this->instanceIndex = static_cast<uint32_t>(Engine::instanceData.size() - 1);
 	Engine::gameObjects.push_back(this);
 }
 
@@ -51,8 +51,8 @@ GameObject::GameObject(std::string modelFilename, Material* material) {
 
 	GameObject::incrementID++;
 
-	Engine::instanceData.push_back(InstanceInfo());
-	this->instanceInfo = &Engine::instanceData.back();
+	Engine::instanceData.push_back(InstanceInfo(this));
+	this->instanceIndex = static_cast<uint32_t>(Engine::instanceData.size() - 1);
 	Engine::gameObjects.push_back(this);
 }
 
@@ -68,8 +68,8 @@ GameObject::GameObject(std::string modelFilename, std::string textureFilename) {
 
 	GameObject::incrementID++;
 
-	Engine::instanceData.push_back(InstanceInfo());
-	this->instanceInfo = &Engine::instanceData.back();
+	Engine::instanceData.push_back(InstanceInfo(this));
+	this->instanceIndex = static_cast<uint32_t>(Engine::instanceData.size() - 1);
 	Engine::gameObjects.push_back(this);
 }
 
@@ -79,4 +79,23 @@ void GameObject::update() {
 
 void GameObject::rotate(glm::quat rotation) {
 	transform->rotation *= rotation;
+}
+
+void GameObject::scale(glm::vec3 scale) {
+
+	this->transform->scale = scale;
+}
+
+InstanceInfo::InstanceInfo(GameObject* owner) {
+	modelMatrix = glm::mat4(1.0f);
+	materialIndex = 0;
+	this->owner = owner;
+}
+
+std::string InstanceInfo::toString() {
+	std::ostringstream oss;
+
+	oss << "Material index: " << materialIndex << "\n"
+		<< "Model matrix: \n" << printMatrix(modelMatrix);
+	return oss.str();
 }

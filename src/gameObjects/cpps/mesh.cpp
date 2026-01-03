@@ -143,7 +143,8 @@ std::string Mesh::toString() {
         << "vertexOffset = " << vertexOffset << "\n "
         << "vertices = " << vertices.size() << "\n "
         << "indexOffset = " << indexOffset << "\n "
-        << "indices = " << indices.size() << " }";
+        << "indices = " << indices.size() << "\n"
+        << "instances = " << instances << " }";
 
     return oss.str();
 }

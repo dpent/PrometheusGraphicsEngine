@@ -213,11 +213,9 @@ void BufferManager::recordCommandBuffer(VkCommandBuffer& commandBuffer, uint32_t
         nullptr
     );
 
-    uint32_t instanceNum = 0;
+    for (auto object : Engine::gameObjects) {
 
-    for (auto mesh : Engine::meshes) {
-
-        cameraPushConstants->instanceOffset = instanceNum;
+		cameraPushConstants->objectIndex = object->instanceIndex;
 
         vkCmdPushConstants(
             commandBuffer,
@@ -227,8 +225,15 @@ void BufferManager::recordCommandBuffer(VkCommandBuffer& commandBuffer, uint32_t
             sizeof(*cameraPushConstants),
             cameraPushConstants
         );
-        vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(mesh->indices.size()), mesh->instances, mesh->indexOffset, mesh->vertexOffset, instanceNum);
-        instanceNum += mesh->instances;
+
+        vkCmdDrawIndexed(
+            commandBuffer, 
+            static_cast<uint32_t>(object->mesh->indices.size()), 
+            1, 
+            object->mesh->indexOffset, 
+            object->mesh->vertexOffset, 
+            0
+        );
     }
 
     if (Engine::displayGUI) {

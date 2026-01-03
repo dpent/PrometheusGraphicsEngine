@@ -5,12 +5,19 @@
 #include "transform.h"
 #include "material.h"
 
+class GameObject;
+
 struct InstanceInfo {
 public:
 	glm::mat4 modelMatrix;
 	uint32_t materialIndex;
-	uint32_t padding[3];
+	GameObject* owner;
+
+	InstanceInfo(GameObject* owner);
+	std::string toString();
 };
+
+static_assert(sizeof(InstanceInfo) % 16 == 0, "Wrong size. This must follow std140 (aligned to 16 bytes)");
 
 class GameObject {
 public:
@@ -21,7 +28,7 @@ public:
 	Mesh* mesh;
 	Transform* transform;
 	Material* material;
-	InstanceInfo* instanceInfo;
+	uint32_t instanceIndex;
 
 	GameObject();
 	GameObject(Mesh* mesh, Material* material);
@@ -31,4 +38,5 @@ public:
 
 	virtual void update();
 	virtual void rotate(glm::quat rotation);
+	virtual void scale(glm::vec3 scale);
 };

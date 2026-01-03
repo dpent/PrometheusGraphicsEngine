@@ -4,7 +4,7 @@
 struct ObjectData {
     mat4 model;
     uint textureIndex;
-    // 12 bytes padding to align to 16 bytes
+    uint padding[3];// 12 bytes padding to align to 16 bytes
 };
 
 layout(std430, binding = 1) readonly buffer instanceData
@@ -20,7 +20,7 @@ layout(location = 3) in vec3 inNormal;
 layout(push_constant) uniform CameraObject {
     mat4 view;
     mat4 proj;
-    uint instanceOffset;
+    uint instanceIndex;
 } pc;
 
 layout(location = 0) out vec3 vertColor;
@@ -30,12 +30,11 @@ layout(location = 3) out uint texIndex;
 
 void main() {
 
-    objectIndex = gl_InstanceIndex + pc.instanceOffset;
-
-    ObjectData obj = instances[objectIndex];
+    ObjectData obj = instances[pc.instanceIndex];
 
 	gl_Position = pc.proj * pc.view * obj.model * vec4(inPosition, 1.0);
 
+    objectIndex = pc.instanceIndex;
     texIndex = obj.textureIndex;
     vertColor = inColor;
     texCoord = inTexCoord;

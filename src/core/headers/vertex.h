@@ -22,7 +22,7 @@ struct CameraObject
 {
     glm::mat4 view;
     glm::mat4 proj;
-    uint32_t instanceOffset;
+    uint32_t objectIndex;
 };
 
 namespace std {

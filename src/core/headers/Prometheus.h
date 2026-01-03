@@ -33,3 +33,20 @@
 #include "../../imgui/imgui_impl_glfw.h"
 #include "../../imgui/imgui_internal.h"
 // TODO: Reference additional headers your program requires here.
+
+
+template<int C, int R, typename T, glm::qualifier Q>
+std::string printMatrix(const glm::mat<C, R, T, Q>& m)
+{
+    std::ostringstream oss;
+    for (int row = 0; row < R; ++row)
+    {
+        for (int col = 0; col < C; ++col)
+        {
+            oss << m[col][row] << " ";
+        }
+        oss << '\n';
+    }
+
+    return oss.str();
+}

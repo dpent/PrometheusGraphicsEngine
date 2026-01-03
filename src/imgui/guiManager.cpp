@@ -106,9 +106,9 @@ void GUIManager::renderGUI(uint32_t& imageIndex) {
 
 void GUIManager::createInfoWindow() {
 
-	ImGui::Begin("Info");
+	ImGui::Begin("General Info");
 
-	ImGui::SeparatorText("GPU INFO");
+	ImGui::SeparatorText("GPU");
 	ImGui::Text("Selected GPU: %s", Engine::deviceInfo.physicalProperties.deviceName);
 	ImGui::Text("Driver version: %u", Engine::deviceInfo.physicalProperties.driverVersion);
 	ImGui::Text("Device Type: %s", DeviceManager::deviceTypeToString(Engine::deviceInfo.physicalProperties.deviceType));
@@ -156,12 +156,10 @@ void GUIManager::createDockSpaceWindow() {
 		ImGui::DockBuilderAddNode(dockspaceId, ImGuiDockNodeFlags_DockSpace);
 		ImGui::DockBuilderSetNodeSize(dockspaceId, ImGui::GetIO().DisplaySize);
 
-		// Split the dockspace vertically: top 70% for Info, bottom 30% for Camera Info
 		ImGuiID dock_id_main = dockspaceId;
 		ImGuiID dock_id_bottom = ImGui::DockBuilderSplitNode(dock_id_main, ImGuiDir_Down, 0.3f, nullptr, &dock_id_main);
 
-		// Dock your windows
-		ImGui::DockBuilderDockWindow("Info", dock_id_main);
+		ImGui::DockBuilderDockWindow("General Info", dock_id_main);
 		ImGui::DockBuilderDockWindow("Camera", dock_id_bottom);
 
 		ImGui::DockBuilderFinish(dockspaceId);
