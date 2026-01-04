@@ -2,6 +2,7 @@
 
 #include "../../core/headers/Prometheus.h"
 #include "../../core/headers/imageManager.h"
+#include "../../core/headers/bufferManager.h"
 
 struct Texture {
 public:
@@ -11,7 +12,7 @@ public:
 	uint32_t index;
 
 	Texture();
-	Texture(std::string filename);
+	Texture(std::string filename, CommandPool& command);
 };
 
 class Material {
@@ -23,6 +24,6 @@ public:
 	float roughness;
 
 	Material();
-	Material(Texture* texture, float metallic, float roughness);
-	Material(std::string filename, float metallic, float roughness);
+	Material(Texture* texture, float metallic, float roughness, CommandPool& command);
+	Material(std::string filename, float metallic, float roughness, CommandPool& command);
 };

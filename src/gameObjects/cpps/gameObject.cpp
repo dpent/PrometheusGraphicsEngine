@@ -38,7 +38,7 @@ GameObject::GameObject(Mesh* mesh, std::string textureFilename) {
 	this->mesh->instances++;
 	Engine::meshMutex.unlock();
 
-	this->material = new Material(textureFilename, 0.0f, 1.0f);
+	this->material = new Material(textureFilename, 0.0f, 1.0f, Engine::command);
 
 	this->transform = new Transform();
 
@@ -84,7 +84,7 @@ GameObject::GameObject(std::string modelFilename, std::string textureFilename) {
 	this->mesh = new Mesh(modelFilename);
 	this->mesh->instances++;
 
-	this->material = new Material(textureFilename, 0.0f, 1.0f);
+	this->material = new Material(textureFilename, 0.0f, 1.0f, Engine::command);
 
 	this->transform = new Transform();
 
@@ -116,7 +116,7 @@ void GameObject::scale(glm::vec3 scale) {
 	this->transform->scale = scale;
 }
 
-void GameObject::initialise(InitInfo& info) {
+void GameObject::initialise(InitInfo& info, CommandPool& command) {
 	if (info.modelPointer == nullptr) {
 		this->mesh = new Mesh(info.modelFilename);
 		this->mesh->instances++;
@@ -129,7 +129,7 @@ void GameObject::initialise(InitInfo& info) {
 	}
 
 	if (info.materialPointer == nullptr) {
-		this->material = new Material(info.textureFilename, 0.0f, 1.0f);
+		this->material = new Material(info.textureFilename, 0.0f, 1.0f, command);
 	}
 	else {
 		this->material = info.materialPointer;

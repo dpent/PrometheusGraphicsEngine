@@ -6,7 +6,7 @@ Job::Job() {
 Job::~Job() {
 }
 
-void Job::execute() {
+void Job::execute(CommandPool& command) {
 	std::cout << "This is a base job. It only prints this to the console." << std::endl;
 }
 
@@ -27,7 +27,7 @@ PrepareForJoinJob::PrepareForJoinJob() {
 PrepareForJoinJob::~PrepareForJoinJob() {
 }
 
-void PrepareForJoinJob::execute() {
+void PrepareForJoinJob::execute(CommandPool& command) {
 }
 
 std::string PrepareForJoinJob::toString() {
@@ -47,8 +47,8 @@ InitialiseObjectJob::InitialiseObjectJob(GameObject* object, InitInfo info) {
 
 InitialiseObjectJob::~InitialiseObjectJob(){}
 
-void InitialiseObjectJob::execute() {
-	object->initialise(info);
+void InitialiseObjectJob::execute(CommandPool& command) {
+	object->initialise(info, command);
 }
 
 std::string InitialiseObjectJob::toString() {

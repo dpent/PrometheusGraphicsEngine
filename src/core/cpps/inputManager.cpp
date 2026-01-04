@@ -148,6 +148,15 @@ void InputManager::consumeInput(GLFWwindow* window) {
         case GLFW_KEY_SPACE:
             Engine::displayGUI = !Engine::displayGUI;
             Engine::pressed[i] = false;
+            break;
+        case GLFW_KEY_L:
+            Engine::fullscreen = !Engine::fullscreen;
+            if (Engine::fullscreen)
+                Engine::enterFullscreen();
+            else
+                Engine::exitFullscreen();
+            Engine::pressed[i] = false;
+            break;
         }
     }
 

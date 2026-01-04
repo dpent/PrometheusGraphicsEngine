@@ -7,6 +7,8 @@ WorkerThread::WorkerThread() {
 	this->thread = std::thread(&WorkerThread::workerLoop, this);
 	this->id = thread.get_id();
 
+	this->command.initialize();
+
 	this->thread.detach();
 }
 
@@ -32,5 +34,5 @@ void WorkerThread::workerLoop() {
 }
 
 void WorkerThread::doWork(Job* job) {
-	job->execute();
+	job->execute(command);
 }

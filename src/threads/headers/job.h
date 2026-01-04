@@ -1,13 +1,14 @@
 #pragma once
 #include "../../core/headers/Prometheus.h"
 #include "../../gameObjects/headers/gameObject.h"
+#include "../../core/headers/engine.h"
 
 struct Job {
 public:
 	Job();
 	~Job();
 
-	virtual void execute();
+	virtual void execute(CommandPool& command);
 	virtual std::string toString();
 	virtual std::string humanReadableName();
 };
@@ -17,7 +18,7 @@ public:
 	PrepareForJoinJob();
 	~PrepareForJoinJob();
 
-	void execute() override;
+	void execute(CommandPool& command) override;
 	std::string toString() override;
 	std::string humanReadableName() override;
 };
@@ -31,7 +32,7 @@ public:
 	InitialiseObjectJob(GameObject* object, InitInfo info);
 	~InitialiseObjectJob();
 
-	void execute() override;
+	void execute(CommandPool& command) override;
 	std::string toString() override;
 	std::string humanReadableName() override;
 };

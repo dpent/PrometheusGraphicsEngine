@@ -1,5 +1,6 @@
 #pragma once
 #include "../../core/headers/Prometheus.h"
+#include "../../core/headers/bufferManager.h"
 
 class Engine;
 struct Job;
@@ -12,6 +13,8 @@ public:
 
     bool alive = true;
 
+    CommandPool command;
+
     WorkerThread();
 
     void workerLoop();
@@ -19,6 +22,4 @@ public:
     void doWork(Job* job);
 
     void detach();
-
-    void createPoolAndBuffers(VkDevice& device, VkPhysicalDevice& physicalDevice, VkSurfaceKHR& surface);
 };

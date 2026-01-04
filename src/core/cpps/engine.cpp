@@ -52,9 +52,10 @@ VkSampler Engine::linearSampler;
 std::vector<bool> Engine::pressed;
 
 bool Engine::firstFrame = true;
-bool Engine::remakeDescriptors = true;
+bool Engine::remakeDescriptors = false;
 bool Engine::remakeVertexIndexBuffer = false;
 bool Engine::remakeInstanceDataSSBO = false;
+bool Engine::fullscreen = false;
 
 //WINDOW
 GLFWwindow* Engine::window = nullptr;
@@ -117,7 +118,6 @@ void Engine::initWindow(Engine* engine) {
 }
 
 void Engine::initVulkan() {
-    Engine::initThreadPool(std::thread::hardware_concurrency() - 1);
 
     InstanceManager::createInstance(Engine::vkInstanceInfo.instance);
     InstanceManager::setupDebugMessenger(Engine::vkInstanceInfo.instance, Engine::vkInstanceInfo.debugMessenger);
@@ -159,6 +159,8 @@ void Engine::initVulkan() {
     BufferManager::createStagingBuffer(8192); //8KB TO START
 
     Engine::instanceData.reserve(256);
+
+    Engine::initThreadPool(std::thread::hardware_concurrency() - 1);
 }
 
 void Engine::mainLoop() {
@@ -168,25 +170,22 @@ void Engine::mainLoop() {
     GameObject::createInitiasationJob(house, hInfo);
     delete hInfo;
 
-    int count = 0;
+    GameObject* floor = new GameObject();
+    InitInfo* fInfo = new InitInfo("cube.obj", nullptr, "marble.jpg", nullptr);
+    floor->transform->position = glm::vec3(0.0f, -0.5f, 0.0f);
+    floor->scale(glm::vec3(10.0f, 0.5f, 10.0f));
+    GameObject::createInitiasationJob(floor, fInfo);
+    delete fInfo;
 
     while (!glfwWindowShouldClose(Engine::window)) {
         glfwPollEvents();
         InputManager::consumeInput(Engine::window);
         Engine::camera.updateCameraVectors();
 
-        if (count == 200) {
-            GameObject* floor = new GameObject();
-            InitInfo* fInfo = new InitInfo("cube.obj", nullptr, "marble.jpg", nullptr);
-            floor->transform->position = glm::vec3(0.0f, -0.5f, 0.0f);
-            floor->scale(glm::vec3(10.0f, 0.5f, 10.0f));
-            GameObject::createInitiasationJob(floor, fInfo);
-            delete fInfo;
+        if (Engine::gameObjects.size() != 0) {
+
+            Engine::drawFrame();
         }
-
-        Engine::drawFrame();
-
-        count++;
     }
 
     Engine::killThreadPool();
@@ -521,4 +520,31 @@ void Engine::updateObjects() {
         count++;
     }
 
+}
+
+void Engine::enterFullscreen() {
+    GLFWmonitor* monitor = glfwGetPrimaryMonitor();
+    const GLFWvidmode* mode = glfwGetVideoMode(monitor);
+
+    glfwSetWindowMonitor(
+        Engine::window,
+        monitor,
+        0, 0,
+        mode->width,
+        mode->height,
+        mode->refreshRate
+    );
+}
+
+void Engine::exitFullscreen() {
+
+    glfwSetWindowMonitor(
+        Engine::window,
+        nullptr,           // <-- NULL monitor = windowed
+        200,
+        200,
+        Engine::WIDTH,
+        Engine::HEIGHT,
+        0
+    );
 }

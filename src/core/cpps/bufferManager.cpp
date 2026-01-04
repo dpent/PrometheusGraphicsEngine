@@ -214,7 +214,6 @@ void BufferManager::recordCommandBuffer(VkCommandBuffer& commandBuffer, uint32_t
     );
 
     for (auto object : Engine::gameObjects) {
-
 		cameraPushConstants->objectIndex = object->instanceIndex;
 
         vkCmdPushConstants(

@@ -86,6 +86,7 @@ public:
 	static bool remakeDescriptors;
 	static bool remakeVertexIndexBuffer;
 	static bool remakeInstanceDataSSBO;
+	static bool fullscreen;
 
 	//WINDOW
 	static GLFWwindow* window;
@@ -141,6 +142,9 @@ public:
 
 	static void recreateVertexIndexData();
 	static void updateObjects();
+
+	static void enterFullscreen();
+	static void exitFullscreen();
 
 	//USED BY GLFW TO NOTIFY WINDOW RESIZE
 	static void frameBufferResizeCallback(GLFWwindow* window, int width, int height);
