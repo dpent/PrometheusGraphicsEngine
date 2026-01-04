@@ -19,6 +19,16 @@ public:
 
 static_assert(sizeof(InstanceInfo) % 16 == 0, "Wrong size. This must follow std140 (aligned to 16 bytes)");
 
+struct InitInfo {
+	std::string modelFilename = ".";
+	Mesh* modelPointer = nullptr;
+	std::string textureFilename = ".";
+	Material* materialPointer = nullptr;
+
+	InitInfo();
+	InitInfo(std::string modelFilename, Mesh* modelPointer, std::string textureFilename, Material* materialPointer);
+};
+
 class GameObject {
 public:
 
@@ -39,4 +49,7 @@ public:
 	virtual void update();
 	virtual void rotate(glm::quat rotation);
 	virtual void scale(glm::vec3 scale);
+	virtual void initialise(InitInfo& info);
+
+	static void createInitiasationJob(GameObject* obj, InitInfo* info);
 };

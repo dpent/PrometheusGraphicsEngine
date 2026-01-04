@@ -7,8 +7,6 @@ Texture::Texture(){}
 
 Texture::Texture(std::string filename) {
 
-    Engine::textures.push_back(this);
-
     int texWidth, texHeight, texChannels;
     stbi_uc* pixels = stbi_load((std::filesystem::path(TEXTURE_DIR) / filename).lexically_normal().string().c_str(), &texWidth, &texHeight, &texChannels, 4);
     VkDeviceSize imageSize = texWidth * texHeight * 4;
@@ -35,6 +33,7 @@ Texture::Texture(std::string filename) {
 
     stbi_image_free(pixels);
 
+    Engine::textureMutex.lock();
     ImageManager::createImage(texWidth,
         texHeight,
         VK_FORMAT_R8G8B8A8_SRGB,
@@ -51,13 +50,16 @@ Texture::Texture(std::string filename) {
 
     ImageManager::transitionImageLayout(image.image, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED,
         VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, mipLevels, Engine::command.pool);
-
     ImageManager::copyBufferToImage(Engine::stagingBuffer.buffer, image.image, static_cast<uint32_t>(texWidth), static_cast<uint32_t>(texHeight),
         Engine::command.pool);
 
     ImageManager::generateMipMaps(image.image, texWidth, texHeight, mipLevels,VK_FORMAT_R8G8B8A8_SRGB, Engine::command.pool);
 
     ImageManager::createImageView(image.image, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT, mipLevels, VK_IMAGE_VIEW_TYPE_2D, 1, 0, image.view);
+
+    Engine::textures.push_back(this);
+    Engine::textureMutex.unlock();
+    Engine::remakeDescriptors = true;
 }
 
 Material::Material() {}
@@ -67,13 +69,17 @@ Material::Material(Texture* texture, float metallic, float roughness) {
     this->metallic = metallic;
     this->roughness = roughness;
 
+    Engine::materialMutex.lock();
     Engine::materials.push_back(this);
+    Engine::materialMutex.unlock();
 }
 
 Material::Material(std::string filename, float metallic, float roughness) {
-    this->texture = new Texture(filename);
     this->metallic = metallic;
     this->roughness = roughness;
 
+    this->texture = new Texture(filename);
+    Engine::materialMutex.lock();
     Engine::materials.push_back(this);
+    Engine::materialMutex.unlock();
 }

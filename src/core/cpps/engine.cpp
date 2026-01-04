@@ -54,6 +54,7 @@ std::vector<bool> Engine::pressed;
 bool Engine::firstFrame = true;
 bool Engine::remakeDescriptors = true;
 bool Engine::remakeVertexIndexBuffer = false;
+bool Engine::remakeInstanceDataSSBO = false;
 
 //WINDOW
 GLFWwindow* Engine::window = nullptr;
@@ -79,6 +80,11 @@ Camera Engine::camera;
 //SYNC OBJECTS
 std::counting_semaphore<INT_MAX> Engine::jobInQueueSem(0);
 std::mutex Engine::jobQueueMutex;
+
+std::mutex Engine::objectCreateMutex;
+std::mutex Engine::materialMutex;
+std::mutex Engine::meshMutex;
+std::mutex Engine::textureMutex;
 
 //THREADS
 std::unordered_map<std::thread::id, WorkerThread*> Engine::threadPool;
@@ -157,20 +163,30 @@ void Engine::initVulkan() {
 
 void Engine::mainLoop() {
 
-    GameObject* house = new GameObject("cottage_FREE.obj", "Cottage_Clean_Base_Color.png");
-    GameObject* floor = new GameObject("cube.obj", "marble.jpg");
-    floor->transform->position = glm::vec3(0.0f, -0.5f, 0.0f);
-    floor->scale(glm::vec3(10.0f, 0.5f, 10.0f));
+    GameObject* house = new GameObject();
+    InitInfo* hInfo = new InitInfo("cottage_FREE.obj", nullptr, "Cottage_Clean_Base_Color.png", nullptr);
+    GameObject::createInitiasationJob(house, hInfo);
+    delete hInfo;
 
-    BufferManager::createSSBO(Engine::instanceDataSSBO, Engine::instanceData);
+    int count = 0;
 
     while (!glfwWindowShouldClose(Engine::window)) {
         glfwPollEvents();
         InputManager::consumeInput(Engine::window);
         Engine::camera.updateCameraVectors();
 
-        Engine::prepareFrameData();
+        if (count == 200) {
+            GameObject* floor = new GameObject();
+            InitInfo* fInfo = new InitInfo("cube.obj", nullptr, "marble.jpg", nullptr);
+            floor->transform->position = glm::vec3(0.0f, -0.5f, 0.0f);
+            floor->scale(glm::vec3(10.0f, 0.5f, 10.0f));
+            GameObject::createInitiasationJob(floor, fInfo);
+            delete fInfo;
+        }
+
         Engine::drawFrame();
+
+        count++;
     }
 
     Engine::killThreadPool();
@@ -354,7 +370,18 @@ void Engine::drawFrame() {
 
     vkResetFences(Engine::deviceInfo.logicalDevice, 1, &Engine::inFlightFences[Engine::currentFrame]);
 
+    Engine::meshMutex.lock();
+    Engine::textureMutex.lock();
+    Engine::materialMutex.lock();
+    Engine::objectCreateMutex.lock();
+
+    Engine::prepareFrameData();
     BufferManager::recordCommandBuffer(Engine::command.buffers[Engine::currentFrame], imageIndex);
+
+    Engine::meshMutex.unlock();
+    Engine::textureMutex.unlock();
+    Engine::materialMutex.unlock();
+    Engine::objectCreateMutex.unlock();
 
     VkSubmitInfo submitInfo{};
     submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -411,11 +438,16 @@ void Engine::drawFrame() {
 void Engine::prepareFrameData() {
 
     if (Engine::remakeVertexIndexBuffer) {
-        
         Engine::recreateVertexIndexData();
         BufferManager::createVertexIndexBuffer(Engine::vertexIndexData.vertices.size() * sizeof(Vertex) + Engine::vertexIndexData.indices.size() * sizeof(uint32_t));
         Engine::remakeVertexIndexBuffer = false;
     }
+
+    if (Engine::remakeInstanceDataSSBO) {
+
+        BufferManager::createSSBO(Engine::instanceDataSSBO, Engine::instanceData);
+    }
+
 
     if (Engine::remakeDescriptors) {
 
@@ -427,7 +459,13 @@ void Engine::prepareFrameData() {
 
     Engine::updateObjects();
 
-    BufferManager::updateSSBO(Engine::instanceDataSSBO, Engine::instanceData);
+    if (!Engine::remakeInstanceDataSSBO) {
+
+        BufferManager::updateSSBO(Engine::instanceDataSSBO, Engine::instanceData);
+        return;
+    }
+
+    Engine::remakeInstanceDataSSBO = false;
 }
 
 void Engine::createSyncObjects() {

@@ -39,3 +39,30 @@ std::string PrepareForJoinJob::humanReadableName() {
 
 	return "PrepareForJoinJob";
 }
+
+InitialiseObjectJob::InitialiseObjectJob(GameObject* object, InitInfo info) {
+	this->object = object;
+	this->info = info;
+}
+
+InitialiseObjectJob::~InitialiseObjectJob(){}
+
+void InitialiseObjectJob::execute() {
+	object->initialise(info);
+}
+
+std::string InitialiseObjectJob::toString() {
+
+	std::ostringstream oss;
+	oss << "InitialiseObjectJob."
+		<< "\nGameObject* -> " << object
+		<< "\nInitInfo -> " << "Model file: " << info.modelFilename << "\n"
+		<< "			Mesh*: " << info.modelPointer << "\n"
+		<< "			Texture file: " << info.textureFilename << "\n"
+		<< "			Material*: " << info.materialPointer;
+	return oss.str();
+}
+
+std::string InitialiseObjectJob::humanReadableName() {
+	return "InitialiseObjectJob";
+}

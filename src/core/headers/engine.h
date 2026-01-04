@@ -85,6 +85,7 @@ public:
 	static bool firstFrame;
 	static bool remakeDescriptors;
 	static bool remakeVertexIndexBuffer;
+	static bool remakeInstanceDataSSBO;
 
 	//WINDOW
 	static GLFWwindow* window;
@@ -106,6 +107,11 @@ public:
 	//SYNC OBJECTS
 	static std::counting_semaphore<INT_MAX> jobInQueueSem;
 	static std::mutex jobQueueMutex;
+
+	static std::mutex objectCreateMutex;
+	static std::mutex materialMutex;
+	static std::mutex meshMutex;
+	static std::mutex textureMutex;
 
 	//THREADS
 	static std::unordered_map<std::thread::id, WorkerThread*> threadPool;
