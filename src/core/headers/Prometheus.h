@@ -32,6 +32,7 @@
 #include "../../imgui/imgui_impl_glfw.h"
 #include "../../imgui/imgui_internal.h"
 #include "doubleEndedQueue.h"
+#include <list>
 // TODO: Reference additional headers your program requires here.
 
 

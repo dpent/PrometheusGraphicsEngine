@@ -315,3 +315,9 @@ void ImageManager::generateMipMaps(VkImage& image, int32_t& texWidth,int32_t& te
 
     BufferManager::endSingleTimeCommands(commandPool, commandBuffer);
 }
+
+void Image::destroy() {
+    vkDestroyImageView(Engine::deviceInfo.logicalDevice, view, nullptr);
+    vkDestroyImage(Engine::deviceInfo.logicalDevice, image, nullptr);
+    vkFreeMemory(Engine::deviceInfo.logicalDevice, memory, nullptr);
+}

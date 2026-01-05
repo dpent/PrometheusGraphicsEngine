@@ -59,6 +59,8 @@ bool Engine::fullscreen = false;
 
 uint64_t Engine::frameCount = 0;
 
+GarbageQueues Engine::garbage;
+
 //WINDOW
 GLFWwindow* Engine::window = nullptr;
 GLFWcursor* Engine::cursor = nullptr;
@@ -186,6 +188,13 @@ void Engine::mainLoop() {
     GameObject::createInitiasationJob(floor, fInfo);
     delete fInfo;
 
+    GameObject* dragon = new GameObject();
+    InitInfo* dInfo = new InitInfo("stanford_dragon.obj", nullptr, "white.png", nullptr);
+    dragon->transform->position = glm::vec3(0.0f, 7.0f, 0.0f);
+    dragon->scale(glm::vec3(15.0f));
+    GameObject::createInitiasationJob(dragon, dInfo);
+    delete dInfo;
+
     while (!glfwWindowShouldClose(Engine::window)) {
         glfwPollEvents();
         InputManager::consumeInput(Engine::window);
@@ -196,10 +205,17 @@ void Engine::mainLoop() {
             Engine::drawFrame();
         }
         
+        std::cout << Engine::frameCount << std::endl;
+        if (Engine::frameCount == 2000) {
+            delete dragon;
+        }
+
         if (Engine::frameCount % 60 == 0)
         {
             Engine::updateSampleVectors();
         }
+
+        Engine::createUpdateGarbageJob();
 
         Engine::frameCount++;
     }
@@ -590,4 +606,96 @@ float Engine::getMax(std::vector<float>& vector) {
 
     if (vector.empty()) return 1.0f;
     return *std::max_element(vector.begin(), vector.end());
+}
+
+void GarbageQueues::lock() {
+    this->mutex.lock();
+}
+
+void GarbageQueues::unlock() {
+    this->mutex.unlock();
+}
+
+void GarbageQueues::update() {
+    mutex.lock();
+
+    auto itTex = textures.begin();
+    auto itTCount = textureFramesPassed.begin();
+
+    while (itTex != textures.end()) {
+
+        (*itTCount)++;  
+
+        if (*itTCount == Engine::MAX_FRAMES_IN_FLIGHT) {
+
+            if ((*itTex)->image.image != VK_NULL_HANDLE) {
+                delete *itTex;
+            }
+
+            itTex = textures.erase(itTex);
+            itTCount = textureFramesPassed.erase(itTCount);
+        }
+        else {
+            itTex++;
+            itTCount++;
+        }
+    }
+
+    auto itDesc = descriptors.begin();
+    auto itDCount = descriptorFramesPassed.begin();
+
+    while (itDesc != descriptors.end()) {
+
+        (*itDCount)++;
+
+        if (*itDCount == Engine::MAX_FRAMES_IN_FLIGHT) {
+
+            if (*itDesc != VK_NULL_HANDLE) {
+                vkDestroyDescriptorPool(Engine::deviceInfo.logicalDevice, *itDesc, nullptr);
+            }
+
+            itDesc = descriptors.erase(itDesc);
+            itDCount = descriptorFramesPassed.erase(itDCount);
+        }
+        else {
+            itDesc++;
+            itDCount++;
+        }
+    }
+
+    auto itBuff = buffers.begin();
+    auto itBCount = bufferFramesPassed.begin();
+
+    while (itBuff != buffers.end()) {
+
+        (*itBCount)++;
+
+        if (*itBCount == Engine::MAX_FRAMES_IN_FLIGHT) {
+
+            if (itBuff->buffer != VK_NULL_HANDLE) {
+                itBuff->destroy();
+            }
+
+            itBuff = buffers.erase(itBuff);
+            itBCount = bufferFramesPassed.erase(itBCount);
+        }
+        else {
+            itBuff++;
+            itBCount++;
+        }
+    }
+
+    mutex.unlock();
+
+}
+
+void Engine::createUpdateGarbageJob() {
+
+    UpdateGarbageJob* job = new UpdateGarbageJob();
+
+    Engine::jobQueueMutex.lock();
+    Engine::jobQueue.push(job);
+    Engine::jobQueueMutex.unlock();
+
+    Engine::jobInQueueSem.release();
 }

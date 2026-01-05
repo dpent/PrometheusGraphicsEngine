@@ -13,9 +13,12 @@ public:
 
 	Texture* next = nullptr;
 	Texture* prev = nullptr;
+	
+	uint32_t instances;
 
 	Texture();
 	Texture(std::string filename, CommandPool& command);
+	~Texture();
 };
 
 class Material {
@@ -28,6 +31,8 @@ public:
 
 	Material* next = nullptr;
 	Material* prev = nullptr;
+
+	uint32_t instances;
 
 	Material();
 	Material(Texture* texture, float metallic, float roughness, CommandPool& command);

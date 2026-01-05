@@ -16,6 +16,22 @@ class WorkerThread;
 struct Job;
 struct PrepareForJoinJob;
 
+struct GarbageQueues {
+	std::list<Texture*> textures;
+	std::list<uint8_t> textureFramesPassed;
+	std::list<VkDescriptorPool> descriptors;
+	std::list<uint8_t> descriptorFramesPassed;
+	std::list<Buffer> buffers;
+	std::list<uint8_t> bufferFramesPassed;
+	
+	std::mutex mutex;
+
+	void lock();
+	void unlock();
+
+	void update();
+};
+
 class Engine {
 
 public:
@@ -90,6 +106,8 @@ public:
 
 	static uint64_t frameCount;
 
+	static GarbageQueues garbage;
+
 	//WINDOW
 	static GLFWwindow* window;
 	static GLFWcursor* cursor;
@@ -161,6 +179,7 @@ public:
 	//THREADS
 	static void initThreadPool(uint16_t poolSize);
 	static void killThreadPool();
+	static void createUpdateGarbageJob();
 
 	//FORMATS
 	static VkFormat findDepthFormat();

@@ -80,11 +80,28 @@ void DeleteObjectJob::execute(CommandPool& command) {
 std::string DeleteObjectJob::toString() {
 
 	std::ostringstream oss;
-	oss << "DeleteObjectJob."
-		<< "\nGameObject* -> " << object;
+	oss << "DeleteObjectJob.";
 	return oss.str();
 }
 
 std::string DeleteObjectJob::humanReadableName() {
 	return "DeleteObjectJob";
+}
+
+UpdateGarbageJob::UpdateGarbageJob() {
+}
+
+UpdateGarbageJob::~UpdateGarbageJob() {}
+
+void UpdateGarbageJob::execute(CommandPool& command) {
+	Engine::garbage.update();
+}
+
+std::string UpdateGarbageJob::toString() {
+
+	return "UpdateGarbageJob. No attributes.";
+}
+
+std::string UpdateGarbageJob::humanReadableName() {
+	return "UpdateGarbageJob";
 }

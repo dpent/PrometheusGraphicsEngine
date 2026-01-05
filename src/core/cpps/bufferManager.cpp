@@ -58,7 +58,10 @@ void BufferManager::createBuffer(Buffer& bufferStruct, VkBufferUsageFlags usage,
 void BufferManager::createStagingBuffer(VkDeviceSize size) {
 
     if (Engine::stagingBuffer.buffer != VK_NULL_HANDLE) {
-        Engine::stagingBuffer.destroy();
+        Engine::garbage.lock();
+        Engine::garbage.buffers.push_back(Engine::stagingBuffer);
+        Engine::garbage.bufferFramesPassed.push_back(0);
+        Engine::garbage.unlock();
     }
 
     Engine::stagingBuffer.size = size;
@@ -68,7 +71,10 @@ void BufferManager::createStagingBuffer(VkDeviceSize size) {
 
 void BufferManager::createVertexIndexBuffer(VkDeviceSize size) {
     if (Engine::vertexIndexBuffer.buffer != VK_NULL_HANDLE) {
-        Engine::vertexIndexBuffer.destroy();
+        Engine::garbage.lock();
+        Engine::garbage.buffers.push_back(Engine::vertexIndexBuffer);
+        Engine::garbage.bufferFramesPassed.push_back(0);
+        Engine::garbage.unlock();
     }
 
     if (size > Engine::stagingBuffer.size) {

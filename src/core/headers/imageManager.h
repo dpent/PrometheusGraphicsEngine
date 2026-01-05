@@ -53,6 +53,8 @@ struct Image {
 	VkImage image;
 	VkDeviceMemory memory;
 	VkImageView view;
+
+    void destroy();
 };
 
 struct ImageVector {

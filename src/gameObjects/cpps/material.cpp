@@ -62,6 +62,10 @@ Texture::Texture(std::string filename, CommandPool& command) {
     Engine::remakeDescriptors = true;
 }
 
+Texture::~Texture() {
+    image.destroy();
+}
+
 Material::Material() {}
 
 Material::Material(Texture* texture, float metallic, float roughness, CommandPool& command) {

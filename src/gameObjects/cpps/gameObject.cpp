@@ -15,6 +15,13 @@ GameObject::GameObject(Mesh* mesh, Material* material) {
 	Engine::meshMutex.unlock();
 
 	this->material = material;
+	Engine::materialMutex.lock();
+	this->material->instances++;
+	Engine::materialMutex.unlock();
+
+	Engine::textureMutex.lock();
+	this->material->texture->instances++;
+	Engine::textureMutex.unlock();
 
 	this->transform = new Transform();
 
@@ -39,6 +46,13 @@ GameObject::GameObject(Mesh* mesh, std::string textureFilename) {
 	Engine::meshMutex.unlock();
 
 	this->material = new Material(textureFilename, 0.0f, 1.0f, Engine::command);
+	Engine::materialMutex.lock();
+	this->material->instances++;
+	Engine::materialMutex.unlock();
+
+	Engine::textureMutex.lock();
+	this->material->texture->instances++;
+	Engine::textureMutex.unlock();
 
 	this->transform = new Transform();
 
@@ -62,6 +76,13 @@ GameObject::GameObject(std::string modelFilename, Material* material) {
 	this->mesh->instances++;
 
 	this->material = material;
+	Engine::materialMutex.lock();
+	this->material->instances++;
+	Engine::materialMutex.unlock();
+
+	Engine::textureMutex.lock();
+	this->material->texture->instances++;
+	Engine::textureMutex.unlock();
 
 	this->transform = new Transform();
 
@@ -85,6 +106,13 @@ GameObject::GameObject(std::string modelFilename, std::string textureFilename) {
 	this->mesh->instances++;
 
 	this->material = new Material(textureFilename, 0.0f, 1.0f, Engine::command);
+	Engine::materialMutex.lock();
+	this->material->instances++;
+	Engine::materialMutex.unlock();
+
+	Engine::textureMutex.lock();
+	this->material->texture->instances++;
+	Engine::textureMutex.unlock();
 
 	this->transform = new Transform();
 
@@ -130,9 +158,18 @@ void GameObject::initialise(InitInfo& info, CommandPool& command) {
 
 	if (info.materialPointer == nullptr) {
 		this->material = new Material(info.textureFilename, 0.0f, 1.0f, command);
+		this->material->instances++;
+		this->material->texture->instances++;
 	}
 	else {
 		this->material = info.materialPointer;
+		Engine::materialMutex.lock();
+		this->material->instances++;
+		Engine::materialMutex.unlock();
+
+		Engine::textureMutex.lock();
+		this->material->texture->instances++;
+		Engine::textureMutex.unlock();
 	}
 	
 	//this->transform = new Transform(); //Already created by default const/tor
@@ -168,7 +205,34 @@ GameObject::~GameObject() {
 
 	Engine::meshMutex.lock();
 	this->mesh->instances--;
+	if (this->mesh->instances == 0) {
+
+		Engine::meshes.popItem(this->mesh);
+		delete this->mesh;
+		Engine::remakeVertexIndexBuffer = true;
+	}
 	Engine::meshMutex.unlock();
+
+	Engine::materialMutex.lock();
+	this->material->instances--;
+	Engine::textureMutex.lock();
+	this->material->texture->instances--;
+
+	if (this->material->texture->instances == 0) {
+		Engine::garbage.lock();
+		Engine::garbage.textures.push_back(this->material->texture);
+		Engine::garbage.textureFramesPassed.push_back(0);
+		Engine::textures.popItem(this->material->texture);
+		Engine::garbage.unlock();
+		Engine::remakeDescriptors = true;
+	}
+
+	if (this->material->instances == 0) {
+		delete this->material;
+	}
+
+	Engine::textureMutex.unlock();
+	Engine::materialMutex.unlock();
 	
 	Engine::objectCreateMutex.lock();
 	Engine::gameObjects.popItem(this);

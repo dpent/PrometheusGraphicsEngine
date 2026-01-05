@@ -62,7 +62,10 @@ void DescriptorManager::createGraphicsDescriptorSetLayout() {
 void DescriptorManager::createGraphicsDescriptorPool() {
 
     if (Engine::graphicsDescriptor.pool != VK_NULL_HANDLE) {
-        vkDestroyDescriptorPool(Engine::deviceInfo.logicalDevice, Engine::graphicsDescriptor.pool, nullptr);
+        Engine::garbage.lock();
+        Engine::garbage.descriptors.push_back(Engine::graphicsDescriptor.pool);
+        Engine::garbage.descriptorFramesPassed.push_back(0);
+        Engine::garbage.unlock();
     }
 
     std::array<VkDescriptorPoolSize, 3> poolSizes{};

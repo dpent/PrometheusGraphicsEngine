@@ -48,3 +48,14 @@ public:
 	std::string toString() override;
 	std::string humanReadableName() override;
 };
+
+struct UpdateGarbageJob : Job {
+
+public:
+	UpdateGarbageJob();
+	~UpdateGarbageJob();
+
+	void execute(CommandPool& command) override;
+	std::string toString() override;
+	std::string humanReadableName() override;
+};
