@@ -27,10 +27,10 @@ Descriptor Engine::graphicsDescriptor;
 
 Descriptor Engine::imGuiDescriptor;
 
-std::deque<Material*> Engine::materials;
-std::deque<Texture*> Engine::textures;
-std::deque<GameObject*> Engine::gameObjects;
-std::deque<Mesh*> Engine::meshes;
+DoubleEndedQueue<Material*> Engine::materials;
+DoubleEndedQueue<Texture*> Engine::textures;
+DoubleEndedQueue<GameObject*> Engine::gameObjects;
+DoubleEndedQueue<Mesh*> Engine::meshes;
 std::vector<InstanceInfo> Engine::instanceData;
 
 CommandPool Engine::command;
@@ -57,6 +57,8 @@ bool Engine::remakeVertexIndexBuffer = false;
 bool Engine::remakeInstanceDataSSBO = false;
 bool Engine::fullscreen = false;
 
+uint64_t Engine::frameCount = 0;
+
 //WINDOW
 GLFWwindow* Engine::window = nullptr;
 GLFWcursor* Engine::cursor = nullptr;
@@ -77,6 +79,13 @@ Camera Engine::camera;
 #else
     bool Engine::displayGUI = true;
 #endif
+
+//EDITOR SPECIFIC
+std::vector<float> Engine::vertexIndexHistory;
+std::vector<float> Engine::stagingHistory;
+std::vector<float> Engine::instanceDataHistory;
+
+uint16_t Engine::maxSamples = 20;
 
 //SYNC OBJECTS
 std::counting_semaphore<INT_MAX> Engine::jobInQueueSem(0);
@@ -182,10 +191,17 @@ void Engine::mainLoop() {
         InputManager::consumeInput(Engine::window);
         Engine::camera.updateCameraVectors();
 
-        if (Engine::gameObjects.size() != 0) {
+        if (Engine::gameObjects.size != 0) {
 
             Engine::drawFrame();
         }
+        
+        if (Engine::frameCount % 60 == 0)
+        {
+            Engine::updateSampleVectors();
+        }
+
+        Engine::frameCount++;
     }
 
     Engine::killThreadPool();
@@ -444,7 +460,7 @@ void Engine::prepareFrameData() {
 
     if (Engine::remakeInstanceDataSSBO) {
 
-        BufferManager::createSSBO(Engine::instanceDataSSBO, Engine::instanceData);
+        BufferManager::createSSBOCheckSize(Engine::instanceDataSSBO, Engine::instanceData) ? Engine::remakeDescriptors = true : Engine::remakeDescriptors = false;
     }
 
 
@@ -495,7 +511,8 @@ void Engine::recreateVertexIndexData() {
     Engine::vertexIndexData.vertices.clear();
     Engine::vertexIndexData.indices.clear();
 
-    for (auto mesh : Engine::meshes) {
+    Mesh* mesh = Engine::meshes.head;
+    while(mesh!=nullptr) {
 
         mesh->vertexOffset = (uint32_t)Engine::vertexIndexData.vertices.size();
         mesh->indexOffset = (uint32_t)Engine::vertexIndexData.indices.size();
@@ -507,17 +524,23 @@ void Engine::recreateVertexIndexData() {
         for (size_t i = 0; i < mesh->indices.size(); i++) {
             Engine::vertexIndexData.indices.push_back(mesh->indices[i]);
         }
+
+        mesh = mesh->next;
     }
 }
 
 void Engine::updateObjects() {
 
     int count = 0;
-    for (auto obj : Engine::gameObjects) {
+    GameObject* obj = Engine::gameObjects.head;
+
+    while(obj!=nullptr) 
+    {
         obj->update();
         Engine::instanceData[obj->instanceIndex].modelMatrix = obj->transform->getModelMatrix();
         Engine::instanceData[obj->instanceIndex].materialIndex = obj->material->texture->index;
         count++;
+        obj = obj->next;
     }
 
 }
@@ -547,4 +570,24 @@ void Engine::exitFullscreen() {
         Engine::HEIGHT,
         0
     );
+}
+
+void Engine::updateSampleVectors() {
+    Engine::vertexIndexHistory.push_back(static_cast<float>(Engine::vertexIndexBuffer.size) / (1024.0f * 1024.0f));
+    if (Engine::vertexIndexHistory.size() > Engine::maxSamples)
+        Engine::vertexIndexHistory.erase(Engine::vertexIndexHistory.begin());
+
+    Engine::stagingHistory.push_back(static_cast<float>(Engine::stagingBuffer.size) / (1024.0f * 1024.0f));
+    if (Engine::stagingHistory.size() > Engine::maxSamples)
+        Engine::stagingHistory.erase(Engine::stagingHistory.begin());
+
+    Engine::instanceDataHistory.push_back(static_cast<float>(Engine::instanceDataSSBO.size) / (1024.0f * 1024.0f));
+    if (Engine::instanceDataHistory.size() > Engine::maxSamples)
+        Engine::instanceDataHistory.erase(Engine::instanceDataHistory.begin());
+}
+
+float Engine::getMax(std::vector<float>& vector) {
+
+    if (vector.empty()) return 1.0f;
+    return *std::max_element(vector.begin(), vector.end());
 }

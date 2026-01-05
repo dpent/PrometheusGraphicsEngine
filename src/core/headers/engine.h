@@ -56,10 +56,10 @@ public:
 
 	static Descriptor imGuiDescriptor;
 
-	static std::deque<Material*> materials;
-	static std::deque<Texture*> textures;
-	static std::deque<GameObject*> gameObjects;
-	static std::deque<Mesh*> meshes;
+	static DoubleEndedQueue<Material*> materials;
+	static DoubleEndedQueue<Texture*> textures;
+	static DoubleEndedQueue<GameObject*> gameObjects;
+	static DoubleEndedQueue<Mesh*> meshes;
 	static std::vector<InstanceInfo> instanceData;
 
 	static CommandPool command;
@@ -88,6 +88,8 @@ public:
 	static bool remakeInstanceDataSSBO;
 	static bool fullscreen;
 
+	static uint64_t frameCount;
+
 	//WINDOW
 	static GLFWwindow* window;
 	static GLFWcursor* cursor;
@@ -104,6 +106,13 @@ public:
 	static Camera camera;
 
 	static bool displayGUI;
+
+	//EDITOR SPECIFIC
+	static std::vector<float> vertexIndexHistory;
+	static std::vector<float> stagingHistory;
+	static std::vector<float> instanceDataHistory;
+
+	static uint16_t maxSamples;
 
 	//SYNC OBJECTS
 	static std::counting_semaphore<INT_MAX> jobInQueueSem;
@@ -156,4 +165,8 @@ public:
 	//FORMATS
 	static VkFormat findDepthFormat();
 	static VkFormat findSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features);
+
+	//EDITOR SPECIFIC
+	static void updateSampleVectors();
+	static float getMax(std::vector<float>& vector);
 };

@@ -10,7 +10,7 @@ Mesh::Mesh(std::string meshPath) {
     this->instances = 0;
     load();
     Engine::meshMutex.lock();
-	Engine::meshes.push_back(this);
+	Engine::meshes.push(this);
     Engine::meshMutex.unlock();
     Engine::remakeVertexIndexBuffer = true;
 }

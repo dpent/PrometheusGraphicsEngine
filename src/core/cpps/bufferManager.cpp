@@ -213,7 +213,8 @@ void BufferManager::recordCommandBuffer(VkCommandBuffer& commandBuffer, uint32_t
         nullptr
     );
 
-    for (auto object : Engine::gameObjects) {
+    GameObject* object = Engine::gameObjects.head;
+    while(object!=nullptr) {
 		cameraPushConstants->objectIndex = object->instanceIndex;
 
         vkCmdPushConstants(
@@ -233,6 +234,8 @@ void BufferManager::recordCommandBuffer(VkCommandBuffer& commandBuffer, uint32_t
             object->mesh->vertexOffset, 
             0
         );
+
+        object = object->next;
     }
 
     if (Engine::displayGUI) {
@@ -279,4 +282,24 @@ void CommandPool ::initialize() {
 void Buffer::destroy() {
     vkDestroyBuffer(Engine::deviceInfo.logicalDevice, buffer, nullptr);
     vkFreeMemory(Engine::deviceInfo.logicalDevice, memory, nullptr);
+}
+
+std::string Buffer::getSizeHumanReadable(VkDeviceSize size) {
+    static const char* suffixes[] = { "B", "KB", "MB", "GB", "TB", "PB" };
+    static constexpr size_t suffixCount = sizeof(suffixes) / sizeof(suffixes[0]);
+
+    double value = static_cast<double>(size);
+    size_t suffixIndex = 0;
+
+    while (value >= 1024.0 && suffixIndex < suffixCount - 1)
+    {
+        value /= 1024.0;
+        ++suffixIndex;
+    }
+
+    std::ostringstream out;
+    out << std::fixed << std::setprecision(value < 10.0 ? 2 : 1)
+        << value << " " << suffixes[suffixIndex];
+
+    return out.str();
 }

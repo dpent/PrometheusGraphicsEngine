@@ -1,5 +1,6 @@
 #include "guiManager.h"
 #include "../core/headers/engine.h"
+#include "../core/headers/bufferManager.h"
 
 void GUIManager::initImGUI() {
 
@@ -97,6 +98,7 @@ void GUIManager::renderGUI(uint32_t& imageIndex) {
 	GUIManager::createDockSpaceWindow();
 	GUIManager::createInfoWindow();
 	GUIManager::createCameraInfoWindow();
+	GUIManager::createBufferInfoWindow();
 
 	ImGui::Render();
 	ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), Engine::command.buffers[Engine::currentFrame]);
@@ -160,8 +162,43 @@ void GUIManager::createDockSpaceWindow() {
 		ImGuiID dock_id_bottom = ImGui::DockBuilderSplitNode(dock_id_main, ImGuiDir_Down, 0.3f, nullptr, &dock_id_main);
 
 		ImGui::DockBuilderDockWindow("General Info", dock_id_main);
+		ImGui::DockBuilderDockWindow("Buffers", dock_id_main);
 		ImGui::DockBuilderDockWindow("Camera", dock_id_bottom);
 
 		ImGui::DockBuilderFinish(dockspaceId);
 	}
+}
+
+void GUIManager::createBufferInfoWindow() {
+	ImGui::Begin("Buffers");
+
+	ImGui::SeparatorText("VERTEX-INDEX BUFFER");
+	ImGui::Text((std::string("Size: ") +Buffer::getSizeHumanReadable(Engine::vertexIndexBuffer.size)).c_str());
+	GUIManager::makeBufferDiagram(Engine::vertexIndexHistory, "###VertexIndexHistory");
+
+	ImGui::SeparatorText("STAGING BUFFER");
+	ImGui::Text((std::string("Size: ") +Buffer::getSizeHumanReadable(Engine::stagingBuffer.size)).c_str());
+	GUIManager::makeBufferDiagram(Engine::stagingHistory, "###StagingHistory");
+
+	ImGui::SeparatorText("INSTANCE DATA SSBO");
+	ImGui::Text((std::string("Size: ") +Buffer::getSizeHumanReadable(Engine::instanceDataSSBO.size)).c_str());
+	GUIManager::makeBufferDiagram(Engine::instanceDataHistory, "###InstanceDataHistory");
+
+	ImGui::End();
+}
+
+void GUIManager::makeBufferDiagram(std::vector<float>& history, const char* label) {
+
+	ImVec2 avail = ImGui::GetContentRegionAvail();
+	float max = Engine::getMax(history);
+	ImGui::PlotLines(
+		label,
+		history.data(),
+		static_cast<int>(history.size()),
+		0,                // offset
+		"(MB)",          // overlay text (optional)
+		0.0f,             // scale_min
+		max,           // scale_max
+		ImVec2(avail.x, 50)     // size of the graph
+	);
 }

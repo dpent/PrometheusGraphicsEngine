@@ -40,6 +40,9 @@ public:
 	Material* material;
 	uint32_t instanceIndex;
 
+	GameObject* next = nullptr;
+	GameObject* prev = nullptr;
+
 	GameObject();
 	GameObject(Mesh* mesh, Material* material);
 	GameObject(Mesh* mesh, std::string textureFilename);
@@ -52,4 +55,7 @@ public:
 	virtual void initialise(InitInfo& info, CommandPool& commandPool);
 
 	static void createInitiasationJob(GameObject* obj, InitInfo* info);
+	static void createDeleteJob(GameObject* obj);
+	
+	~GameObject();
 };

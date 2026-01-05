@@ -95,7 +95,7 @@ void DescriptorManager::createGraphicsDescriptorSets() {
 
     Engine::graphicsDescriptor.sets.resize(1);
 
-    uint32_t variableDescriptorCount = static_cast<uint32_t>(Engine::textures.size());
+    uint32_t variableDescriptorCount = static_cast<uint32_t>(Engine::textures.size);
 
     VkDescriptorSetVariableDescriptorCountAllocateInfo variableCountInfo{};
     variableCountInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_VARIABLE_DESCRIPTOR_COUNT_ALLOCATE_INFO;
@@ -114,7 +114,8 @@ void DescriptorManager::createGraphicsDescriptorSets() {
     }
 
     uint32_t count = 0;
-    for (auto texture : Engine::textures) {
+    Texture* texture = Engine::textures.head;
+    while(texture != nullptr) {
         VkDescriptorImageInfo imageInfo{};
         imageInfo.imageView = texture->image.view;
         imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
@@ -122,6 +123,7 @@ void DescriptorManager::createGraphicsDescriptorSets() {
         textures.push_back(imageInfo);
         texture->index = count;
         count++;
+        texture = texture->next;
     }
 
     VkDescriptorImageInfo samplerInfo{};
@@ -138,7 +140,7 @@ void DescriptorManager::createGraphicsDescriptorSets() {
     write.dstBinding = 2;
     write.dstArrayElement = 0;
     write.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
-    write.descriptorCount = static_cast<uint32_t>(Engine::textures.size());
+    write.descriptorCount = static_cast<uint32_t>(Engine::textures.size);
     write.pImageInfo = textures.data();
 
     VkWriteDescriptorSet samplerWrite{};

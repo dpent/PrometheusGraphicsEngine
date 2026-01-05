@@ -14,6 +14,7 @@ public:
 	void* mapped;
 
 	void destroy();
+	static std::string getSizeHumanReadable(VkDeviceSize size);
 };
 
 class BufferManager {
@@ -42,6 +43,21 @@ public:
 	static void createVertexIndexBuffer(VkDeviceSize size);
 
 	static void recordCommandBuffer(VkCommandBuffer& commandBuffer, uint32_t& imageIndex);
+
+	template <typename T> static bool createSSBOCheckSize(Buffer& buffer, std::vector<T>& bufferData)
+	{ //TRUE if remade FALSE if not
+
+		VkDeviceSize bufferSize = sizeof(T) * bufferData.size();
+		if (bufferSize > buffer.size) {
+			buffer.destroy();
+			BufferManager::createSSBO(buffer, bufferData);
+			return true;
+		}
+		else {
+			BufferManager::updateSSBO(buffer, bufferData);
+			return false;
+		}
+	}
 
 	template <typename T> static void createSSBO(Buffer& buffer, std::vector<T>& bufferData)
 	{

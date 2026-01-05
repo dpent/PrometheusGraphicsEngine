@@ -19,4 +19,6 @@ public:
 	static void createInfoWindow();
 	static void createCameraInfoWindow();
 	static void createDockSpaceWindow();
+	static void createBufferInfoWindow();
+	static void makeBufferDiagram(std::vector<float>& history, const char* label);
 };

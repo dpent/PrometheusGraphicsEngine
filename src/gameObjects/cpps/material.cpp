@@ -57,7 +57,7 @@ Texture::Texture(std::string filename, CommandPool& command) {
 
     ImageManager::createImageView(image.image, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT, mipLevels, VK_IMAGE_VIEW_TYPE_2D, 1, 0, image.view);
 
-    Engine::textures.push_back(this);
+    Engine::textures.push(this);
     Engine::textureMutex.unlock();
     Engine::remakeDescriptors = true;
 }
@@ -70,7 +70,7 @@ Material::Material(Texture* texture, float metallic, float roughness, CommandPoo
     this->roughness = roughness;
 
     Engine::materialMutex.lock();
-    Engine::materials.push_back(this);
+    Engine::materials.push(this);
     Engine::materialMutex.unlock();
 }
 
@@ -80,6 +80,6 @@ Material::Material(std::string filename, float metallic, float roughness, Comman
 
     this->texture = new Texture(filename, command);
     Engine::materialMutex.lock();
-    Engine::materials.push_back(this);
+    Engine::materials.push(this);
     Engine::materialMutex.unlock();
 }

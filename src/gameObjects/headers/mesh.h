@@ -14,6 +14,9 @@ public:
 
     uint32_t instances;
 
+    Mesh* next = nullptr;
+    Mesh* prev = nullptr;
+
     Mesh();
     Mesh(std::string meshPath);
     std::string toString();

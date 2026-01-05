@@ -66,3 +66,25 @@ std::string InitialiseObjectJob::toString() {
 std::string InitialiseObjectJob::humanReadableName() {
 	return "InitialiseObjectJob";
 }
+
+DeleteObjectJob::DeleteObjectJob(GameObject* object) {
+	this->object = object;
+}
+
+DeleteObjectJob::~DeleteObjectJob() {}
+
+void DeleteObjectJob::execute(CommandPool& command) {
+	delete object;
+}
+
+std::string DeleteObjectJob::toString() {
+
+	std::ostringstream oss;
+	oss << "DeleteObjectJob."
+		<< "\nGameObject* -> " << object;
+	return oss.str();
+}
+
+std::string DeleteObjectJob::humanReadableName() {
+	return "DeleteObjectJob";
+}

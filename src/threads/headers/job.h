@@ -36,3 +36,15 @@ public:
 	std::string toString() override;
 	std::string humanReadableName() override;
 };
+
+struct DeleteObjectJob : Job {
+	GameObject* object;
+
+public:
+	DeleteObjectJob(GameObject* object);
+	~DeleteObjectJob();
+
+	void execute(CommandPool& command) override;
+	std::string toString() override;
+	std::string humanReadableName() override;
+};

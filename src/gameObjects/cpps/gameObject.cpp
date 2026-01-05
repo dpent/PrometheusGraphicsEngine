@@ -26,7 +26,7 @@ GameObject::GameObject(Mesh* mesh, Material* material) {
 
 	Engine::instanceData.push_back(InstanceInfo(this));
 	this->instanceIndex = static_cast<uint32_t>(Engine::instanceData.size() - 1);
-	Engine::gameObjects.push_back(this);
+	Engine::gameObjects.push(this);
 
 	Engine::objectCreateMutex.unlock();
 
@@ -50,7 +50,7 @@ GameObject::GameObject(Mesh* mesh, std::string textureFilename) {
 
 	Engine::instanceData.push_back(InstanceInfo(this));
 	this->instanceIndex = static_cast<uint32_t>(Engine::instanceData.size() - 1);
-	Engine::gameObjects.push_back(this);
+	Engine::gameObjects.push(this);
 
 	Engine::objectCreateMutex.unlock();
 
@@ -73,7 +73,7 @@ GameObject::GameObject(std::string modelFilename, Material* material) {
 
 	Engine::instanceData.push_back(InstanceInfo(this));
 	this->instanceIndex = static_cast<uint32_t>(Engine::instanceData.size() - 1);
-	Engine::gameObjects.push_back(this);
+	Engine::gameObjects.push(this);
 
 	Engine::objectCreateMutex.unlock();
 
@@ -96,7 +96,7 @@ GameObject::GameObject(std::string modelFilename, std::string textureFilename) {
 
 	Engine::instanceData.push_back(InstanceInfo(this));
 	this->instanceIndex = static_cast<uint32_t>(Engine::instanceData.size() - 1);
-	Engine::gameObjects.push_back(this);
+	Engine::gameObjects.push(this);
 
 	Engine::objectCreateMutex.unlock();
 
@@ -145,7 +145,7 @@ void GameObject::initialise(InitInfo& info, CommandPool& command) {
 
 	Engine::instanceData.push_back(InstanceInfo(this));
 	this->instanceIndex = static_cast<uint32_t>(Engine::instanceData.size() - 1);
-	Engine::gameObjects.push_back(this);
+	Engine::gameObjects.push(this);
 
 	Engine::objectCreateMutex.unlock();
 
@@ -156,6 +156,34 @@ void GameObject::initialise(InitInfo& info, CommandPool& command) {
 void GameObject::createInitiasationJob(GameObject* obj, InitInfo* info) {
 
 	InitialiseObjectJob* job = new InitialiseObjectJob(obj, *info);
+
+	Engine::jobQueueMutex.lock();
+	Engine::jobQueue.push(job);
+	Engine::jobQueueMutex.unlock();
+
+	Engine::jobInQueueSem.release();
+}
+
+GameObject::~GameObject() {
+
+	Engine::meshMutex.lock();
+	this->mesh->instances--;
+	Engine::meshMutex.unlock();
+	
+	Engine::objectCreateMutex.lock();
+	Engine::gameObjects.popItem(this);
+	Engine::instanceData[this->instanceIndex] = Engine::instanceData.back();
+	Engine::instanceData[this->instanceIndex].owner->instanceIndex = this->instanceIndex;
+	Engine::instanceData.pop_back();
+	Engine::objectCreateMutex.unlock();
+
+	Engine::remakeInstanceDataSSBO = true;
+	delete this->transform;
+}
+
+void GameObject::createDeleteJob(GameObject* object) {
+
+	DeleteObjectJob* job = new DeleteObjectJob(object);
 
 	Engine::jobQueueMutex.lock();
 	Engine::jobQueue.push(job);
