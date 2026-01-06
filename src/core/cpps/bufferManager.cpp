@@ -87,15 +87,43 @@ void BufferManager::createVertexIndexBuffer(VkDeviceSize size) {
     void* data;
     vkMapMemory(Engine::deviceInfo.logicalDevice, Engine::stagingBuffer.memory, 0, Engine::vertexIndexBuffer.offset, 0, &data);
     memcpy(data, Engine::vertexIndexData.vertices.data(), (size_t)(sizeof(Vertex) * Engine::vertexIndexData.vertices.size()));
-    vkUnmapMemory(Engine::deviceInfo.logicalDevice, Engine::stagingBuffer.memory);
-
-    vkMapMemory(Engine::deviceInfo.logicalDevice, Engine::stagingBuffer.memory, Engine::vertexIndexBuffer.offset, sizeof(uint32_t) * Engine::vertexIndexData.indices.size(), 0, &data);
-    memcpy(data, Engine::vertexIndexData.indices.data(), (size_t)(sizeof(uint32_t) * Engine::vertexIndexData.indices.size()));
+    memcpy((char*)data + Engine::vertexIndexBuffer.offset, Engine::vertexIndexData.indices.data(), (size_t)(sizeof(uint32_t) * Engine::vertexIndexData.indices.size()));
     vkUnmapMemory(Engine::deviceInfo.logicalDevice, Engine::stagingBuffer.memory);
 
     BufferManager::createBuffer(Engine::vertexIndexBuffer, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
     BufferManager::copyBuffer(Engine::stagingBuffer, Engine::vertexIndexBuffer, size);
+}
+
+void BufferManager::createVertexIndexBufferCheckSize(VkDeviceSize size) {
+
+    if (size > Engine::stagingBuffer.size) {
+        BufferManager::createStagingBuffer(size);
+    }
+
+    if (size > Engine::vertexIndexBuffer.size) {
+
+        if (Engine::vertexIndexBuffer.buffer != VK_NULL_HANDLE) {
+            Engine::garbage.lock();
+            Engine::garbage.buffers.push_back(Engine::vertexIndexBuffer);
+            Engine::garbage.bufferFramesPassed.push_back(0);
+            Engine::garbage.unlock();
+        }
+
+        Engine::vertexIndexBuffer.size = size;
+        BufferManager::createBuffer(Engine::vertexIndexBuffer, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+    }
+
+    Engine::vertexIndexBuffer.offset = uint32_t(Engine::vertexIndexData.vertices.size() * sizeof(Vertex));
+
+    void* data;
+    vkMapMemory(Engine::deviceInfo.logicalDevice, Engine::stagingBuffer.memory, 0, Engine::vertexIndexBuffer.offset, 0, &data);
+    memcpy(data, Engine::vertexIndexData.vertices.data(), (size_t)(sizeof(Vertex) * Engine::vertexIndexData.vertices.size()));
+    memcpy((char*)data + Engine::vertexIndexBuffer.offset, Engine::vertexIndexData.indices.data(), (size_t)(sizeof(uint32_t) * Engine::vertexIndexData.indices.size()));
+    vkUnmapMemory(Engine::deviceInfo.logicalDevice, Engine::stagingBuffer.memory);
+
+    BufferManager::copyBuffer(Engine::stagingBuffer, Engine::vertexIndexBuffer, size);
+
 }
 
 void BufferManager::copyBuffer(Buffer& srcBuffer, Buffer& dstBuffer, VkDeviceSize size) {

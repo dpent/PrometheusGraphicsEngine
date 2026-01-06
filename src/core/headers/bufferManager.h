@@ -41,6 +41,7 @@ public:
 	static void createStagingBuffer(VkDeviceSize size);
 
 	static void createVertexIndexBuffer(VkDeviceSize size);
+	static void createVertexIndexBufferCheckSize(VkDeviceSize size);
 
 	static void recordCommandBuffer(VkCommandBuffer& commandBuffer, uint32_t& imageIndex);
 

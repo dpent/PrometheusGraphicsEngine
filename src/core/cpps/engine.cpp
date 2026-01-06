@@ -188,12 +188,12 @@ void Engine::mainLoop() {
     GameObject::createInitiasationJob(floor, fInfo);
     delete fInfo;
 
-    GameObject* dragon = new GameObject();
+    /*GameObject* dragon = new GameObject();
     InitInfo* dInfo = new InitInfo("stanford_dragon.obj", nullptr, "white.png", nullptr);
     dragon->transform->position = glm::vec3(0.0f, 7.0f, 0.0f);
     dragon->scale(glm::vec3(15.0f));
     GameObject::createInitiasationJob(dragon, dInfo);
-    delete dInfo;
+    delete dInfo;*/
 
     while (!glfwWindowShouldClose(Engine::window)) {
         glfwPollEvents();
@@ -205,10 +205,10 @@ void Engine::mainLoop() {
             Engine::drawFrame();
         }
         
-        std::cout << Engine::frameCount << std::endl;
+        /*std::cout << Engine::frameCount << std::endl;
         if (Engine::frameCount == 2000) {
             delete dragon;
-        }
+        }*/
 
         if (Engine::frameCount % 60 == 0)
         {
@@ -470,7 +470,7 @@ void Engine::prepareFrameData() {
 
     if (Engine::remakeVertexIndexBuffer) {
         Engine::recreateVertexIndexData();
-        BufferManager::createVertexIndexBuffer(Engine::vertexIndexData.vertices.size() * sizeof(Vertex) + Engine::vertexIndexData.indices.size() * sizeof(uint32_t));
+        BufferManager::createVertexIndexBufferCheckSize(Engine::vertexIndexData.vertices.size() * sizeof(Vertex) + Engine::vertexIndexData.indices.size() * sizeof(uint32_t));
         Engine::remakeVertexIndexBuffer = false;
     }
 
@@ -478,7 +478,6 @@ void Engine::prepareFrameData() {
 
         BufferManager::createSSBOCheckSize(Engine::instanceDataSSBO, Engine::instanceData) ? Engine::remakeDescriptors = true : Engine::remakeDescriptors = false;
     }
-
 
     if (Engine::remakeDescriptors) {
 
