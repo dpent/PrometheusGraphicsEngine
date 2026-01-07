@@ -8,7 +8,7 @@ class Engine;
 struct Buffer {
 public:
 	VkDeviceSize size;
-	VkBuffer buffer;
+	VkBuffer buffer = VK_NULL_HANDLE;
 	VkDeviceMemory memory;
 	uint32_t offset;
 	void* mapped;
@@ -38,7 +38,7 @@ public:
 	static VkCommandBuffer beginSingleTimeCommands(VkCommandPool& commandPool);
 	static void endSingleTimeCommands(VkCommandPool& commandPool, VkCommandBuffer& commandBuffer);
 
-	static void createStagingBuffer(VkDeviceSize size);
+	static void createStagingBuffer(VkDeviceSize size, Buffer& buffer);
 
 	static void createVertexIndexBuffer(VkDeviceSize size);
 	static void createVertexIndexBufferCheckSize(VkDeviceSize size);

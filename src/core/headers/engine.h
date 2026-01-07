@@ -108,6 +108,9 @@ public:
 
 	static GarbageQueues garbage;
 
+	static int targetFPS;
+	static uint16_t FPS;
+
 	//WINDOW
 	static GLFWwindow* window;
 	static GLFWcursor* cursor;

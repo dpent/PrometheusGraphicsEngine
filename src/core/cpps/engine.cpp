@@ -61,6 +61,9 @@ uint64_t Engine::frameCount = 0;
 
 GarbageQueues Engine::garbage;
 
+int Engine::targetFPS = 60;
+uint16_t Engine::FPS = 0;
+
 //WINDOW
 GLFWwindow* Engine::window = nullptr;
 GLFWcursor* Engine::cursor = nullptr;
@@ -167,7 +170,7 @@ void Engine::initVulkan() {
     
     PipelineManager::createGraphicsPipeline();
 
-    BufferManager::createStagingBuffer(8192); //8KB TO START
+    BufferManager::createStagingBuffer(8192, Engine::stagingBuffer); //8KB TO START
 
     Engine::instanceData.reserve(256);
 
@@ -178,15 +181,31 @@ void Engine::mainLoop() {
 
     GameObject* house = new GameObject();
     InitInfo* hInfo = new InitInfo("cottage_FREE.obj", nullptr, "Cottage_Clean_Base_Color.png", nullptr);
+    house->transform->position = glm::vec3(6.0f, 0.0f, 6.0f);
+    house->rotate(glm::angleAxis(glm::radians(225.0f), glm::vec3(0.0f, 1.0f, 0.0f)));
     GameObject::createInitiasationJob(house, hInfo);
     delete hInfo;
 
     GameObject* floor = new GameObject();
     InitInfo* fInfo = new InitInfo("cube.obj", nullptr, "marble.jpg", nullptr);
-    floor->transform->position = glm::vec3(0.0f, -0.5f, 0.0f);
-    floor->scale(glm::vec3(10.0f, 0.5f, 10.0f));
+    floor->transform->position = glm::vec3(10.0f, -0.5f, 10.0f);
+    floor->scale(glm::vec3(20.0f, 0.5f, 20.0f));
     GameObject::createInitiasationJob(floor, fInfo);
     delete fInfo;
+
+    GameObject* house2 = new GameObject();
+    InitInfo* hInfo2 = new InitInfo("cottage_FREE.obj", nullptr, "Cottage_Clean_Base_Color.png", nullptr);
+    house2->transform->position = glm::vec3(22.0f, 0.0f, 0.0f);
+    house2->rotate(glm::angleAxis(glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f)));
+    GameObject::createInitiasationJob(house2, hInfo2);
+    delete hInfo2;
+
+    GameObject* house3 = new GameObject();
+    InitInfo* hInfo3 = new InitInfo("cottage_FREE.obj", nullptr, "Cottage_Clean_Base_Color.png", nullptr);
+    house3->transform->position = glm::vec3(0.0f, 0.0f, 22.0f);
+    house3->rotate(glm::angleAxis(glm::radians(-90.0f), glm::vec3(0.0f, 1.0f, 0.0f)));
+    GameObject::createInitiasationJob(house3, hInfo3);
+    delete hInfo3;
 
     /*GameObject* dragon = new GameObject();
     InitInfo* dInfo = new InitInfo("stanford_dragon.obj", nullptr, "white.png", nullptr);
@@ -195,6 +214,11 @@ void Engine::mainLoop() {
     GameObject::createInitiasationJob(dragon, dInfo);
     delete dInfo;*/
 
+    uint64_t framesThisSecond = 0;
+
+    auto nextFrameTime = std::chrono::steady_clock::now();
+    auto secondStart = std::chrono::steady_clock::now();
+
     while (!glfwWindowShouldClose(Engine::window)) {
         glfwPollEvents();
         InputManager::consumeInput(Engine::window);
@@ -202,13 +226,24 @@ void Engine::mainLoop() {
 
         if (Engine::gameObjects.size != 0) {
 
+            nextFrameTime += std::chrono::duration_cast<std::chrono::steady_clock::duration>(std::chrono::duration<double>(1.0 / Engine::targetFPS));
             Engine::drawFrame();
+
+            std::this_thread::sleep_until(nextFrameTime);            
         }
         
         /*std::cout << Engine::frameCount << std::endl;
         if (Engine::frameCount == 2000) {
             delete dragon;
         }*/
+
+        framesThisSecond++;
+        auto now = std::chrono::steady_clock::now();
+        if (now - secondStart >= std::chrono::seconds(1)) {
+            secondStart = now;
+            Engine::FPS = static_cast<uint16_t>(framesThisSecond);
+            framesThisSecond = 0;
+        }
 
         if (Engine::frameCount % 60 == 0)
         {

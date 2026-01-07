@@ -8,6 +8,7 @@ WorkerThread::WorkerThread() {
 	this->id = thread.get_id();
 
 	this->command.initialize();
+	BufferManager::createStagingBuffer(8192, this->stagingBuffer);
 
 	this->thread.detach();
 }
@@ -34,5 +35,5 @@ void WorkerThread::workerLoop() {
 }
 
 void WorkerThread::doWork(Job* job) {
-	job->execute(command);
+	job->execute(command, stagingBuffer);
 }

@@ -8,7 +8,7 @@ public:
 	Job();
 	~Job();
 
-	virtual void execute(CommandPool& command);
+	virtual void execute(CommandPool& command, Buffer& stagingBuffer);
 	virtual std::string toString();
 	virtual std::string humanReadableName();
 };
@@ -18,7 +18,7 @@ public:
 	PrepareForJoinJob();
 	~PrepareForJoinJob();
 
-	void execute(CommandPool& command) override;
+	void execute(CommandPool& command, Buffer& stagingBuffer) override;
 	std::string toString() override;
 	std::string humanReadableName() override;
 };
@@ -32,7 +32,7 @@ public:
 	InitialiseObjectJob(GameObject* object, InitInfo info);
 	~InitialiseObjectJob();
 
-	void execute(CommandPool& command) override;
+	void execute(CommandPool& command, Buffer& stagingBuffer) override;
 	std::string toString() override;
 	std::string humanReadableName() override;
 };
@@ -44,7 +44,7 @@ public:
 	DeleteObjectJob(GameObject* object);
 	~DeleteObjectJob();
 
-	void execute(CommandPool& command) override;
+	void execute(CommandPool& command, Buffer& stagingBuffer) override;
 	std::string toString() override;
 	std::string humanReadableName() override;
 };
@@ -55,7 +55,7 @@ public:
 	UpdateGarbageJob();
 	~UpdateGarbageJob();
 
-	void execute(CommandPool& command) override;
+	void execute(CommandPool& command, Buffer& stagingBuffer) override;
 	std::string toString() override;
 	std::string humanReadableName() override;
 };

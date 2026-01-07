@@ -52,7 +52,7 @@ public:
 	virtual void update();
 	virtual void rotate(glm::quat rotation);
 	virtual void scale(glm::vec3 scale);
-	virtual void initialise(InitInfo& info, CommandPool& commandPool);
+	virtual void initialise(InitInfo& info, CommandPool& commandPool, Buffer& stagingBuffer);
 
 	static void createInitiasationJob(GameObject* obj, InitInfo* info);
 	static void createDeleteJob(GameObject* obj);

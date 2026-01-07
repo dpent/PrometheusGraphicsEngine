@@ -3,8 +3,8 @@ setlocal EnableDelayedExpansion
 
 IF NOT EXIST "..\..\bin" mkdir "..\..\bin"
 
-SET "SHADER_DIR=C:\Users\dimpe\Documents\Projects\Prometheus\src\shaders"
-SET "BUILD_DIR=C:\Users\dimpe\Documents\Projects\Prometheus\bin"
+SET "SHADER_DIR=C:\Users\Dimitris\source\repos\Prometheus\src\shaders"
+SET "BUILD_DIR=C:\Users\Dimitris\source\repos\Prometheus\bin"
 
 FOR %%f IN ("%SHADER_DIR%\*") DO (
     IF NOT EXIST "%%f\" (
@@ -25,7 +25,7 @@ FOR %%f IN ("%SHADER_DIR%\*") DO (
         IF "!output!"=="" (
             ECHO Skipping unknown file type: !filename!
         ) ELSE (
-            "C:\Users\dimpe\Documents\Libraries\VulkanSDK\1.4.335.0\Bin\glslc.exe" "%%f" -o "%BUILD_DIR%\!output!"
+            "C:\Users\Dimitris\Documents\Libraries\VulkanSDK\1.4.335.0\Bin\glslc.exe" "%%f" -o "%BUILD_DIR%\!output!"
             IF ERRORLEVEL 1 (
                 ECHO Failed to compile !filename!
                 EXIT /B 1

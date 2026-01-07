@@ -5,7 +5,7 @@
 
 Texture::Texture(){}
 
-Texture::Texture(std::string filename, CommandPool& command) {
+Texture::Texture(std::string filename, CommandPool& command, Buffer& stagingBuffer) {
 
     int texWidth, texHeight, texChannels;
     stbi_uc* pixels = stbi_load((std::filesystem::path(TEXTURE_DIR) / filename).lexically_normal().string().c_str(), &texWidth, &texHeight, &texChannels, 4);
@@ -22,14 +22,14 @@ Texture::Texture(std::string filename, CommandPool& command) {
         throw std::runtime_error("failed to load texture image!");
     }
 
-	if (imageSize > Engine::stagingBuffer.size) {
-        BufferManager::createStagingBuffer(imageSize);
+	if (imageSize > stagingBuffer.size) {
+        BufferManager::createStagingBuffer(imageSize, stagingBuffer);
     }
 
     void* data;
-    vkMapMemory(Engine::deviceInfo.logicalDevice, Engine::stagingBuffer.memory, 0, imageSize, 0, &data);
+    vkMapMemory(Engine::deviceInfo.logicalDevice, stagingBuffer.memory, 0, imageSize, 0, &data);
     memcpy(data, pixels, static_cast<size_t>(imageSize));
-    vkUnmapMemory(Engine::deviceInfo.logicalDevice, Engine::stagingBuffer.memory);
+    vkUnmapMemory(Engine::deviceInfo.logicalDevice, stagingBuffer.memory);
 
     stbi_image_free(pixels);
 
@@ -50,7 +50,7 @@ Texture::Texture(std::string filename, CommandPool& command) {
     Engine::textureMutex.lock();
     ImageManager::transitionImageLayout(image.image, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED,
         VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, mipLevels, command.pool);
-    ImageManager::copyBufferToImage(Engine::stagingBuffer.buffer, image.image, static_cast<uint32_t>(texWidth), static_cast<uint32_t>(texHeight),
+    ImageManager::copyBufferToImage(stagingBuffer.buffer, image.image, static_cast<uint32_t>(texWidth), static_cast<uint32_t>(texHeight),
         command.pool);
 
     ImageManager::generateMipMaps(image.image, texWidth, texHeight, mipLevels,VK_FORMAT_R8G8B8A8_SRGB, command.pool);
@@ -68,7 +68,7 @@ Texture::~Texture() {
 
 Material::Material() {}
 
-Material::Material(Texture* texture, float metallic, float roughness, CommandPool& command) {
+Material::Material(Texture* texture, float metallic, float roughness, CommandPool& command, Buffer& stagingBuffer) {
     this->texture = texture;
     this->metallic = metallic;
     this->roughness = roughness;
@@ -78,11 +78,11 @@ Material::Material(Texture* texture, float metallic, float roughness, CommandPoo
     Engine::materialMutex.unlock();
 }
 
-Material::Material(std::string filename, float metallic, float roughness, CommandPool& command) {
+Material::Material(std::string filename, float metallic, float roughness, CommandPool& command, Buffer& stagingBuffer) {
     this->metallic = metallic;
     this->roughness = roughness;
 
-    this->texture = new Texture(filename, command);
+    this->texture = new Texture(filename, command, stagingBuffer);
     Engine::materialMutex.lock();
     Engine::materials.push(this);
     Engine::materialMutex.unlock();

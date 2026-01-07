@@ -17,7 +17,7 @@ public:
 	uint32_t instances;
 
 	Texture();
-	Texture(std::string filename, CommandPool& command);
+	Texture(std::string filename, CommandPool& command, Buffer& stagingBuffer);
 	~Texture();
 };
 
@@ -35,6 +35,6 @@ public:
 	uint32_t instances;
 
 	Material();
-	Material(Texture* texture, float metallic, float roughness, CommandPool& command);
-	Material(std::string filename, float metallic, float roughness, CommandPool& command);
+	Material(Texture* texture, float metallic, float roughness, CommandPool& command, Buffer& stagingBuffer);
+	Material(std::string filename, float metallic, float roughness, CommandPool& command, Buffer& stagingBuffer);
 };

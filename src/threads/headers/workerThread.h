@@ -14,6 +14,7 @@ public:
     bool alive = true;
 
     CommandPool command;
+    Buffer stagingBuffer;
 
     WorkerThread();
 

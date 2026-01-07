@@ -33,6 +33,8 @@
 #include "../../imgui/imgui_internal.h"
 #include "doubleEndedQueue.h"
 #include <list>
+#include <chrono>
+#include <cstdint>
 // TODO: Reference additional headers your program requires here.
 
 

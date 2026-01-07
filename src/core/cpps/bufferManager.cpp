@@ -55,17 +55,17 @@ void BufferManager::createBuffer(Buffer& bufferStruct, VkBufferUsageFlags usage,
     vkBindBufferMemory(Engine::deviceInfo.logicalDevice, bufferStruct.buffer, bufferStruct.memory, 0);
 }
 
-void BufferManager::createStagingBuffer(VkDeviceSize size) {
+void BufferManager::createStagingBuffer(VkDeviceSize size, Buffer& buffer) {
 
-    if (Engine::stagingBuffer.buffer != VK_NULL_HANDLE) {
+    if (buffer.buffer != VK_NULL_HANDLE) {
         Engine::garbage.lock();
-        Engine::garbage.buffers.push_back(Engine::stagingBuffer);
+        Engine::garbage.buffers.push_back(buffer);
         Engine::garbage.bufferFramesPassed.push_back(0);
         Engine::garbage.unlock();
     }
 
-    Engine::stagingBuffer.size = size;
-    BufferManager::createBuffer(Engine::stagingBuffer, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+    buffer.size = size;
+    BufferManager::createBuffer(buffer, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
 }
 
@@ -78,7 +78,7 @@ void BufferManager::createVertexIndexBuffer(VkDeviceSize size) {
     }
 
     if (size > Engine::stagingBuffer.size) {
-        BufferManager::createStagingBuffer(size);
+        BufferManager::createStagingBuffer(size, Engine::stagingBuffer);
     }
 
     Engine::vertexIndexBuffer.offset = uint32_t(Engine::vertexIndexData.vertices.size() * sizeof(Vertex));
@@ -98,7 +98,7 @@ void BufferManager::createVertexIndexBuffer(VkDeviceSize size) {
 void BufferManager::createVertexIndexBufferCheckSize(VkDeviceSize size) {
 
     if (size > Engine::stagingBuffer.size) {
-        BufferManager::createStagingBuffer(size);
+        BufferManager::createStagingBuffer(size, Engine::stagingBuffer);
     }
 
     if (size > Engine::vertexIndexBuffer.size) {

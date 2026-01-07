@@ -6,7 +6,7 @@ Job::Job() {
 Job::~Job() {
 }
 
-void Job::execute(CommandPool& command) {
+void Job::execute(CommandPool& command, Buffer& stagingBuffer) {
 	std::cout << "This is a base job. It only prints this to the console." << std::endl;
 }
 
@@ -27,7 +27,7 @@ PrepareForJoinJob::PrepareForJoinJob() {
 PrepareForJoinJob::~PrepareForJoinJob() {
 }
 
-void PrepareForJoinJob::execute(CommandPool& command) {
+void PrepareForJoinJob::execute(CommandPool& command, Buffer& stagingBuffer) {
 }
 
 std::string PrepareForJoinJob::toString() {
@@ -47,8 +47,8 @@ InitialiseObjectJob::InitialiseObjectJob(GameObject* object, InitInfo info) {
 
 InitialiseObjectJob::~InitialiseObjectJob(){}
 
-void InitialiseObjectJob::execute(CommandPool& command) {
-	object->initialise(info, command);
+void InitialiseObjectJob::execute(CommandPool& command, Buffer& stagingBuffer) {
+	object->initialise(info, command, stagingBuffer);
 }
 
 std::string InitialiseObjectJob::toString() {
@@ -73,7 +73,7 @@ DeleteObjectJob::DeleteObjectJob(GameObject* object) {
 
 DeleteObjectJob::~DeleteObjectJob() {}
 
-void DeleteObjectJob::execute(CommandPool& command) {
+void DeleteObjectJob::execute(CommandPool& command, Buffer& stagingBuffer) {
 	delete object;
 }
 
@@ -93,7 +93,7 @@ UpdateGarbageJob::UpdateGarbageJob() {
 
 UpdateGarbageJob::~UpdateGarbageJob() {}
 
-void UpdateGarbageJob::execute(CommandPool& command) {
+void UpdateGarbageJob::execute(CommandPool& command, Buffer& stagingBuffer) {
 	Engine::garbage.update();
 }
 

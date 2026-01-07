@@ -110,6 +110,10 @@ void GUIManager::createInfoWindow() {
 
 	ImGui::Begin("General Info");
 
+	ImGui::SeparatorText("Performance");
+	ImGui::Text("FPS: %u", Engine::FPS);
+	ImGui::SliderInt("FPS cap", &Engine::targetFPS, 1, 1000);
+
 	ImGui::SeparatorText("GPU");
 	ImGui::Text("Selected GPU: %s", Engine::deviceInfo.physicalProperties.deviceName);
 	ImGui::Text("Driver version: %u", Engine::deviceInfo.physicalProperties.driverVersion);

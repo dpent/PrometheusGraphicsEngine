@@ -45,7 +45,7 @@ GameObject::GameObject(Mesh* mesh, std::string textureFilename) {
 	this->mesh->instances++;
 	Engine::meshMutex.unlock();
 
-	this->material = new Material(textureFilename, 0.0f, 1.0f, Engine::command);
+	this->material = new Material(textureFilename, 0.0f, 1.0f, Engine::command, Engine::stagingBuffer);
 	Engine::materialMutex.lock();
 	this->material->instances++;
 	Engine::materialMutex.unlock();
@@ -105,7 +105,7 @@ GameObject::GameObject(std::string modelFilename, std::string textureFilename) {
 	this->mesh = new Mesh(modelFilename);
 	this->mesh->instances++;
 
-	this->material = new Material(textureFilename, 0.0f, 1.0f, Engine::command);
+	this->material = new Material(textureFilename, 0.0f, 1.0f, Engine::command, Engine::stagingBuffer);
 	Engine::materialMutex.lock();
 	this->material->instances++;
 	Engine::materialMutex.unlock();
@@ -132,7 +132,7 @@ GameObject::GameObject(std::string modelFilename, std::string textureFilename) {
 }
 
 void GameObject::update() {
-	rotate(glm::angleAxis(0.01f, glm::vec3(0.0f, 1.0f, 0.0f)));
+	//rotate(glm::angleAxis(0.01f, glm::vec3(0.0f, 1.0f, 0.0f)));
 }
 
 void GameObject::rotate(glm::quat rotation) {
@@ -144,7 +144,7 @@ void GameObject::scale(glm::vec3 scale) {
 	this->transform->scale = scale;
 }
 
-void GameObject::initialise(InitInfo& info, CommandPool& command) {
+void GameObject::initialise(InitInfo& info, CommandPool& command, Buffer& stagingBuffer) {
 	if (info.modelPointer == nullptr) {
 		this->mesh = new Mesh(info.modelFilename);
 		this->mesh->instances++;
@@ -157,7 +157,7 @@ void GameObject::initialise(InitInfo& info, CommandPool& command) {
 	}
 
 	if (info.materialPointer == nullptr) {
-		this->material = new Material(info.textureFilename, 0.0f, 1.0f, command);
+		this->material = new Material(info.textureFilename, 0.0f, 1.0f, command, stagingBuffer);
 		this->material->instances++;
 		this->material->texture->instances++;
 	}
