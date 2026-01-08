@@ -282,6 +282,15 @@ void BufferManager::recordCommandBuffer(VkCommandBuffer& commandBuffer, uint32_t
     }
 }
 
+void BufferManager::createUniformBuffer(Buffer& buffer, VkDeviceSize size) {
+    buffer.size = size;
+
+    createBuffer(buffer, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+
+    vkMapMemory(Engine::deviceInfo.logicalDevice, buffer.memory, 0, size, 0, &buffer.mapped);
+}
+
 void CommandPool ::initialize() {
     
     QueueFamilyIndices queueFamilyIndices = QueueFamilyIndices::findQueueFamilies(Engine::deviceInfo.physicalDevice, Engine::surface);

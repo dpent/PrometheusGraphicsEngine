@@ -27,6 +27,8 @@ layout(location = 0) out vec3 vertColor;
 layout(location = 1) out uint objectIndex;
 layout(location = 2) out vec2 texCoord;
 layout(location = 3) out uint texIndex;
+layout(location = 4) out vec3 worldPos;
+layout(location = 5) out vec3 worldNormal;
 
 void main() {
 
@@ -38,4 +40,6 @@ void main() {
     texIndex = obj.textureIndex;
     vertColor = inColor;
     texCoord = inTexCoord;
+    worldPos = (obj.model * vec4(inPosition, 1.0)).xyz;
+    worldNormal = normalize(mat3(obj.model) * inNormal);
 }

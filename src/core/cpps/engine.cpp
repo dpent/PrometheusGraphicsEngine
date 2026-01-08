@@ -64,6 +64,14 @@ GarbageQueues Engine::garbage;
 int Engine::targetFPS = 60;
 uint16_t Engine::FPS = 0;
 
+//LIGHTING
+DoubleEndedQueue<Light*> Engine::lights;
+DoubleEndedQueue<Light*> Engine::shadowCreatingLights;
+Buffer Engine::uniformLightBuffer;
+LightUBOData Engine::lightData;
+
+bool Engine::recreateShadowResources;
+
 //WINDOW
 GLFWwindow* Engine::window = nullptr;
 GLFWcursor* Engine::cursor = nullptr;
@@ -175,6 +183,8 @@ void Engine::initVulkan() {
     Engine::instanceData.reserve(256);
 
     Engine::initThreadPool(std::thread::hardware_concurrency() - 1);
+
+    BufferManager::createUniformBuffer(Engine::uniformLightBuffer, sizeof(LightUBOData));
 }
 
 void Engine::mainLoop() {
@@ -207,12 +217,7 @@ void Engine::mainLoop() {
     GameObject::createInitiasationJob(house3, hInfo3);
     delete hInfo3;
 
-    /*GameObject* dragon = new GameObject();
-    InitInfo* dInfo = new InitInfo("stanford_dragon.obj", nullptr, "white.png", nullptr);
-    dragon->transform->position = glm::vec3(0.0f, 7.0f, 0.0f);
-    dragon->scale(glm::vec3(15.0f));
-    GameObject::createInitiasationJob(dragon, dInfo);
-    delete dInfo;*/
+    DirectionalLight* sun = new DirectionalLight(glm::vec4(-10.0f), glm::vec4(COLOR_WHITE, 1.0f), 1.0f);
 
     uint64_t framesThisSecond = 0;
 
@@ -231,11 +236,6 @@ void Engine::mainLoop() {
 
             std::this_thread::sleep_until(nextFrameTime);            
         }
-        
-        /*std::cout << Engine::frameCount << std::endl;
-        if (Engine::frameCount == 2000) {
-            delete dragon;
-        }*/
 
         framesThisSecond++;
         auto now = std::chrono::steady_clock::now();
@@ -523,6 +523,9 @@ void Engine::prepareFrameData() {
     }
 
     Engine::updateObjects();
+    Engine::updateLightData();
+
+    BufferManager::updateUniformBuffer(Engine::uniformLightBuffer, Engine::lightData);
 
     if (!Engine::remakeInstanceDataSSBO) {
 
@@ -732,4 +735,28 @@ void Engine::createUpdateGarbageJob() {
     Engine::jobQueueMutex.unlock();
 
     Engine::jobInQueueSem.release();
+}
+
+void Engine::updateLightData() {
+
+    Light* light = Engine::lights.head;
+
+    for (size_t i = 0; i < Engine::lights.size; i++) {
+
+        light->update();
+
+        Engine::lightData.positions[i] = light->position;
+        Engine::lightData.colors[i] = light->color;
+        Engine::lightData.ambientLightColors[i] = light->ambientLightColor;
+        Engine::lightData.intensities[i] = glm::vec4(light->intensity);
+        Engine::lightData.lightMVPs[i] = light->getLightVP();
+
+        size_t idx = i / 4;        // which uint32_t
+        size_t bytePos = i % 4;    // which byte in that uint32_t
+        Engine::lightData.types[idx] |= ((uint32_t)light->type << (8 * (3 - bytePos))); // write 8bit value inside said byte
+
+        light = light->next;
+    }
+
+    Engine::lightData.lightCount = Engine::lights.size;
 }

@@ -2,6 +2,7 @@
 
 #include "Prometheus.h"
 #include "vertex.h"
+#include "../../physics/headers/light.h"
 
 class Engine;
 
@@ -44,6 +45,11 @@ public:
 	static void createVertexIndexBufferCheckSize(VkDeviceSize size);
 
 	static void recordCommandBuffer(VkCommandBuffer& commandBuffer, uint32_t& imageIndex);
+
+	static void createUniformBuffer(Buffer& buffer, VkDeviceSize size);
+	template <typename T>static void updateUniformBuffer(Buffer& buffer, T& data) {
+		memcpy(buffer.mapped, &data, sizeof(T));
+	}
 
 	template <typename T> static bool createSSBOCheckSize(Buffer& buffer, std::vector<T>& bufferData)
 	{ //TRUE if remade FALSE if not

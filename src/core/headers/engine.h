@@ -11,6 +11,7 @@
 #include "../../gameObjects/headers/camera.h"
 #include "inputManager.h"
 #include "../../gameObjects/headers/material.h"
+#include "../../physics/headers/light.h"
 
 class WorkerThread;
 struct Job;
@@ -111,6 +112,15 @@ public:
 	static int targetFPS;
 	static uint16_t FPS;
 
+	//LIGHTING
+	static DoubleEndedQueue<Light*> lights;
+	static DoubleEndedQueue<Light*> shadowCreatingLights;
+
+	static Buffer uniformLightBuffer;
+	static LightUBOData lightData;
+
+	static bool recreateShadowResources;
+
 	//WINDOW
 	static GLFWwindow* window;
 	static GLFWcursor* cursor;
@@ -175,6 +185,9 @@ public:
 
 	static void enterFullscreen();
 	static void exitFullscreen();
+
+	//LIGHTING
+	static void updateLightData();
 
 	//USED BY GLFW TO NOTIFY WINDOW RESIZE
 	static void frameBufferResizeCallback(GLFWwindow* window, int width, int height);
