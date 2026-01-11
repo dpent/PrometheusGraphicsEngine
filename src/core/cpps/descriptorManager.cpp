@@ -27,27 +27,35 @@ void DescriptorManager::createGraphicsDescriptorSetLayout() {
     uboLayoutBinding.descriptorCount = 1;
     uboLayoutBinding.pImmutableSamplers = nullptr;
 
+    VkDescriptorSetLayoutBinding shadowMapBinding{};
+    shadowMapBinding.binding = 3;
+    shadowMapBinding.stageFlags = VK_SHADER_STAGE_ALL_GRAPHICS;
+    shadowMapBinding.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+    shadowMapBinding.descriptorCount = 128;
+
     VkDescriptorSetLayoutBinding texturesBinding{}; //Textures
-    texturesBinding.binding = 3;
+    texturesBinding.binding = 4;
     texturesBinding.descriptorCount = Engine::MAX_TEXTURES;
     texturesBinding.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
     texturesBinding.pImmutableSamplers = nullptr;
     texturesBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 
-    std::array<VkDescriptorSetLayoutBinding, 4> bindings = {    
+    std::array<VkDescriptorSetLayoutBinding, 5> bindings = {    
     samplerBinding,
     instanceDataSSBO,
     uboLayoutBinding,
+    shadowMapBinding,
     texturesBinding
     };
 
-    std::array<VkDescriptorBindingFlags, 4> bindingFlags = {
+    std::array<VkDescriptorBindingFlags, 5> bindingFlags = {
     0, // samplerBinding (binding 0) no flags
     0, // instanceDataSSBO (binding 1) no flags
     0, // uboLayoutBinding (binding 2) no flags
+    0, // shadowMapBinding (binding 3)
     VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT |
     VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT |
-    VK_DESCRIPTOR_BINDING_VARIABLE_DESCRIPTOR_COUNT_BIT // texturesBinding (binding 2)
+    VK_DESCRIPTOR_BINDING_VARIABLE_DESCRIPTOR_COUNT_BIT // texturesBinding (binding 4)
     };
 
     VkDescriptorSetLayoutBindingFlagsCreateInfo flagsInfo{};
@@ -77,7 +85,7 @@ void DescriptorManager::createGraphicsDescriptorPool() {
         Engine::garbage.unlock();
     }
 
-    std::array<VkDescriptorPoolSize, 4> poolSizes{};
+    std::array<VkDescriptorPoolSize, 5> poolSizes{};
 
     poolSizes[0].type = VK_DESCRIPTOR_TYPE_SAMPLER;
     poolSizes[0].descriptorCount = 1;
@@ -89,7 +97,10 @@ void DescriptorManager::createGraphicsDescriptorPool() {
     poolSizes[2].descriptorCount = 1;
 
     poolSizes[3].type = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
-    poolSizes[3].descriptorCount = Engine::MAX_TEXTURES;
+    poolSizes[3].descriptorCount = 128;
+
+    poolSizes[4].type = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+    poolSizes[4].descriptorCount = Engine::MAX_TEXTURES;
 
     VkDescriptorPoolCreateInfo poolInfo{};
     poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
@@ -107,6 +118,7 @@ void DescriptorManager::createGraphicsDescriptorPool() {
 void DescriptorManager::createGraphicsDescriptorSets() {
 
     std::vector<VkDescriptorImageInfo> textures;
+    std::vector<VkDescriptorImageInfo> shadowMaps;
 
     Engine::graphicsDescriptor.sets.resize(1);
 
@@ -141,6 +153,21 @@ void DescriptorManager::createGraphicsDescriptorSets() {
         texture = texture->next;
     }
 
+    for (size_t i = 0; i < Engine::shadowCreatingLights.size; i++) {
+        VkDescriptorImageInfo shadowInfo{};
+        shadowInfo.imageView = Engine::shadowMaps.views[i];
+        shadowInfo.imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
+
+        shadowMaps.push_back(shadowInfo);
+    }
+
+    for (size_t i = Engine::shadowCreatingLights.size; i < 128; i++) {
+        VkDescriptorImageInfo shadowInfo{};
+        shadowInfo.imageView = Engine::shadowMaps.views[0];
+        shadowInfo.imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
+        shadowMaps.push_back(shadowInfo);
+    }
+
     VkDescriptorImageInfo samplerInfo{};
     samplerInfo.sampler = Engine::linearSampler;
 
@@ -157,7 +184,7 @@ void DescriptorManager::createGraphicsDescriptorSets() {
     VkWriteDescriptorSet write{};
     write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
     write.dstSet = Engine::graphicsDescriptor.sets[0];
-    write.dstBinding = 3;
+    write.dstBinding = 4;
     write.dstArrayElement = 0;
     write.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
     write.descriptorCount = static_cast<uint32_t>(Engine::textures.size);
@@ -190,11 +217,21 @@ void DescriptorManager::createGraphicsDescriptorSets() {
     uboWrite.descriptorCount = 1;
     uboWrite.pBufferInfo = &uboInfo;
 
-    std::array<VkWriteDescriptorSet, 4> writes = {
+    VkWriteDescriptorSet shadowWrite{};
+    shadowWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    shadowWrite.dstSet = Engine::graphicsDescriptor.sets[0];
+    shadowWrite.dstBinding = 3;
+    shadowWrite.dstArrayElement = 0;
+    shadowWrite.descriptorCount = static_cast<uint32_t>(Engine::shadowCreatingLights.size);
+    shadowWrite.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+    shadowWrite.pImageInfo = shadowMaps.data();
+
+    std::array<VkWriteDescriptorSet, 5> writes = {
         write,
         samplerWrite,
         instanceSSBOWrite,
-        uboWrite
+        uboWrite,
+        shadowWrite
     };
 
     vkUpdateDescriptorSets(Engine::deviceInfo.logicalDevice, static_cast<uint32_t>(writes.size()), writes.data(), 0, nullptr);

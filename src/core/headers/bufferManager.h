@@ -29,6 +29,13 @@ public:
 		VkImageView& depthView
 	);
 
+	static void createShadowFrameBuffers(
+		std::vector<VkFramebuffer>& frameBuffers,
+		std::vector<VkImageView>& views,
+		VkExtent2D& extent,
+		VkRenderPass& renderPass
+	);
+
 	static void createBuffer(
 		Buffer& bufferStruct,
 		VkBufferUsageFlags usage,

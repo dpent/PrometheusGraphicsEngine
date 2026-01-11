@@ -63,29 +63,37 @@ DirectionalLight::~DirectionalLight() {
 }
 
 void DirectionalLight::update() {
-    float time = static_cast<float>(glfwGetTime()); // or your own frame timer
+    /*float time = static_cast<float>(glfwGetTime()); // or your own frame timer
 
     float offset = color.x * -0.8f + color.y * 0.0f + color.z * 0.8f;
 
-    float x = 0.0f + 10.0f * cos(time + offset);
-    float z = 0.0f + 10.0f * sin(time + offset);
+    float x = 0.0f + 15.0f * cos(time + offset);
+    float z = 0.0f + 15.0f * sin(time + offset);
     position.x = x;
-    position.z = z;
+    position.z = z;*/
+    return;
 }
 
 glm::mat4 DirectionalLight::getLightVP() {
 
     glm::mat4 view = glm::lookAt(
-        glm::vec3(position.x, position.y, position.z),
+        -glm::vec3(position.x - 10.0f, position.y - 10.0f, position.z - 10.0f), //Negative so i can get the proper image from the light perspective
         glm::vec3(0.0f),
         glm::vec3(0.0f, 1.0f, 0.0f)
     );
 
-    glm::mat4 proj = glm::orthoZO(
-        -10.0f, 10.0f,
-        -15.0f, 15.0f,
-        0.1f, 96.0f
+    float near = 0.1f;
+    float far = 150.f;
+
+    float orthoSize = 25.0f;
+
+    glm::mat4 proj = glm::ortho(
+        -orthoSize, orthoSize,
+        -orthoSize, orthoSize,
+        near, far
     );
+
+    proj[1][1] *= -1;
 
     return proj * view;
 }

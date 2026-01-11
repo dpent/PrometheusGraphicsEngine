@@ -36,6 +36,7 @@ public:
 
     static void createDepthResources();
     static void createColorResources();
+    static void createShadowMapResources();
 
     static void transitionImageLayout(VkImage& image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout,
         uint32_t mipLevels, VkCommandPool& commandPool);
@@ -61,4 +62,7 @@ struct ImageVector {
     std::vector<VkImage> images;
     std::vector<VkDeviceMemory> memories;
     std::vector<VkImageView> views;
+
+    void destroyAllItems();
+    void resize(uint32_t size);
 };

@@ -100,6 +100,10 @@ void GUIManager::renderGUI(uint32_t& imageIndex) {
 	GUIManager::createCameraInfoWindow();
 	GUIManager::createBufferInfoWindow();
 
+	if (Engine::textureDisplayId != VK_NULL_HANDLE) {
+		GUIManager::createImageWindow();
+	}
+
 	ImGui::Render();
 	ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), Engine::command.buffers[Engine::currentFrame]);
 	ImGui::UpdatePlatformWindows();
@@ -163,11 +167,15 @@ void GUIManager::createDockSpaceWindow() {
 		ImGui::DockBuilderSetNodeSize(dockspaceId, ImGui::GetIO().DisplaySize);
 
 		ImGuiID dock_id_main = dockspaceId;
-		ImGuiID dock_id_bottom = ImGui::DockBuilderSplitNode(dock_id_main, ImGuiDir_Down, 0.3f, nullptr, &dock_id_main);
+		ImGuiID dock_id_bottom = ImGui::DockBuilderSplitNode(dock_id_main, ImGuiDir_Down, 0.4f, nullptr, &dock_id_main);
 
 		ImGui::DockBuilderDockWindow("General Info", dock_id_main);
 		ImGui::DockBuilderDockWindow("Buffers", dock_id_main);
 		ImGui::DockBuilderDockWindow("Camera", dock_id_bottom);
+		
+		if (Engine::textureDisplayId != VK_NULL_HANDLE) {
+			ImGui::DockBuilderDockWindow("Texture view", dock_id_bottom);
+		}
 
 		ImGui::DockBuilderFinish(dockspaceId);
 	}
@@ -188,6 +196,16 @@ void GUIManager::createBufferInfoWindow() {
 	ImGui::Text((std::string("Size: ") +Buffer::getSizeHumanReadable(Engine::instanceDataSSBO.size)).c_str());
 	GUIManager::makeBufferDiagram(Engine::instanceDataHistory, "###InstanceDataHistory");
 
+	ImGui::End();
+}
+
+void GUIManager::createImageWindow() {
+
+	ImGui::Begin("Texture view");
+	
+	ImVec2 avail = ImGui::GetContentRegionAvail();
+	ImGui::Image(Engine::textureDisplayId, avail);
+	
 	ImGui::End();
 }
 

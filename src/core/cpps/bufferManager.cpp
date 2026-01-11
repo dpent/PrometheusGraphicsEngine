@@ -28,6 +28,29 @@ void BufferManager::createFrameBuffers(std::vector<VkFramebuffer>& frameBuffers,
     }
 }
 
+void BufferManager::createShadowFrameBuffers(std::vector<VkFramebuffer>& frameBuffers,std::vector<VkImageView>& views,VkExtent2D& extent,VkRenderPass& renderPass) {
+    frameBuffers.resize(views.size());
+
+    for (size_t i = 0; i < views.size(); i++) {
+        std::array<VkImageView, 1>attachments = {
+            views[i]
+        };
+
+        VkFramebufferCreateInfo framebufferInfo{};
+        framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+        framebufferInfo.renderPass = renderPass;
+        framebufferInfo.attachmentCount = static_cast<uint32_t>(attachments.size());;
+        framebufferInfo.pAttachments = attachments.data();
+        framebufferInfo.width = extent.width;
+        framebufferInfo.height = extent.height;
+        framebufferInfo.layers = 1;
+
+        if (vkCreateFramebuffer(Engine::deviceInfo.logicalDevice, &framebufferInfo, nullptr, &frameBuffers[i]) != VK_SUCCESS) {
+            throw std::runtime_error("failed to create framebuffer!");
+        }
+    }
+}
+
 void BufferManager::createBuffer(Buffer& bufferStruct, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties)
 {
     VkBufferCreateInfo bufferInfo{};
@@ -192,6 +215,100 @@ void BufferManager::recordCommandBuffer(VkCommandBuffer& commandBuffer, uint32_t
         throw std::runtime_error("failed to begin recording command buffer!");
     }
 
+    VkRenderPassBeginInfo shadowPassInfo{};
+    shadowPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+    shadowPassInfo.renderPass = Engine::shadowRenderPass;
+    shadowPassInfo.renderArea.offset = { 0,0 };
+    shadowPassInfo.renderArea.extent = VkExtent2D{ Engine::shadowRes, Engine::shadowRes };
+
+    std::array<VkClearValue, 1> shadowClearValues{};
+    shadowClearValues[0].depthStencil = { 1.0f, 0 };
+
+    shadowPassInfo.clearValueCount = static_cast<uint32_t>(shadowClearValues.size());
+    shadowPassInfo.pClearValues = shadowClearValues.data();
+
+    Light* light = Engine::shadowCreatingLights.head;
+    for (size_t i = 0; i < Engine::shadowMaps.images.size(); i++) {
+
+        shadowPassInfo.framebuffer = Engine::shadowFrameBuffers[i];
+
+        vkCmdBeginRenderPass(commandBuffer, &shadowPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+
+        VkViewport viewport{};
+        viewport.x = 0.0f;
+        viewport.y = 0.0f;
+        viewport.width = static_cast<float>(Engine::shadowRes);
+        viewport.height = static_cast<float>(Engine::shadowRes);
+        viewport.minDepth = 0.0f;
+        viewport.maxDepth = 1.0f;
+        vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
+
+        VkRect2D scissor{};
+        scissor.offset = { 0, 0 };
+        scissor.extent = VkExtent2D{ Engine::shadowRes, Engine::shadowRes };
+
+        vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
+
+        vkCmdSetDepthBias(
+            commandBuffer,
+            1.25f,
+            0.0f,
+            1.75f
+        );
+
+        LightVPObject* lightPushConstants = new LightVPObject();
+        lightPushConstants->lightVP = light->getLightVP();
+
+        vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, Engine::shadowPipeline.pipeline);
+
+        VkBuffer vertexBuffers[] = { Engine::vertexIndexBuffer.buffer };
+        VkDeviceSize offsets[] = { 0 };
+
+        vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
+        vkCmdBindIndexBuffer(commandBuffer, Engine::vertexIndexBuffer.buffer, Engine::vertexIndexBuffer.offset, VK_INDEX_TYPE_UINT32);
+
+        vkCmdBindDescriptorSets(
+            commandBuffer,
+            VK_PIPELINE_BIND_POINT_GRAPHICS,
+            Engine::shadowPipeline.layout,
+            0,                              // first set
+            1,                              // number of sets
+            &Engine::graphicsDescriptor.sets[0],     // pointer to descriptor set
+            0,
+            nullptr
+        );
+
+
+        GameObject* object = Engine::gameObjects.head;
+        while (object != nullptr) {
+            lightPushConstants->objectIndex = object->instanceIndex;
+
+            vkCmdPushConstants(
+                commandBuffer,
+                Engine::shadowPipeline.layout,
+                VK_SHADER_STAGE_VERTEX_BIT,
+                0,
+                sizeof(*lightPushConstants),
+                lightPushConstants
+            );
+
+            vkCmdDrawIndexed(
+                commandBuffer,
+                static_cast<uint32_t>(object->mesh->indices.size()),
+                1,
+                object->mesh->indexOffset,
+                object->mesh->vertexOffset,
+                0
+            );
+
+            object = object->next;
+        }
+
+        vkCmdEndRenderPass(commandBuffer);
+
+        light = light->next;
+    }
+
     VkRenderPassBeginInfo renderPassInfo{};
     renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
     renderPassInfo.renderPass = Engine::graphicsRenderPass;
@@ -200,7 +317,7 @@ void BufferManager::recordCommandBuffer(VkCommandBuffer& commandBuffer, uint32_t
     renderPassInfo.renderArea.extent = Engine::swapChainInfo.extent;
 
     std::array<VkClearValue, 2> clearValues{};
-    clearValues[0].color = { {0.0f, 0.0f, 0.0f, 1.0f} };
+    clearValues[0].color = { {0.2f, 0.2f, 0.2f, 1.0f} };
     clearValues[1].depthStencil = { 1.0f, 0 };
 
     renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());

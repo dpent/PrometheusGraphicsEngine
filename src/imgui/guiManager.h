@@ -21,4 +21,5 @@ public:
 	static void createDockSpaceWindow();
 	static void createBufferInfoWindow();
 	static void makeBufferDiagram(std::vector<float>& history, const char* label);
+	static void createImageWindow();
 };

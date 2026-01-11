@@ -7,4 +7,5 @@ class Engine;
 class RenderPassManager {
 public:
 	static void createRenderPass();
+	static void createShadowRenderPass();
 };

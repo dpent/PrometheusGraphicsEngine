@@ -25,6 +25,11 @@ struct CameraObject
     uint32_t objectIndex;
 };
 
+struct LightVPObject {
+    glm::mat4 lightVP;
+    uint32_t objectIndex;
+};
+
 namespace std {
     template<> struct hash<Vertex> {
         size_t operator()(Vertex const& vertex) const {

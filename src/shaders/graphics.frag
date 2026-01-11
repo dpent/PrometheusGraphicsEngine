@@ -1,5 +1,6 @@
 #version 450
 #extension GL_EXT_nonuniform_qualifier : enable
+#extension  GL_EXT_samplerless_texture_functions : enable
 
 
 layout(location = 0) in vec3 vertColor;
@@ -19,15 +20,51 @@ layout(set = 0, binding = 2) uniform Lights {
     uint lightCount;
     uint types[128/4];
 } lightsUBO;
-layout(set = 0, binding = 3) uniform texture2D textures[];
+layout(set = 0, binding = 3) uniform texture2D shadowMaps[];
+layout(set = 0, binding = 4) uniform texture2D textures[];
 
 
 layout(location = 0) out vec4 outColor;
+
+float shadowCalculation(vec4 fragPosLightSpace)
+{
+    vec3 projCoords = fragPosLightSpace.xyz / fragPosLightSpace.w;
+    projCoords.xy = projCoords.xy * 0.5 + 0.5;
+
+    if (projCoords.z > 1.0 || projCoords.z < 0.0 || projCoords.x > 1.0 || projCoords.x < 0.0 || projCoords.y > 1.0 || projCoords.y < 0.0)
+        return 0.0;
+
+    float shadow = 0.0;
+
+     vec2 texelSize = 1.0 / textureSize(shadowMaps[0], 0);
+
+    float closestDepth = 0.0;
+    // 3x3 PCF
+    for (int x = -1; x <= 1; ++x)
+    {
+        for (int y = -1; y <= 1; ++y)
+        {
+            closestDepth = texture(
+                sampler2D(shadowMaps[0], linearSampler),
+                projCoords.xy + vec2(x, y) * texelSize
+            ).r;
+            
+            float bias = 0.001;
+
+            shadow += projCoords.z + bias > closestDepth  ? 0.9 : 0.0;
+        }
+    }
+
+    shadow /= 9.0; // average
+    return shadow;
+}
 
 void main(){
     vec4 texColor = texture(sampler2D(textures[texIndex], linearSampler), texCoord);
     vec3 totalLight = vec3(0.0);
     vec3 totalAmbient = vec3(0.0);
+
+    float shadow = 0;
 
     for (uint i = 0; i < lightsUBO.lightCount; i++) {
     
@@ -43,6 +80,10 @@ void main(){
             lightColor = lightColor/2.0;
 
             vec3 diffuseLight = lightColor * max(dot(normalize(worldNormal), normalize(-directionToLight)), 0);
+
+            vec4 fragLightPos = lightsUBO.lightVPs[i] * vec4(worldPos,1.0);
+            
+            shadow = shadowCalculation(fragLightPos);
 
             totalLight += diffuseLight;
             totalAmbient += lightsUBO.ambientColors[i].xyz * lightsUBO.ambientColors[i].w;
@@ -62,5 +103,6 @@ void main(){
     }
     
     vec3 lightColor = vec3(totalAmbient + totalLight) / lightsUBO.lightCount;
-	outColor = texColor + vec4(lightColor, 1.0);
+    vec3 finalColor = texColor.rgb * 0.4 + lightColor * 0.6;
+	outColor = vec4(finalColor * (1.0 - shadow), 1.0);
 }

@@ -6,6 +6,7 @@ class PipelineManager {
 public:
 
 	static void createGraphicsPipeline();
+	static void createShadowPipeline();
 };
 
 struct Pipeline {

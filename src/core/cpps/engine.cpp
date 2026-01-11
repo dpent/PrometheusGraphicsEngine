@@ -12,7 +12,6 @@
 VulkanInstance Engine::vkInstanceInfo;
 DeviceInfo Engine::deviceInfo;
 SwapChain Engine::swapChainInfo;
-ImageVector Engine::imGuiHelperImages;
 
 VkSampleCountFlagBits Engine::msaaSamples;
 
@@ -64,13 +63,22 @@ GarbageQueues Engine::garbage;
 int Engine::targetFPS = 60;
 uint16_t Engine::FPS = 0;
 
+VkDescriptorSet Engine::textureDisplayId;
+
 //LIGHTING
 DoubleEndedQueue<Light*> Engine::lights;
 DoubleEndedQueue<Light*> Engine::shadowCreatingLights;
 Buffer Engine::uniformLightBuffer;
 LightUBOData Engine::lightData;
 
+ImageVector Engine::shadowMaps;
 bool Engine::recreateShadowResources;
+uint32_t Engine::shadowRes = 2048;
+std::vector<VkFramebuffer> Engine::shadowFrameBuffers;
+
+VkRenderPass Engine::shadowRenderPass;
+Pipeline Engine::shadowPipeline;
+Descriptor Engine::shadowDescriptor;
 
 //WINDOW
 GLFWwindow* Engine::window = nullptr;
@@ -156,6 +164,7 @@ void Engine::initVulkan() {
     Engine::command.initialize();
 
     RenderPassManager::createRenderPass();
+    RenderPassManager::createShadowRenderPass();
 
     GUIManager::initImGUI();
     ImageManager::createImageSampler(Engine::linearSampler);
@@ -177,6 +186,7 @@ void Engine::initVulkan() {
     DescriptorManager::createGraphicsDescriptorSetLayout();
     
     PipelineManager::createGraphicsPipeline();
+    PipelineManager::createShadowPipeline();
 
     BufferManager::createStagingBuffer(8192, Engine::stagingBuffer); //8KB TO START
 
@@ -335,6 +345,19 @@ VkFormat Engine::findDepthFormat() {
     return Engine::findSupportedFormat({ VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT },
         VK_IMAGE_TILING_OPTIMAL,
         VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT);
+}
+
+VkFormat Engine::findShadowFormat() {
+
+    return Engine::findSupportedFormat(
+        {
+            VK_FORMAT_D32_SFLOAT,
+            VK_FORMAT_D16_UNORM
+        },
+        VK_IMAGE_TILING_OPTIMAL,
+        VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT |
+        VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT
+    );
 }
 
 VkFormat Engine::findSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features) {
@@ -512,6 +535,13 @@ void Engine::prepareFrameData() {
     if (Engine::remakeInstanceDataSSBO) {
 
         BufferManager::createSSBOCheckSize(Engine::instanceDataSSBO, Engine::instanceData) ? Engine::remakeDescriptors = true : Engine::remakeDescriptors = false;
+    }
+
+    if (Engine::recreateShadowResources) {
+        ImageManager::createShadowMapResources();
+
+        Engine::recreateShadowResources = false;
+        Engine::remakeDescriptors = true;
     }
 
     if (Engine::remakeDescriptors) {

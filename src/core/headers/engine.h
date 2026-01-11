@@ -58,7 +58,6 @@ public:
 	static VulkanInstance vkInstanceInfo;
 	static DeviceInfo deviceInfo;
 	static SwapChain swapChainInfo;
-	static ImageVector imGuiHelperImages;
 
 	static VkSampleCountFlagBits msaaSamples;
 
@@ -112,6 +111,8 @@ public:
 	static int targetFPS;
 	static uint16_t FPS;
 
+	static VkDescriptorSet textureDisplayId;
+
 	//LIGHTING
 	static DoubleEndedQueue<Light*> lights;
 	static DoubleEndedQueue<Light*> shadowCreatingLights;
@@ -119,7 +120,14 @@ public:
 	static Buffer uniformLightBuffer;
 	static LightUBOData lightData;
 
+	static ImageVector shadowMaps;
 	static bool recreateShadowResources;
+	static uint32_t shadowRes;
+	static std::vector<VkFramebuffer> shadowFrameBuffers;
+
+	static VkRenderPass shadowRenderPass;
+	static Pipeline shadowPipeline;
+	static Descriptor shadowDescriptor;
 
 	//WINDOW
 	static GLFWwindow* window;
@@ -199,6 +207,7 @@ public:
 
 	//FORMATS
 	static VkFormat findDepthFormat();
+	static VkFormat findShadowFormat();
 	static VkFormat findSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features);
 
 	//EDITOR SPECIFIC

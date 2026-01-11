@@ -94,27 +94,6 @@ void SwapChainManager::createSwapChain(VkSwapchainKHR oldSwapChain) {
 
     Engine::swapChainInfo.imageFormat = surfaceFormat.format;
     Engine::swapChainInfo.extent = extent;
-
-    Engine::imGuiHelperImages.images.resize(Engine::swapChainInfo.images.size());
-    Engine::imGuiHelperImages.memories.resize(Engine::swapChainInfo.images.size());
-    Engine::imGuiHelperImages.views.resize(Engine::swapChainInfo.images.size());
-
-    for (size_t i = 0; i < Engine::swapChainInfo.images.size(); i++) {
-        ImageManager::createImage
-        (
-            Engine::swapChainInfo.extent.width,
-            Engine::swapChainInfo.extent.height,
-            Engine::swapChainInfo.imageFormat,
-            VK_IMAGE_TILING_OPTIMAL,
-            VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
-            VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-            Engine::imGuiHelperImages.images[i],
-            Engine::imGuiHelperImages.memories[i],
-            1,
-            VK_SAMPLE_COUNT_1_BIT,
-            1
-        );
-    }
 }
 
 VkSurfaceFormatKHR SwapChainManager::chooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats) {
@@ -160,7 +139,6 @@ VkExtent2D SwapChainManager::chooseSwapExtent(const VkSurfaceCapabilitiesKHR& ca
 
 void SwapChainManager::createSwapChainImageViews() {
     Engine::swapChainInfo.imageViews.resize(Engine::swapChainInfo.images.size());
-    Engine::swapChainInfo.imGuiIds.resize(Engine::swapChainInfo.images.size());
 
     for (size_t i = 0; i < Engine::swapChainInfo.images.size(); i++) {
         ImageManager::createImageView(
@@ -172,19 +150,6 @@ void SwapChainManager::createSwapChainImageViews() {
             1,
             0,
             Engine::swapChainInfo.imageViews[i]
-        );
-    }
-
-    for (size_t i = 0; i < Engine::swapChainInfo.images.size(); i++) {
-        ImageManager::createImageView(
-            Engine::imGuiHelperImages.images[i],
-            Engine::swapChainInfo.imageFormat,
-            VK_IMAGE_ASPECT_COLOR_BIT,
-            1,
-            VK_IMAGE_VIEW_TYPE_2D,
-            1,
-            0,
-            Engine::imGuiHelperImages.views[i]
         );
     }
 }
@@ -252,9 +217,5 @@ void SwapChainManager::recreateSwapChain() {
 }
 
 void SwapChainManager::createImGuiTexture(uint32_t imageIndex) {
-    Engine::swapChainInfo.imGuiIds[imageIndex] = ImGui_ImplVulkan_AddTexture(
-        Engine::linearSampler,
-        Engine::imGuiHelperImages.views[imageIndex],
-        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
-    );
+    return;
 }

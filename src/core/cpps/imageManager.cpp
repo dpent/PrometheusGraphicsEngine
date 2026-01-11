@@ -102,6 +102,58 @@ void ImageManager::createColorResources() {
     ImageManager::createImageView(Engine::colorResource.image, format, VK_IMAGE_ASPECT_COLOR_BIT, 1, VK_IMAGE_VIEW_TYPE_2D, 1, 0, Engine::colorResource.view);
 }
 
+void ImageManager::createShadowMapResources() {
+    if (Engine::shadowMaps.images.size() != 0) {
+        Engine::shadowMaps.destroyAllItems();
+    }
+
+    Engine::shadowMaps.resize(static_cast<uint32_t>(Engine::shadowCreatingLights.size));
+
+    VkFormat depthFormat = Engine::findShadowFormat();
+
+    for (size_t i = 0; i < Engine::shadowMaps.images.size(); i++) {
+        ImageManager::createImage(
+            Engine::shadowRes,
+            Engine::shadowRes,
+            depthFormat,
+            VK_IMAGE_TILING_OPTIMAL,
+            VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+            VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+            Engine::shadowMaps.images[i],
+            Engine::shadowMaps.memories[i],
+            1,
+            VK_SAMPLE_COUNT_1_BIT,
+            1
+        );
+
+        ImageManager::createImageView(
+            Engine::shadowMaps.images[i],
+            depthFormat,
+            VK_IMAGE_ASPECT_DEPTH_BIT,
+            1,
+            VK_IMAGE_VIEW_TYPE_2D,
+            1,
+            0,
+            Engine::shadowMaps.views[i]
+        );
+    }
+
+    VkExtent2D shadowExtent = { Engine::shadowRes, Engine::shadowRes };
+
+    BufferManager::createShadowFrameBuffers(
+        Engine::shadowFrameBuffers,
+        Engine::shadowMaps.views,
+        shadowExtent,
+        Engine::shadowRenderPass
+    );
+
+    Engine::textureDisplayId = ImGui_ImplVulkan_AddTexture(
+        Engine::linearSampler,
+        Engine::shadowMaps.views[0],
+        VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL
+    );
+}
+
 void ImageManager::createImageSampler(VkSampler& sampler) {
     VkSamplerCreateInfo samplerInfo{};
     samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
@@ -320,4 +372,19 @@ void Image::destroy() {
     vkDestroyImageView(Engine::deviceInfo.logicalDevice, view, nullptr);
     vkDestroyImage(Engine::deviceInfo.logicalDevice, image, nullptr);
     vkFreeMemory(Engine::deviceInfo.logicalDevice, memory, nullptr);
+}
+
+void ImageVector::destroyAllItems() {
+
+    for (size_t i = 0; i < images.size(); i++) {
+        vkDestroyImageView(Engine::deviceInfo.logicalDevice, views[i], nullptr);
+        vkDestroyImage(Engine::deviceInfo.logicalDevice, images[i], nullptr);
+        vkFreeMemory(Engine::deviceInfo.logicalDevice, memories[i], nullptr);
+    }
+}
+
+void ImageVector::resize(uint32_t size) {
+    images.resize(size);
+    memories.resize(size);
+    views.resize(size);
 }
