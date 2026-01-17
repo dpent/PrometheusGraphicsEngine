@@ -68,8 +68,13 @@ VkDescriptorSet Engine::textureDisplayId;
 //LIGHTING
 DoubleEndedQueue<Light*> Engine::lights;
 DoubleEndedQueue<Light*> Engine::shadowCreatingLights;
+
 Buffer Engine::uniformLightBuffer;
 LightUBOData Engine::lightData;
+Buffer Engine::uniformShadowLightBuffer;
+ShadowLightUBOData Engine::shadowLightData;
+
+Descriptor Engine::shadowLightsDescriptor;
 
 ImageVector Engine::shadowMaps;
 bool Engine::recreateShadowResources;
@@ -184,6 +189,7 @@ void Engine::initVulkan() {
     );
 
     DescriptorManager::createGraphicsDescriptorSetLayout();
+    DescriptorManager::createShadowLightsSetLayout();
     
     PipelineManager::createGraphicsPipeline();
     PipelineManager::createShadowPipeline();
@@ -195,6 +201,7 @@ void Engine::initVulkan() {
     Engine::initThreadPool(std::thread::hardware_concurrency() - 1);
 
     BufferManager::createUniformBuffer(Engine::uniformLightBuffer, sizeof(LightUBOData));
+    BufferManager::createUniformBuffer(Engine::uniformShadowLightBuffer, sizeof(ShadowLightUBOData));
 }
 
 void Engine::mainLoop() {
@@ -227,7 +234,10 @@ void Engine::mainLoop() {
     GameObject::createInitiasationJob(house3, hInfo3);
     delete hInfo3;
 
-    DirectionalLight* sun = new DirectionalLight(glm::vec4(-10.0f), glm::vec4(COLOR_WHITE, 1.0f), 1.0f);
+    DirectionalLight* sun = new DirectionalLight(glm::vec4(-10.0f), glm::vec4(COLOR_SUN, 1.0f), 1.0f);
+    //DirectionalLight* Sun2 = new DirectionalLight(glm::vec4(-20.0f,-10.0f,20.0f,10.0f), glm::vec4(COLOR_RED, 1.0f), 1.0f);
+
+    PointLight* blueLight = new PointLight(glm::vec4(5.0f, 1.0f, 5.0f, 5.0f), glm::vec4(COLOR_BLUE, 1.0f), 1.0f);
 
     uint64_t framesThisSecond = 0;
 
@@ -538,6 +548,7 @@ void Engine::prepareFrameData() {
     }
 
     if (Engine::recreateShadowResources) {
+
         ImageManager::createShadowMapResources();
 
         Engine::recreateShadowResources = false;
@@ -549,6 +560,9 @@ void Engine::prepareFrameData() {
         DescriptorManager::createGraphicsDescriptorPool();
         DescriptorManager::createGraphicsDescriptorSets();
 
+        DescriptorManager::createShadowLightsPool();
+        DescriptorManager::createShadowLightsSets();
+
         Engine::remakeDescriptors = false;
     }
 
@@ -556,6 +570,7 @@ void Engine::prepareFrameData() {
     Engine::updateLightData();
 
     BufferManager::updateUniformBuffer(Engine::uniformLightBuffer, Engine::lightData);
+    BufferManager::updateUniformBuffer(Engine::uniformShadowLightBuffer, Engine::shadowLightData);
 
     if (!Engine::remakeInstanceDataSSBO) {
 
@@ -779,7 +794,7 @@ void Engine::updateLightData() {
         Engine::lightData.colors[i] = light->color;
         Engine::lightData.ambientLightColors[i] = light->ambientLightColor;
         Engine::lightData.intensities[i] = glm::vec4(light->intensity);
-        Engine::lightData.lightMVPs[i] = light->getLightVP();
+        Engine::lightData.lightVPs[i] = light->getLightVP();
 
         size_t idx = i / 4;        // which uint32_t
         size_t bytePos = i % 4;    // which byte in that uint32_t
@@ -789,4 +804,35 @@ void Engine::updateLightData() {
     }
 
     Engine::lightData.lightCount = Engine::lights.size;
+
+    light = Engine::shadowCreatingLights.head;
+
+    for (size_t i = 0; i < Engine::shadowCreatingLights.size; i++) {
+
+        light->update();
+
+        Engine::shadowLightData.positions[i] = light->position;
+        Engine::shadowLightData.colors[i] = light->color;
+        Engine::shadowLightData.ambientLightColors[i] = light->ambientLightColor;
+        Engine::shadowLightData.intensities[i] = glm::vec4(light->intensity);
+        Engine::shadowLightData.lightVPs[i] = light->getLightVP();
+
+        size_t idx = i / 4;        // which uint32_t
+        size_t bytePos = i % 4;    // which byte in that uint32_t
+        size_t shift = 8 * (3 - bytePos);
+        uint32_t mask = 0xFFu << shift;
+
+        Engine::shadowLightData.shadowMapIndices[idx] =
+            (Engine::shadowLightData.shadowMapIndices[idx] & ~mask) |
+            ((uint32_t)i << shift);
+
+        Engine::shadowLightData.types[idx] =
+            (Engine::shadowLightData.types[idx] & ~mask) |
+            ((uint32_t)light->type << shift);
+
+        light = light->next;
+    }
+
+    Engine::shadowLightData.lightCount = Engine::shadowCreatingLights.size;
+
 }

@@ -28,13 +28,13 @@ void DescriptorManager::createGraphicsDescriptorSetLayout() {
     uboLayoutBinding.pImmutableSamplers = nullptr;
 
     VkDescriptorSetLayoutBinding shadowMapBinding{};
-    shadowMapBinding.binding = 3;
+    shadowMapBinding.binding = 4;
     shadowMapBinding.stageFlags = VK_SHADER_STAGE_ALL_GRAPHICS;
     shadowMapBinding.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
-    shadowMapBinding.descriptorCount = 128;
+    shadowMapBinding.descriptorCount = 64;
 
     VkDescriptorSetLayoutBinding texturesBinding{}; //Textures
-    texturesBinding.binding = 4;
+    texturesBinding.binding = 5;
     texturesBinding.descriptorCount = Engine::MAX_TEXTURES;
     texturesBinding.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
     texturesBinding.pImmutableSamplers = nullptr;
@@ -52,10 +52,10 @@ void DescriptorManager::createGraphicsDescriptorSetLayout() {
     0, // samplerBinding (binding 0) no flags
     0, // instanceDataSSBO (binding 1) no flags
     0, // uboLayoutBinding (binding 2) no flags
-    0, // shadowMapBinding (binding 3)
+    0, // shadowMapBinding (binding 4) no flags
     VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT |
     VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT |
-    VK_DESCRIPTOR_BINDING_VARIABLE_DESCRIPTOR_COUNT_BIT // texturesBinding (binding 4)
+    VK_DESCRIPTOR_BINDING_VARIABLE_DESCRIPTOR_COUNT_BIT // texturesBinding (binding 5)
     };
 
     VkDescriptorSetLayoutBindingFlagsCreateInfo flagsInfo{};
@@ -97,7 +97,7 @@ void DescriptorManager::createGraphicsDescriptorPool() {
     poolSizes[2].descriptorCount = 1;
 
     poolSizes[3].type = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
-    poolSizes[3].descriptorCount = 128;
+    poolSizes[3].descriptorCount = 64;
 
     poolSizes[4].type = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
     poolSizes[4].descriptorCount = Engine::MAX_TEXTURES;
@@ -161,9 +161,9 @@ void DescriptorManager::createGraphicsDescriptorSets() {
         shadowMaps.push_back(shadowInfo);
     }
 
-    for (size_t i = Engine::shadowCreatingLights.size; i < 128; i++) {
+    for (size_t i = Engine::shadowCreatingLights.size; i < 64; i++) {
         VkDescriptorImageInfo shadowInfo{};
-        shadowInfo.imageView = Engine::shadowMaps.views[0];
+        shadowInfo.imageView = VK_NULL_HANDLE;
         shadowInfo.imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
         shadowMaps.push_back(shadowInfo);
     }
@@ -184,7 +184,7 @@ void DescriptorManager::createGraphicsDescriptorSets() {
     VkWriteDescriptorSet write{};
     write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
     write.dstSet = Engine::graphicsDescriptor.sets[0];
-    write.dstBinding = 4;
+    write.dstBinding = 5;
     write.dstArrayElement = 0;
     write.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
     write.descriptorCount = static_cast<uint32_t>(Engine::textures.size);
@@ -220,7 +220,7 @@ void DescriptorManager::createGraphicsDescriptorSets() {
     VkWriteDescriptorSet shadowWrite{};
     shadowWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
     shadowWrite.dstSet = Engine::graphicsDescriptor.sets[0];
-    shadowWrite.dstBinding = 3;
+    shadowWrite.dstBinding = 4;
     shadowWrite.dstArrayElement = 0;
     shadowWrite.descriptorCount = static_cast<uint32_t>(Engine::shadowCreatingLights.size);
     shadowWrite.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
@@ -235,4 +235,105 @@ void DescriptorManager::createGraphicsDescriptorSets() {
     };
 
     vkUpdateDescriptorSets(Engine::deviceInfo.logicalDevice, static_cast<uint32_t>(writes.size()), writes.data(), 0, nullptr);
+}
+
+void DescriptorManager::createShadowLightsSetLayout() {
+    if (Engine::shadowLightsDescriptor.layout != VK_NULL_HANDLE) {
+        vkDestroyDescriptorSetLayout(Engine::deviceInfo.logicalDevice, Engine::shadowLightsDescriptor.layout, nullptr);
+    }
+
+    VkDescriptorSetLayoutBinding uboShadowLightLayoutBinding{};
+    uboShadowLightLayoutBinding.binding = 3;
+    uboShadowLightLayoutBinding.stageFlags = VK_SHADER_STAGE_ALL_GRAPHICS;
+    uboShadowLightLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    uboShadowLightLayoutBinding.descriptorCount = 1;
+    uboShadowLightLayoutBinding.pImmutableSamplers = nullptr;
+
+    std::array<VkDescriptorSetLayoutBinding, 1> bindings = {
+    uboShadowLightLayoutBinding,
+    };
+
+    std::array<VkDescriptorBindingFlags, 1> bindingFlags = {
+    0, // uboShadowLightLayoutBinding (binding 3) no flags
+    };
+
+    VkDescriptorSetLayoutBindingFlagsCreateInfo flagsInfo{};
+    flagsInfo.sType =
+        VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO;
+    flagsInfo.bindingCount = static_cast<uint32_t>(bindingFlags.size());
+    flagsInfo.pBindingFlags = bindingFlags.data();
+
+    VkDescriptorSetLayoutCreateInfo layoutInfo{};
+    layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    layoutInfo.bindingCount = static_cast<uint32_t>(bindings.size());
+    layoutInfo.pBindings = bindings.data();
+    layoutInfo.flags = VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT;
+    layoutInfo.pNext = &flagsInfo;
+
+    if (vkCreateDescriptorSetLayout(Engine::deviceInfo.logicalDevice, &layoutInfo, nullptr, &Engine::shadowLightsDescriptor.layout) != VK_SUCCESS) {
+        throw std::runtime_error("failed to create descriptor set layout!");
+    }
+}
+
+void DescriptorManager::createShadowLightsPool() {
+
+    if (Engine::shadowLightsDescriptor.pool != VK_NULL_HANDLE) {
+        Engine::garbage.lock();
+        Engine::garbage.descriptors.push_back(Engine::shadowLightsDescriptor.pool);
+        Engine::garbage.descriptorFramesPassed.push_back(0);
+        Engine::garbage.unlock();
+    }
+
+    std::array<VkDescriptorPoolSize, 1> poolSizes{};
+
+    poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    poolSizes[0].descriptorCount = 1;
+
+    VkDescriptorPoolCreateInfo poolInfo{};
+    poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+    poolInfo.flags =
+        VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT;
+    poolInfo.maxSets = 1; //NOT PER FRAME. ITS 1 GLOBAL
+    poolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
+    poolInfo.pPoolSizes = poolSizes.data();
+
+    if (vkCreateDescriptorPool(Engine::deviceInfo.logicalDevice, &poolInfo, nullptr, &Engine::shadowLightsDescriptor.pool) != VK_SUCCESS) {
+        throw std::runtime_error("failed to create descriptor pool!");
+    }
+}
+
+void DescriptorManager::createShadowLightsSets() {
+
+    Engine::shadowLightsDescriptor.sets.resize(1);
+
+    VkDescriptorSetAllocateInfo allocInfo{};
+    allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+    allocInfo.descriptorPool = Engine::shadowLightsDescriptor.pool;
+    allocInfo.descriptorSetCount = 1;
+    allocInfo.pSetLayouts = &Engine::shadowLightsDescriptor.layout;
+
+    if (vkAllocateDescriptorSets(Engine::deviceInfo.logicalDevice, &allocInfo, &Engine::shadowLightsDescriptor.sets[0]) != VK_SUCCESS) {
+        throw std::runtime_error("failed to allocate descriptor set!");
+    }
+
+    VkDescriptorBufferInfo shadowUboInfo{};
+    shadowUboInfo.buffer = Engine::uniformShadowLightBuffer.buffer; // VkBuffer for UBO
+    shadowUboInfo.offset = 0;
+    shadowUboInfo.range = sizeof(ShadowLightUBOData);
+
+    VkWriteDescriptorSet shadowUboWrite{};
+    shadowUboWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    shadowUboWrite.dstSet = Engine::shadowLightsDescriptor.sets[0];
+    shadowUboWrite.dstBinding = 3;
+    shadowUboWrite.dstArrayElement = 0;
+    shadowUboWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    shadowUboWrite.descriptorCount = 1;
+    shadowUboWrite.pBufferInfo = &shadowUboInfo;
+
+    std::array<VkWriteDescriptorSet, 1> writes = {
+        shadowUboWrite,
+    };
+
+    vkUpdateDescriptorSets(Engine::deviceInfo.logicalDevice, static_cast<uint32_t>(writes.size()), writes.data(), 0, nullptr);
+
 }

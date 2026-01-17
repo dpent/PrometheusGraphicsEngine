@@ -35,7 +35,7 @@ struct PointLight : public Light {
     void update() override;
 };
 
-struct DirectionalLight : public Light {
+struct DirectionalLight : public Light { //POSITION HERE IS DIRECTION
 
     DirectionalLight();
     DirectionalLight(glm::vec4 pos, glm::vec4 color, float intensity);
@@ -53,7 +53,18 @@ struct LightUBOData : public UBOData{
     glm::vec4 colors[128];
     glm::vec4 ambientLightColors[128];
     glm::vec4 intensities[128];
-    glm::mat4 lightMVPs[128];
+    glm::mat4 lightVPs[128];
     alignas(16) uint64_t lightCount;
     alignas(16) uint32_t types[128 / 4] = {};
+};
+
+struct ShadowLightUBOData : public UBOData {
+    glm::vec4 positions[64];
+    glm::vec4 colors[64];
+    glm::vec4 ambientLightColors[64];
+    glm::vec4 intensities[64];
+    glm::mat4 lightVPs[64];
+    alignas(16) uint64_t lightCount;
+    alignas(16) uint32_t types[64 / 4] = {};
+    alignas(16) uint32_t shadowMapIndices[64 / 4] = {};
 };

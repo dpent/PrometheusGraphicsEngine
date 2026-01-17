@@ -352,14 +352,18 @@ void BufferManager::recordCommandBuffer(VkCommandBuffer& commandBuffer, uint32_t
     vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
     vkCmdBindIndexBuffer(commandBuffer, Engine::vertexIndexBuffer.buffer, Engine::vertexIndexBuffer.offset, VK_INDEX_TYPE_UINT32);
 
+    std::array<VkDescriptorSet, 2> sets = {
+        Engine::graphicsDescriptor.sets[0],     // set = 0
+        Engine::shadowLightsDescriptor.sets[0]  // set = 1
+    };
 
     vkCmdBindDescriptorSets(
         commandBuffer,
         VK_PIPELINE_BIND_POINT_GRAPHICS,
         Engine::graphicsPipeLine.layout,
         0,                              // first set
-        1,                              // number of sets
-        &Engine::graphicsDescriptor.sets[0],     // pointer to descriptor set
+        static_cast<uint32_t>(sets.size()),       // number of sets
+        sets.data(),     // pointer to descriptor set
         0,
         nullptr
     );

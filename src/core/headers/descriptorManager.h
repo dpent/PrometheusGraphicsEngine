@@ -7,6 +7,10 @@ public:
 	static void createGraphicsDescriptorSetLayout();
 	static void createGraphicsDescriptorPool();
 	static void createGraphicsDescriptorSets();
+
+	static void createShadowLightsSetLayout();
+	static void createShadowLightsPool();
+	static void createShadowLightsSets();
 };
 
 struct Descriptor {

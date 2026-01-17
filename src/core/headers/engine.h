@@ -119,6 +119,10 @@ public:
 
 	static Buffer uniformLightBuffer;
 	static LightUBOData lightData;
+	static Buffer uniformShadowLightBuffer;
+	static ShadowLightUBOData shadowLightData;
+
+	static Descriptor shadowLightsDescriptor;
 
 	static ImageVector shadowMaps;
 	static bool recreateShadowResources;

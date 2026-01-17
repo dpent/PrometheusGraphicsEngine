@@ -7,8 +7,6 @@ Light::Light(glm::vec4 pos, glm::vec4 color, float intensity) {
     ambientLightColor = glm::vec4(1.0f, 1.0f, 1.0f, 0.02f);
     this->intensity = intensity;
     this->type = type;
-
-    Engine::lights.push(this);
 }
 
 Light::Light() {}
@@ -28,6 +26,7 @@ PointLight::PointLight(glm::vec4 pos, glm::vec4 color, float intensity)
     : Light::Light(pos, color, intensity) {
 
     this->type = LIGHT_POINT;
+    Engine::lights.push(this);
 }
 
 void PointLight::update() {
@@ -53,7 +52,7 @@ DirectionalLight::DirectionalLight(glm::vec4 pos, glm::vec4 color, float intensi
 
     Engine::shadowCreatingLights.push(this);
     Engine::recreateShadowResources = true;
-
+    this->type = LIGHT_DIRECTIONAL;
 
 }
 

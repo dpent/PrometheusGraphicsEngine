@@ -20,13 +20,25 @@ layout(set = 0, binding = 2) uniform Lights {
     uint lightCount;
     uint types[128/4];
 } lightsUBO;
-layout(set = 0, binding = 3) uniform texture2D shadowMaps[];
-layout(set = 0, binding = 4) uniform texture2D textures[];
+
+layout(set = 1, binding = 3) uniform ShadowLights {
+    vec4 positions[64];
+    vec4 colors[64];
+    vec4 ambientColors[64];
+    vec4 intensities[64];
+    mat4 lightVPs[64];
+    uint lightCount;
+    uint types[64/4];
+    uint shadowMapIndices[64/4];
+} shadowLightsUBO;
+
+layout(set = 0, binding = 4) uniform texture2D shadowMaps[];
+layout(set = 0, binding = 5) uniform texture2D textures[];
 
 
 layout(location = 0) out vec4 outColor;
 
-float shadowCalculation(vec4 fragPosLightSpace)
+float shadowCalculation(vec4 fragPosLightSpace, uint shadowIndex)
 {
     vec3 projCoords = fragPosLightSpace.xyz / fragPosLightSpace.w;
     projCoords.xy = projCoords.xy * 0.5 + 0.5;
@@ -36,7 +48,7 @@ float shadowCalculation(vec4 fragPosLightSpace)
 
     float shadow = 0.0;
 
-     vec2 texelSize = 1.0 / textureSize(shadowMaps[0], 0);
+     vec2 texelSize = 1.0 / textureSize(shadowMaps[shadowIndex], 0);
 
     float closestDepth = 0.0;
     // 3x3 PCF
@@ -45,7 +57,7 @@ float shadowCalculation(vec4 fragPosLightSpace)
         for (int y = -1; y <= 1; ++y)
         {
             closestDepth = texture(
-                sampler2D(shadowMaps[0], linearSampler),
+                sampler2D(shadowMaps[shadowIndex], linearSampler),
                 projCoords.xy + vec2(x, y) * texelSize
             ).r;
             
@@ -74,22 +86,8 @@ void main(){
         uint packed = lightsUBO.types[idx];
         uint type   = (packed >> (8u * (3u - bytePos))) & 0xFFu;
 
-        if(type == 0u){ //DIRECTIONAL
-            vec3 directionToLight = lightsUBO.positions[i].xyz;
-            vec3 lightColor = ((lightsUBO.colors[i].xyz) * lightsUBO.colors[i].w) * lightsUBO.intensities[i].x;
-            lightColor = lightColor/2.0;
-
-            vec3 diffuseLight = lightColor * max(dot(normalize(worldNormal), normalize(-directionToLight)), 0);
-
-            vec4 fragLightPos = lightsUBO.lightVPs[i] * vec4(worldPos,1.0);
-            
-            shadow = shadowCalculation(fragLightPos);
-
-            totalLight += diffuseLight;
-            totalAmbient += lightsUBO.ambientColors[i].xyz * lightsUBO.ambientColors[i].w;
-
-        }else if (type == 1u){
-            vec3 directionToLight = lightsUBO.positions[i].xyz - worldPos;
+        if (type == 1u){
+            vec3 directionToLight = normalize(lightsUBO.positions[i].xyz - worldPos);
             float distance2 = dot(directionToLight, directionToLight);
             float attenuation = 1.0 / max(distance2, 0.001); // avoid divide by zero
 
@@ -101,8 +99,35 @@ void main(){
             totalAmbient += lightsUBO.ambientColors[i].xyz * lightsUBO.ambientColors[i].w;
         }
     }
+
+    for (uint i = 0; i < shadowLightsUBO.lightCount; i++) {
     
-    vec3 lightColor = vec3(totalAmbient + totalLight) / lightsUBO.lightCount;
+        uint idx = i / 4u; // which uint
+        uint bytePos = i % 4u; // which byte
+
+        uint packed = shadowLightsUBO.types[idx];
+        uint type   = (packed >> (8u * (3u - bytePos))) & 0xFFu;
+
+        uint indexPacked = shadowLightsUBO.shadowMapIndices[idx];
+        uint shadowIndex = (indexPacked >> (8u * (3u - bytePos))) & 0xFFu;
+
+        if(type == 0u){ //DIRECTIONAL
+            vec3 directionToLight = normalize(shadowLightsUBO.positions[i].xyz);
+            vec3 lightColor = ((shadowLightsUBO.colors[i].xyz) * shadowLightsUBO.colors[i].w) * shadowLightsUBO.intensities[i].x;
+            lightColor = lightColor/2.0;
+
+            vec4 fragLightPos = shadowLightsUBO.lightVPs[i] * vec4(worldPos,1.0);
+            shadow = shadowCalculation(fragLightPos, shadowIndex);
+            
+            vec3 diffuseLight = lightColor * max(dot(normalize(worldNormal), normalize(-directionToLight)), 0) * (1.0 - shadow);
+
+            totalLight += diffuseLight;
+            totalAmbient += shadowLightsUBO.ambientColors[i].xyz * shadowLightsUBO.ambientColors[i].w;
+
+        }
+    }
+    
+    vec3 lightColor = totalAmbient + totalLight; // / (lightsUBO.lightCount + shadowLightsUBO.lightCount);
     vec3 finalColor = texColor.rgb * 0.4 + lightColor * 0.6;
-	outColor = vec4(finalColor * (1.0 - shadow), 1.0);
+	outColor = vec4(finalColor, 1.0);
 }

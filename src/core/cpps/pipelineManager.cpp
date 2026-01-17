@@ -137,10 +137,15 @@ void PipelineManager::createGraphicsPipeline() {
     pushConstantRange.offset = 0;
     pushConstantRange.size = sizeof(glm::mat4) * 2 + sizeof(uint32_t);
 
+    std::array<VkDescriptorSetLayout, 2> setLayouts = {
+    Engine::graphicsDescriptor.layout,      // set = 0
+    Engine::shadowLightsDescriptor.layout   // set = 1
+    };
+
     VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
     pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-    pipelineLayoutInfo.setLayoutCount = 1;
-    pipelineLayoutInfo.pSetLayouts = &Engine::graphicsDescriptor.layout;
+    pipelineLayoutInfo.setLayoutCount = static_cast<uint32_t>(setLayouts.size());
+    pipelineLayoutInfo.pSetLayouts = setLayouts.data();
     pipelineLayoutInfo.pushConstantRangeCount = 1;
     pipelineLayoutInfo.pPushConstantRanges = &pushConstantRange;
 
