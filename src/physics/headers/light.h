@@ -54,9 +54,11 @@ struct LightUBOData : public UBOData{
     glm::vec4 ambientLightColors[128];
     glm::vec4 intensities[128];
     glm::mat4 lightVPs[128];
-    alignas(16) uint64_t lightCount;
-    alignas(16) uint32_t types[128 / 4] = {};
+    alignas(16) uint32_t lightCount;
+    alignas(16) glm::uvec4 types[128 / 16] = {};
 };
+
+static_assert(sizeof(LightUBOData) % 16 == 0, "UBO size must be multiple of 16");
 
 struct ShadowLightUBOData : public UBOData {
     glm::vec4 positions[64];
@@ -64,7 +66,9 @@ struct ShadowLightUBOData : public UBOData {
     glm::vec4 ambientLightColors[64];
     glm::vec4 intensities[64];
     glm::mat4 lightVPs[64];
-    alignas(16) uint64_t lightCount;
-    alignas(16) uint32_t types[64 / 4] = {};
-    alignas(16) uint32_t shadowMapIndices[64 / 4] = {};
+    alignas(16) uint32_t lightCount; 
+    alignas(16) glm::uvec4 types[64 / 16] = {};
+    alignas(16) glm::uvec4 shadowMapIndices[64 / 16] = {};
 };
+
+static_assert(sizeof(ShadowLightUBOData) % 16 == 0, "UBO size must be multiple of 16");

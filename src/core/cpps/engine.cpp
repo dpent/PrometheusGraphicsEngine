@@ -63,8 +63,6 @@ GarbageQueues Engine::garbage;
 int Engine::targetFPS = 60;
 uint16_t Engine::FPS = 0;
 
-VkDescriptorSet Engine::textureDisplayId;
-
 //LIGHTING
 DoubleEndedQueue<Light*> Engine::lights;
 DoubleEndedQueue<Light*> Engine::shadowCreatingLights;
@@ -235,9 +233,6 @@ void Engine::mainLoop() {
     delete hInfo3;
 
     DirectionalLight* sun = new DirectionalLight(glm::vec4(-10.0f), glm::vec4(COLOR_SUN, 1.0f), 1.0f);
-    //DirectionalLight* Sun2 = new DirectionalLight(glm::vec4(-20.0f,-10.0f,20.0f,10.0f), glm::vec4(COLOR_RED, 1.0f), 1.0f);
-
-    PointLight* blueLight = new PointLight(glm::vec4(5.0f, 1.0f, 5.0f, 5.0f), glm::vec4(COLOR_BLUE, 1.0f), 1.0f);
 
     uint64_t framesThisSecond = 0;
 
@@ -797,13 +792,21 @@ void Engine::updateLightData() {
         Engine::lightData.lightVPs[i] = light->getLightVP();
 
         size_t idx = i / 4;        // which uint32_t
-        size_t bytePos = i % 4;    // which byte in that uint32_t
-        Engine::lightData.types[idx] |= ((uint32_t)light->type << (8 * (3 - bytePos))); // write 8bit value inside said byte
+        uint32_t bytePos = i % 4;    // which byte in that uint32_t
+        uint32_t shift = 8 * (3 - bytePos);
+        uint32_t mask = 0xFFu << shift;
+
+        uint32_t  uvecIndex = static_cast<uint32_t>(idx) / 4;      // which uvec4
+        uint32_t  uvecElement = idx % 4;    // which uint inside that uvec4
+
+        Engine::lightData.types[uvecIndex][uvecElement] =
+            (Engine::lightData.types[uvecIndex][uvecElement] & ~mask) |
+            ((uint32_t)light->type << shift);
 
         light = light->next;
     }
 
-    Engine::lightData.lightCount = Engine::lights.size;
+    Engine::lightData.lightCount = static_cast<uint32_t>(Engine::lights.size);
 
     light = Engine::shadowCreatingLights.head;
 
@@ -817,22 +820,25 @@ void Engine::updateLightData() {
         Engine::shadowLightData.intensities[i] = glm::vec4(light->intensity);
         Engine::shadowLightData.lightVPs[i] = light->getLightVP();
 
-        size_t idx = i / 4;        // which uint32_t
-        size_t bytePos = i % 4;    // which byte in that uint32_t
-        size_t shift = 8 * (3 - bytePos);
+        size_t  idx = i / 4;        // which uint32_t
+        uint32_t bytePos = i % 4;    // which byte in that uint32_t
+        uint32_t shift = 8 * (3 - bytePos);
         uint32_t mask = 0xFFu << shift;
 
-        Engine::shadowLightData.shadowMapIndices[idx] =
-            (Engine::shadowLightData.shadowMapIndices[idx] & ~mask) |
-            ((uint32_t)i << shift);
+        uint32_t  uvecIndex = static_cast<uint32_t>(idx) / 4;      // which uvec4
+        uint32_t  uvecElement = idx % 4;    // which uint inside that uvec4
 
-        Engine::shadowLightData.types[idx] =
-            (Engine::shadowLightData.types[idx] & ~mask) |
+        Engine::shadowLightData.types[uvecIndex][uvecElement] =
+            (Engine::shadowLightData.types[uvecIndex][uvecElement] & ~mask) |
             ((uint32_t)light->type << shift);
+
+        Engine::shadowLightData.shadowMapIndices[uvecIndex][uvecElement] =
+            (Engine::shadowLightData.shadowMapIndices[uvecIndex][uvecElement] & ~mask) |
+            ((uint32_t)i << shift);
 
         light = light->next;
     }
 
-    Engine::shadowLightData.lightCount = Engine::shadowCreatingLights.size;
+    Engine::shadowLightData.lightCount = static_cast<uint32_t>(Engine::shadowCreatingLights.size);
 
 }

@@ -7,6 +7,10 @@ class GUIManager {
 
 public:
 
+	static size_t currentTextureViewIndex;
+	static std::vector<VkDescriptorSet> textureDisplayIds;
+	static std::vector<std::string> textureDisplayNames;
+
 	static void initImGUI();
 
 	static void check_vk_result(VkResult err);

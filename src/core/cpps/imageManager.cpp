@@ -108,6 +108,8 @@ void ImageManager::createShadowMapResources() {
     }
 
     Engine::shadowMaps.resize(static_cast<uint32_t>(Engine::shadowCreatingLights.size));
+    GUIManager::textureDisplayIds.resize(static_cast<uint32_t>(Engine::shadowCreatingLights.size));
+    GUIManager::textureDisplayNames.resize(static_cast<uint32_t>(Engine::shadowCreatingLights.size));
 
     VkFormat depthFormat = Engine::findShadowFormat();
 
@@ -136,6 +138,14 @@ void ImageManager::createShadowMapResources() {
             0,
             Engine::shadowMaps.views[i]
         );
+
+        GUIManager::textureDisplayIds[i] = ImGui_ImplVulkan_AddTexture(
+            Engine::linearSampler,
+            Engine::shadowMaps.views[i],
+            VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL
+        );
+
+        GUIManager::textureDisplayNames[i] = "Shadow map " + std::to_string(i);
     }
 
     VkExtent2D shadowExtent = { Engine::shadowRes, Engine::shadowRes };
@@ -145,12 +155,6 @@ void ImageManager::createShadowMapResources() {
         Engine::shadowMaps.views,
         shadowExtent,
         Engine::shadowRenderPass
-    );
-
-    Engine::textureDisplayId = ImGui_ImplVulkan_AddTexture(
-        Engine::linearSampler,
-        Engine::shadowMaps.views[0],
-        VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL
     );
 }
 

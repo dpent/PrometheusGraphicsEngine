@@ -111,8 +111,6 @@ public:
 	static int targetFPS;
 	static uint16_t FPS;
 
-	static VkDescriptorSet textureDisplayId;
-
 	//LIGHTING
 	static DoubleEndedQueue<Light*> lights;
 	static DoubleEndedQueue<Light*> shadowCreatingLights;

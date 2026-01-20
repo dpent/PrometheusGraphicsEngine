@@ -2,6 +2,10 @@
 #include "../core/headers/engine.h"
 #include "../core/headers/bufferManager.h"
 
+size_t GUIManager::currentTextureViewIndex = 0;
+std::vector<VkDescriptorSet> GUIManager::textureDisplayIds;
+std::vector<std::string> GUIManager::textureDisplayNames;
+
 void GUIManager::initImGUI() {
 
 	IMGUI_CHECKVERSION();
@@ -100,7 +104,7 @@ void GUIManager::renderGUI(uint32_t& imageIndex) {
 	GUIManager::createCameraInfoWindow();
 	GUIManager::createBufferInfoWindow();
 
-	if (Engine::textureDisplayId != VK_NULL_HANDLE) {
+	if (GUIManager::textureDisplayIds.size() != 0) {
 		GUIManager::createImageWindow();
 	}
 
@@ -173,7 +177,7 @@ void GUIManager::createDockSpaceWindow() {
 		ImGui::DockBuilderDockWindow("Buffers", dock_id_main);
 		ImGui::DockBuilderDockWindow("Camera", dock_id_bottom);
 		
-		if (Engine::textureDisplayId != VK_NULL_HANDLE) {
+		if (GUIManager::textureDisplayIds.size() != 0) {
 			ImGui::DockBuilderDockWindow("Texture view", dock_id_bottom);
 		}
 
@@ -203,8 +207,26 @@ void GUIManager::createImageWindow() {
 
 	ImGui::Begin("Texture view");
 	
+	std::string preview = GUIManager::textureDisplayNames[GUIManager::currentTextureViewIndex];
+
+	if (ImGui::BeginCombo("",preview.c_str()))
+	{
+		for (int i = 0; i < GUIManager::textureDisplayIds.size(); ++i)
+		{
+			const std::string& label = GUIManager::textureDisplayNames[i];
+
+			bool isSelected = (GUIManager::currentTextureViewIndex == i);
+			if (ImGui::Selectable(label.c_str(), isSelected))
+				GUIManager::currentTextureViewIndex = i;
+
+			if (isSelected)
+				ImGui::SetItemDefaultFocus();
+		}
+		ImGui::EndCombo();
+	}
+
 	ImVec2 avail = ImGui::GetContentRegionAvail();
-	ImGui::Image(Engine::textureDisplayId, avail);
+	ImGui::Image(GUIManager::textureDisplayIds[GUIManager::currentTextureViewIndex], avail);
 	
 	ImGui::End();
 }

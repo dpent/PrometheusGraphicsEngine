@@ -18,7 +18,7 @@ layout(set = 0, binding = 2) uniform Lights {
     vec4 intensities[128];
     mat4 lightVPs[128];
     uint lightCount;
-    uint types[128/4];
+    uvec4 types[128/16];
 } lightsUBO;
 
 layout(set = 1, binding = 3) uniform ShadowLights {
@@ -28,8 +28,8 @@ layout(set = 1, binding = 3) uniform ShadowLights {
     vec4 intensities[64];
     mat4 lightVPs[64];
     uint lightCount;
-    uint types[64/4];
-    uint shadowMapIndices[64/4];
+    uvec4 types[64/16];
+    uvec4 shadowMapIndices[64/16];
 } shadowLightsUBO;
 
 layout(set = 0, binding = 4) uniform texture2D shadowMaps[];
@@ -80,11 +80,12 @@ void main(){
 
     for (uint i = 0; i < lightsUBO.lightCount; i++) {
     
-        uint idx = i / 4u; // which uint
-        uint bytePos = i % 4u; // which byte
+         uint uvecIndex  = i / 16u;       // which uvec4
+        uint elementIdx = (i / 4u) % 4u; // which uint inside the uvec4
+        uint bytePos    = i % 4u;        // which byte inside the uint
 
-        uint packed = lightsUBO.types[idx];
-        uint type   = (packed >> (8u * (3u - bytePos))) & 0xFFu;
+        uint packedType = lightsUBO.types[uvecIndex][elementIdx];
+        uint type = (packedType >> (8u * (3u - bytePos))) & 0xFFu;
 
         if (type == 1u){
             vec3 directionToLight = normalize(lightsUBO.positions[i].xyz - worldPos);
@@ -102,14 +103,15 @@ void main(){
 
     for (uint i = 0; i < shadowLightsUBO.lightCount; i++) {
     
-        uint idx = i / 4u; // which uint
-        uint bytePos = i % 4u; // which byte
+        uint uvecIndex  = i / 16u;       // which uvec4
+        uint elementIdx = (i / 4u) % 4u; // which uint inside the uvec4
+        uint bytePos    = i % 4u;        // which byte inside the uint
 
-        uint packed = shadowLightsUBO.types[idx];
-        uint type   = (packed >> (8u * (3u - bytePos))) & 0xFFu;
+        uint packedType = shadowLightsUBO.types[uvecIndex][elementIdx];
+        uint type = (packedType >> (8u * (3u - bytePos))) & 0xFFu;
 
-        uint indexPacked = shadowLightsUBO.shadowMapIndices[idx];
-        uint shadowIndex = (indexPacked >> (8u * (3u - bytePos))) & 0xFFu;
+        uint packedIndex = shadowLightsUBO.shadowMapIndices[uvecIndex][elementIdx];
+        uint shadowIndex = (packedIndex >> (8u * (3u - bytePos))) & 0xFFu;
 
         if(type == 0u){ //DIRECTIONAL
             vec3 directionToLight = normalize(shadowLightsUBO.positions[i].xyz);
@@ -126,8 +128,11 @@ void main(){
 
         }
     }
-    
-    vec3 lightColor = totalAmbient + totalLight; // / (lightsUBO.lightCount + shadowLightsUBO.lightCount);
+
+    //vec4 fragLightPos = shadowLightsUBO.lightVPs[0] * vec4(worldPos,1.0);
+    //shadow = shadowCalculation(fragLightPos, 0);
+
+    vec3 lightColor = totalAmbient + totalLight;
     vec3 finalColor = texColor.rgb * 0.4 + lightColor * 0.6;
 	outColor = vec4(finalColor, 1.0);
 }
