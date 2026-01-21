@@ -48,6 +48,8 @@ public:
         int32_t& texHeight, uint32_t& mipLevels,
         VkFormat imageFormat,VkCommandPool& commandPool
     );
+
+    static void createDummyImage();
 };
 
 struct Image {

@@ -13,6 +13,9 @@ public:
         if (size == 0) {
             head = newEntry;
             tail = newEntry;
+
+            newEntry->next = nullptr;
+            newEntry->prev = nullptr;
         }
         else if (size == 1) {
             tail = newEntry;
@@ -57,7 +60,6 @@ public:
             head = nullptr;
             tail = nullptr;
 
-            size--;
         }
         else if (size == 2) {
             if (item->next == nullptr) {
@@ -72,7 +74,6 @@ public:
             head->next = nullptr;
             head->prev = nullptr;
 
-            size--;
         }
         else {
 
@@ -89,8 +90,9 @@ public:
                 item->prev->next = item->next;
             }
 
-            size--;
         }
+
+        size--;
     }
 
     T pop_back() {

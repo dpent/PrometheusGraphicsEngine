@@ -103,17 +103,21 @@ void ImageManager::createColorResources() {
 }
 
 void ImageManager::createShadowMapResources() {
-    if (Engine::shadowMaps.images.size() != 0) {
-        Engine::shadowMaps.destroyAllItems();
+    if (Engine::shadowMaps != nullptr) {
+        Engine::garbage.lock();
+        Engine::garbage.imageVectors.push_back(Engine::shadowMaps);
+        Engine::garbage.imageVectorFramesPassed.push_back(0);
+        Engine::garbage.unlock();
     }
 
-    Engine::shadowMaps.resize(static_cast<uint32_t>(Engine::shadowCreatingLights.size));
+    Engine::shadowMaps = new ImageVector();
+    Engine::shadowMaps->resize(static_cast<uint32_t>(Engine::shadowCreatingLights.size));
     GUIManager::textureDisplayIds.resize(static_cast<uint32_t>(Engine::shadowCreatingLights.size));
     GUIManager::textureDisplayNames.resize(static_cast<uint32_t>(Engine::shadowCreatingLights.size));
 
     VkFormat depthFormat = Engine::findShadowFormat();
 
-    for (size_t i = 0; i < Engine::shadowMaps.images.size(); i++) {
+    for (size_t i = 0; i < Engine::shadowMaps->images.size(); i++) {
         ImageManager::createImage(
             Engine::shadowRes,
             Engine::shadowRes,
@@ -121,27 +125,27 @@ void ImageManager::createShadowMapResources() {
             VK_IMAGE_TILING_OPTIMAL,
             VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
             VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-            Engine::shadowMaps.images[i],
-            Engine::shadowMaps.memories[i],
+            Engine::shadowMaps->images[i],
+            Engine::shadowMaps->memories[i],
             1,
             VK_SAMPLE_COUNT_1_BIT,
             1
         );
 
         ImageManager::createImageView(
-            Engine::shadowMaps.images[i],
+            Engine::shadowMaps->images[i],
             depthFormat,
             VK_IMAGE_ASPECT_DEPTH_BIT,
             1,
             VK_IMAGE_VIEW_TYPE_2D,
             1,
             0,
-            Engine::shadowMaps.views[i]
+            Engine::shadowMaps->views[i]
         );
 
         GUIManager::textureDisplayIds[i] = ImGui_ImplVulkan_AddTexture(
             Engine::linearSampler,
-            Engine::shadowMaps.views[i],
+            Engine::shadowMaps->views[i],
             VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL
         );
 
@@ -152,7 +156,7 @@ void ImageManager::createShadowMapResources() {
 
     BufferManager::createShadowFrameBuffers(
         Engine::shadowFrameBuffers,
-        Engine::shadowMaps.views,
+        Engine::shadowMaps->views,
         shadowExtent,
         Engine::shadowRenderPass
     );
@@ -370,6 +374,39 @@ void ImageManager::generateMipMaps(VkImage& image, int32_t& texWidth,int32_t& te
     );
 
     BufferManager::endSingleTimeCommands(commandPool, commandBuffer);
+}
+
+void ImageManager::createDummyImage() {
+
+    VkFormat depthFormat = VK_FORMAT_D32_SFLOAT;
+
+    Engine::dummyImage = new Image();
+
+    ImageManager::createImage(
+        Engine::shadowRes,
+        Engine::shadowRes,
+        depthFormat,
+        VK_IMAGE_TILING_OPTIMAL,
+        VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+        Engine::dummyImage->image,
+        Engine::dummyImage->memory,
+        1,
+        VK_SAMPLE_COUNT_1_BIT,
+        1
+    );
+
+    ImageManager::createImageView(
+        Engine::dummyImage->image,
+        depthFormat,
+        VK_IMAGE_ASPECT_DEPTH_BIT,
+        1,
+        VK_IMAGE_VIEW_TYPE_2D,
+        1,
+        0,
+        Engine::dummyImage->view
+    );
+
 }
 
 void Image::destroy() {

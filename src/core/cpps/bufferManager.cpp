@@ -228,8 +228,8 @@ void BufferManager::recordCommandBuffer(VkCommandBuffer& commandBuffer, uint32_t
     shadowPassInfo.pClearValues = shadowClearValues.data();
 
     Light* light = Engine::shadowCreatingLights.head;
-    for (size_t i = 0; i < Engine::shadowMaps.images.size(); i++) {
-
+    int i = 0;
+    while (light != nullptr){
         shadowPassInfo.framebuffer = Engine::shadowFrameBuffers[i];
 
         vkCmdBeginRenderPass(commandBuffer, &shadowPassInfo, VK_SUBPASS_CONTENTS_INLINE);
@@ -307,6 +307,7 @@ void BufferManager::recordCommandBuffer(VkCommandBuffer& commandBuffer, uint32_t
         vkCmdEndRenderPass(commandBuffer);
 
         light = light->next;
+        i++;
     }
 
     VkRenderPassBeginInfo renderPassInfo{};
@@ -352,9 +353,9 @@ void BufferManager::recordCommandBuffer(VkCommandBuffer& commandBuffer, uint32_t
     vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
     vkCmdBindIndexBuffer(commandBuffer, Engine::vertexIndexBuffer.buffer, Engine::vertexIndexBuffer.offset, VK_INDEX_TYPE_UINT32);
 
-    std::array<VkDescriptorSet, 2> sets = {
+    std::array<VkDescriptorSet, 2> sets{
         Engine::graphicsDescriptor.sets[0],     // set = 0
-        Engine::shadowLightsDescriptor.sets[0]  // set = 1
+        Engine::shadowLightsDescriptor.sets[0]
     };
 
     vkCmdBindDescriptorSets(

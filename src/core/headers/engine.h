@@ -24,6 +24,8 @@ struct GarbageQueues {
 	std::list<uint8_t> descriptorFramesPassed;
 	std::list<Buffer> buffers;
 	std::list<uint8_t> bufferFramesPassed;
+	std::list<ImageVector*> imageVectors;
+	std::list<uint8_t> imageVectorFramesPassed;
 	
 	std::mutex mutex;
 
@@ -122,7 +124,7 @@ public:
 
 	static Descriptor shadowLightsDescriptor;
 
-	static ImageVector shadowMaps;
+	static ImageVector* shadowMaps;
 	static bool recreateShadowResources;
 	static uint32_t shadowRes;
 	static std::vector<VkFramebuffer> shadowFrameBuffers;
@@ -130,6 +132,8 @@ public:
 	static VkRenderPass shadowRenderPass;
 	static Pipeline shadowPipeline;
 	static Descriptor shadowDescriptor;
+
+	static Image* dummyImage;
 
 	//WINDOW
 	static GLFWwindow* window;

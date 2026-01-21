@@ -74,7 +74,7 @@ ShadowLightUBOData Engine::shadowLightData;
 
 Descriptor Engine::shadowLightsDescriptor;
 
-ImageVector Engine::shadowMaps;
+ImageVector* Engine::shadowMaps;
 bool Engine::recreateShadowResources;
 uint32_t Engine::shadowRes = 2048;
 std::vector<VkFramebuffer> Engine::shadowFrameBuffers;
@@ -82,6 +82,8 @@ std::vector<VkFramebuffer> Engine::shadowFrameBuffers;
 VkRenderPass Engine::shadowRenderPass;
 Pipeline Engine::shadowPipeline;
 Descriptor Engine::shadowDescriptor;
+
+Image* Engine::dummyImage;
 
 //WINDOW
 GLFWwindow* Engine::window = nullptr;
@@ -200,6 +202,11 @@ void Engine::initVulkan() {
 
     BufferManager::createUniformBuffer(Engine::uniformLightBuffer, sizeof(LightUBOData));
     BufferManager::createUniformBuffer(Engine::uniformShadowLightBuffer, sizeof(ShadowLightUBOData));
+
+    ImageManager::createDummyImage();
+
+    DescriptorManager::createShadowLightsPool();
+    DescriptorManager::createShadowLightsSets();
 }
 
 void Engine::mainLoop() {
@@ -546,17 +553,15 @@ void Engine::prepareFrameData() {
 
         ImageManager::createShadowMapResources();
 
+        DescriptorManager::createShadowLightsPool();
+        DescriptorManager::createShadowLightsSets();
+
         Engine::recreateShadowResources = false;
-        Engine::remakeDescriptors = true;
     }
 
     if (Engine::remakeDescriptors) {
-
         DescriptorManager::createGraphicsDescriptorPool();
         DescriptorManager::createGraphicsDescriptorSets();
-
-        DescriptorManager::createShadowLightsPool();
-        DescriptorManager::createShadowLightsSets();
 
         Engine::remakeDescriptors = false;
     }
@@ -759,6 +764,30 @@ void GarbageQueues::update() {
         else {
             itBuff++;
             itBCount++;
+        }
+    }
+
+    auto itImgVec = imageVectors.begin();
+    auto itIVCount = imageVectorFramesPassed.begin();
+
+    while (itImgVec != imageVectors.end()) {
+
+        (*itIVCount)++;
+
+        if (*itIVCount == Engine::MAX_FRAMES_IN_FLIGHT) {
+
+            if ((*itImgVec)->images.size() != 0) {
+                (*itImgVec)->destroyAllItems();
+            }
+
+            delete* itImgVec;
+
+            itImgVec = imageVectors.erase(itImgVec);
+            itIVCount = imageVectorFramesPassed.erase(itIVCount);
+        }
+        else {
+            itImgVec++;
+            itIVCount++;
         }
     }
 

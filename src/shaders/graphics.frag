@@ -32,7 +32,7 @@ layout(set = 1, binding = 3) uniform ShadowLights {
     uvec4 shadowMapIndices[64/16];
 } shadowLightsUBO;
 
-layout(set = 0, binding = 4) uniform texture2D shadowMaps[];
+layout(set = 1, binding = 4) uniform texture2D shadowMaps[];
 layout(set = 0, binding = 5) uniform texture2D textures[];
 
 
@@ -128,9 +128,6 @@ void main(){
 
         }
     }
-
-    //vec4 fragLightPos = shadowLightsUBO.lightVPs[0] * vec4(worldPos,1.0);
-    //shadow = shadowCalculation(fragLightPos, 0);
 
     vec3 lightColor = totalAmbient + totalLight;
     vec3 finalColor = texColor.rgb * 0.4 + lightColor * 0.6;
