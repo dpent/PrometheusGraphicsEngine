@@ -215,6 +215,17 @@ void BufferManager::recordCommandBuffer(VkCommandBuffer& commandBuffer, uint32_t
         throw std::runtime_error("failed to begin recording command buffer!");
     }
 
+    BufferManager::recordShadowMapCommands(commandBuffer, imageIndex);
+
+    BufferManager::recordGraphicsPass(commandBuffer, imageIndex);
+
+    if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS) {
+        throw std::runtime_error("failed to record command buffer!");
+    }
+}
+
+void BufferManager::recordShadowMapCommands(VkCommandBuffer& commandBuffer, uint32_t& imageIndex) {
+    
     VkRenderPassBeginInfo shadowPassInfo{};
     shadowPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
     shadowPassInfo.renderPass = Engine::shadowRenderPass;
@@ -229,7 +240,8 @@ void BufferManager::recordCommandBuffer(VkCommandBuffer& commandBuffer, uint32_t
 
     Light* light = Engine::shadowCreatingLights.head;
     int i = 0;
-    while (light != nullptr){
+    while (light != nullptr) {
+
         shadowPassInfo.framebuffer = Engine::shadowFrameBuffers[i];
 
         vkCmdBeginRenderPass(commandBuffer, &shadowPassInfo, VK_SUBPASS_CONTENTS_INLINE);
@@ -309,6 +321,9 @@ void BufferManager::recordCommandBuffer(VkCommandBuffer& commandBuffer, uint32_t
         light = light->next;
         i++;
     }
+}
+
+void BufferManager::recordGraphicsPass(VkCommandBuffer& commandBuffer, uint32_t& imageIndex) {
 
     VkRenderPassBeginInfo renderPassInfo{};
     renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
@@ -347,7 +362,7 @@ void BufferManager::recordCommandBuffer(VkCommandBuffer& commandBuffer, uint32_t
 
     vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, Engine::graphicsPipeLine.pipeline);
 
-    VkBuffer vertexBuffers[] = { Engine::vertexIndexBuffer.buffer};
+    VkBuffer vertexBuffers[] = { Engine::vertexIndexBuffer.buffer };
     VkDeviceSize offsets[] = { 0 };
 
     vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
@@ -370,8 +385,8 @@ void BufferManager::recordCommandBuffer(VkCommandBuffer& commandBuffer, uint32_t
     );
 
     GameObject* object = Engine::gameObjects.head;
-    while(object!=nullptr) {
-		cameraPushConstants->objectIndex = object->instanceIndex;
+    while (object != nullptr) {
+        cameraPushConstants->objectIndex = object->instanceIndex;
 
         vkCmdPushConstants(
             commandBuffer,
@@ -383,11 +398,11 @@ void BufferManager::recordCommandBuffer(VkCommandBuffer& commandBuffer, uint32_t
         );
 
         vkCmdDrawIndexed(
-            commandBuffer, 
-            static_cast<uint32_t>(object->mesh->indices.size()), 
-            1, 
-            object->mesh->indexOffset, 
-            object->mesh->vertexOffset, 
+            commandBuffer,
+            static_cast<uint32_t>(object->mesh->indices.size()),
+            1,
+            object->mesh->indexOffset,
+            object->mesh->vertexOffset,
             0
         );
 
@@ -399,9 +414,6 @@ void BufferManager::recordCommandBuffer(VkCommandBuffer& commandBuffer, uint32_t
     }
 
     vkCmdEndRenderPass(commandBuffer);
-    if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS) {
-        throw std::runtime_error("failed to record command buffer!");
-    }
 }
 
 void BufferManager::createUniformBuffer(Buffer& buffer, VkDeviceSize size) {

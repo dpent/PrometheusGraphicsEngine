@@ -37,6 +37,7 @@ GameObject::GameObject(Mesh* mesh, Material* material) {
 
 	Engine::objectCreateMutex.unlock();
 
+	Engine::remakeInstanceDataSSBO = true;
 }
 
 GameObject::GameObject(Mesh* mesh, std::string textureFilename) {
@@ -68,6 +69,7 @@ GameObject::GameObject(Mesh* mesh, std::string textureFilename) {
 
 	Engine::objectCreateMutex.unlock();
 
+	Engine::remakeInstanceDataSSBO = true;
 }
 
 GameObject::GameObject(std::string modelFilename, Material* material) {
@@ -97,6 +99,8 @@ GameObject::GameObject(std::string modelFilename, Material* material) {
 	Engine::gameObjects.push(this);
 
 	Engine::objectCreateMutex.unlock();
+
+	Engine::remakeInstanceDataSSBO = true;
 
 }
 
