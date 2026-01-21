@@ -76,7 +76,7 @@ void DirectionalLight::update() {
 glm::mat4 DirectionalLight::getLightVP() {
 
     glm::mat4 view = glm::lookAt(
-        -glm::vec3(position.x - 10.0f, position.y - 10.0f, position.z - 10.0f), //Negative so i can get the proper image from the light perspective
+        -glm::vec3(position.x, position.y, position.z) * 2.0f, //Negative so i can get the proper image from the light perspective
         glm::vec3(0.0f),
         glm::vec3(0.0f, 1.0f, 0.0f)
     );

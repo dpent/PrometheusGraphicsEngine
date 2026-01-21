@@ -239,7 +239,7 @@ void Engine::mainLoop() {
     GameObject::createInitiasationJob(house3, hInfo3);
     delete hInfo3;
 
-    DirectionalLight* sun = new DirectionalLight(glm::vec4(-10.0f), glm::vec4(COLOR_SUN, 1.0f), 1.0f);
+    DirectionalLight* sun = new DirectionalLight(glm::vec4(-10.0f), glm::vec4(COLOR_WHITE, 10.0f), 5.0f);
 
     uint64_t framesThisSecond = 0;
 

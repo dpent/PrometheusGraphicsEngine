@@ -38,7 +38,67 @@ layout(set = 0, binding = 5) uniform texture2D textures[];
 
 layout(location = 0) out vec4 outColor;
 
-float shadowCalculation(vec4 fragPosLightSpace, uint shadowIndex)
+float rand(float co) { return fract(sin(co*(91.3458)) * 47453.5453); }
+float rand(vec2 co){ return fract(sin(dot(co.xy ,vec2(12.9898,78.233))) * 43758.5453); }
+
+float pcss(uint shadowIndex, vec3 projCoords, float lightSize)
+{
+    float zReceiver = projCoords.z;
+
+    vec2 uv = projCoords.xy;
+    float texelSize = 1.0 / float(textureSize(shadowMaps[shadowIndex], 0).x);
+    
+    const int blockerSearchSamples = 16;
+    float avgBlockerDepth = 0.0;
+    int blockers = 0;
+
+    float bias = 0.0001;
+
+    for(int j = 0; j < 5; ++j)
+    {
+        for(int i = 0; i < blockerSearchSamples; ++i)
+        {
+            float angle = float(i) * 6.2831853 / float(blockerSearchSamples);
+            vec2 offset = vec2(cos(angle), sin(angle)) * texelSize * (1.0f + j);
+
+            float depth = texture(sampler2D(shadowMaps[shadowIndex], linearSampler), uv + offset).r;
+
+            if(depth < zReceiver)
+            {
+                avgBlockerDepth += depth;
+                blockers++;
+            }
+        }
+    }
+
+    if(blockers == 0)
+        return 0.0;
+
+    avgBlockerDepth /= float(blockers);
+
+    float penumbra = ((zReceiver - avgBlockerDepth) * (lightSize)) / avgBlockerDepth; 
+    const int pcfSamples = 128; 
+    float shadow = 0.0;
+
+    for(int i = 0; i < pcfSamples; ++i) 
+    { 
+        vec2 randOffset = vec2(rand(uv.x + i), rand(uv.y + i));
+        float angle = float(i) * 6.2831853 / float(pcfSamples); 
+        vec2 offset = vec2(cos(angle), sin(angle)) * texelSize * penumbra;
+
+        float depth = texture(sampler2D(shadowMaps[shadowIndex], linearSampler), uv + offset).r; 
+
+        bool inShadow = (zReceiver + bias > depth);
+        if (inShadow) {
+            shadow += 1.0;
+        }
+    }
+    shadow/=float(pcfSamples);
+
+    return shadow;
+}
+
+float shadowCalculation(vec4 fragPosLightSpace, uint shadowIndex, float lightSize)
 {
     vec3 projCoords = fragPosLightSpace.xyz / fragPosLightSpace.w;
     projCoords.xy = projCoords.xy * 0.5 + 0.5;
@@ -48,26 +108,8 @@ float shadowCalculation(vec4 fragPosLightSpace, uint shadowIndex)
 
     float shadow = 0.0;
 
-     vec2 texelSize = 1.0 / textureSize(shadowMaps[shadowIndex], 0);
+     shadow = pcss(shadowIndex, projCoords, lightSize);
 
-    float closestDepth = 0.0;
-    // 3x3 PCF
-    for (int x = -1; x <= 1; ++x)
-    {
-        for (int y = -1; y <= 1; ++y)
-        {
-            closestDepth = texture(
-                sampler2D(shadowMaps[shadowIndex], linearSampler),
-                projCoords.xy + vec2(x, y) * texelSize
-            ).r;
-            
-            float bias = 0.001;
-
-            shadow += projCoords.z + bias > closestDepth  ? 0.9 : 0.0;
-        }
-    }
-
-    shadow /= 9.0; // average
     return shadow;
 }
 
@@ -92,7 +134,7 @@ void main(){
             float distance2 = dot(directionToLight, directionToLight);
             float attenuation = 1.0 / max(distance2, 0.001); // avoid divide by zero
 
-            vec3 lightColor = ((lightsUBO.colors[i].xyz) * lightsUBO.colors[i].w) * lightsUBO.intensities[i].x;
+            vec3 lightColor = lightsUBO.colors[i].xyz * lightsUBO.intensities[i].x;
 
             vec3 diffuseLight = lightColor * max(dot(normalize(worldNormal), normalize(directionToLight)), 0);
 
@@ -115,11 +157,11 @@ void main(){
 
         if(type == 0u){ //DIRECTIONAL
             vec3 directionToLight = normalize(shadowLightsUBO.positions[i].xyz);
-            vec3 lightColor = ((shadowLightsUBO.colors[i].xyz) * shadowLightsUBO.colors[i].w) * shadowLightsUBO.intensities[i].x;
+            vec3 lightColor = shadowLightsUBO.colors[i].xyz * shadowLightsUBO.intensities[i].x;
             lightColor = lightColor/2.0;
 
             vec4 fragLightPos = shadowLightsUBO.lightVPs[i] * vec4(worldPos,1.0);
-            shadow = shadowCalculation(fragLightPos, shadowIndex);
+            shadow = shadowCalculation(fragLightPos, shadowIndex, shadowLightsUBO.colors[i].w);
             
             vec3 diffuseLight = lightColor * max(dot(normalize(worldNormal), normalize(-directionToLight)), 0) * (1.0 - shadow);
 
@@ -130,6 +172,6 @@ void main(){
     }
 
     vec3 lightColor = totalAmbient + totalLight;
-    vec3 finalColor = texColor.rgb * 0.4 + lightColor * 0.6;
+    vec3 finalColor = texColor.rgb * lightColor;
 	outColor = vec4(finalColor, 1.0);
 }
