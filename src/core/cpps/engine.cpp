@@ -212,28 +212,28 @@ void Engine::initVulkan() {
 void Engine::mainLoop() {
 
     GameObject* house = new GameObject();
-    InitInfo* hInfo = new InitInfo("cottage_FREE.obj", nullptr, "Cottage_Clean_Base_Color.png", nullptr);
+    InitInfo* hInfo = new InitInfo("cottage_FREE.obj", nullptr, "Cottage_Clean_Base_Color.png", nullptr, "cottage_Clean_Normal.png");
     house->transform->position = glm::vec3(6.0f, 0.0f, 6.0f);
     house->rotate(glm::angleAxis(glm::radians(225.0f), glm::vec3(0.0f, 1.0f, 0.0f)));
     GameObject::createInitiasationJob(house, hInfo);
     delete hInfo;
 
     GameObject* floor = new GameObject();
-    InitInfo* fInfo = new InitInfo("cube.obj", nullptr, "marble.jpg", nullptr);
+    InitInfo* fInfo = new InitInfo("cube.obj", nullptr, "marble.jpg", nullptr, ".");
     floor->transform->position = glm::vec3(10.0f, -0.5f, 10.0f);
     floor->scale(glm::vec3(20.0f, 0.5f, 20.0f));
     GameObject::createInitiasationJob(floor, fInfo);
     delete fInfo;
 
     GameObject* house2 = new GameObject();
-    InitInfo* hInfo2 = new InitInfo("cottage_FREE.obj", nullptr, "Cottage_Clean_Base_Color.png", nullptr);
+    InitInfo* hInfo2 = new InitInfo("cottage_FREE.obj", nullptr, "Cottage_Clean_Base_Color.png", nullptr, "cottage_Clean_Normal.png");
     house2->transform->position = glm::vec3(22.0f, 0.0f, 0.0f);
     house2->rotate(glm::angleAxis(glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f)));
     GameObject::createInitiasationJob(house2, hInfo2);
     delete hInfo2;
 
     GameObject* house3 = new GameObject();
-    InitInfo* hInfo3 = new InitInfo("cottage_FREE.obj", nullptr, "Cottage_Clean_Base_Color.png", nullptr);
+    InitInfo* hInfo3 = new InitInfo("cottage_FREE.obj", nullptr, "Cottage_Clean_Base_Color.png", nullptr, "cottage_Clean_Normal.png");
     house3->transform->position = glm::vec3(0.0f, 0.0f, 22.0f);
     house3->rotate(glm::angleAxis(glm::radians(-90.0f), glm::vec3(0.0f, 1.0f, 0.0f)));
     GameObject::createInitiasationJob(house3, hInfo3);
@@ -256,7 +256,7 @@ void Engine::mainLoop() {
             nextFrameTime += std::chrono::duration_cast<std::chrono::steady_clock::duration>(std::chrono::duration<double>(1.0 / Engine::targetFPS));
             Engine::drawFrame();
 
-            std::this_thread::sleep_until(nextFrameTime);            
+            std::this_thread::sleep_until(nextFrameTime);
         }
 
         framesThisSecond++;
@@ -637,7 +637,9 @@ void Engine::updateObjects() {
         obj->update();
         Engine::instanceData[obj->instanceIndex].modelMatrix = obj->transform->getModelMatrix();
         Engine::instanceData[obj->instanceIndex].materialIndex = obj->material->texture->index;
+        Engine::instanceData[obj->instanceIndex].hasNormal = obj->hasNormalMap;
         count++;
+
         obj = obj->next;
     }
 

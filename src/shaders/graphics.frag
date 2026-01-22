@@ -9,6 +9,7 @@ layout(location = 2) in vec2 texCoord;
 layout(location = 3) in flat uint texIndex;
 layout(location = 4) in vec3 worldPos;
 layout(location = 5) in vec3 worldNormal;
+layout(location = 6) in flat uint useNormalMap;
 
 layout(set = 0, binding = 0) uniform sampler linearSampler;
 layout(set = 0, binding = 2) uniform Lights {
@@ -121,8 +122,8 @@ void main(){
     float shadow = 0;
 
     for (uint i = 0; i < lightsUBO.lightCount; i++) {
-    
-         uint uvecIndex  = i / 16u;       // which uvec4
+
+        uint uvecIndex  = i / 16u;       // which uvec4
         uint elementIdx = (i / 4u) % 4u; // which uint inside the uvec4
         uint bytePos    = i % 4u;        // which byte inside the uint
 
@@ -136,7 +137,13 @@ void main(){
 
             vec3 lightColor = lightsUBO.colors[i].xyz * lightsUBO.intensities[i].x;
 
-            vec3 diffuseLight = lightColor * max(dot(normalize(worldNormal), normalize(directionToLight)), 0);
+            vec3 diffuseLight;
+
+            if(useNormalMap != 0u){
+                diffuseLight = lightColor * max(dot(texture(sampler2D(textures[texIndex + 1], linearSampler), texCoord).xyz, normalize(directionToLight)), 0);
+            }else{
+                diffuseLight = lightColor * max(dot(normalize(worldNormal), normalize(-directionToLight)), 0) * (1.0 - shadow);
+            }
 
             totalLight += diffuseLight * attenuation;
             totalAmbient += lightsUBO.ambientColors[i].xyz * lightsUBO.ambientColors[i].w;
@@ -162,9 +169,15 @@ void main(){
 
             vec4 fragLightPos = shadowLightsUBO.lightVPs[i] * vec4(worldPos,1.0);
             shadow = shadowCalculation(fragLightPos, shadowIndex, shadowLightsUBO.colors[i].w);
-            
-            vec3 diffuseLight = lightColor * max(dot(normalize(worldNormal), normalize(-directionToLight)), 0) * (1.0 - shadow);
 
+            vec3 diffuseLight;
+
+            if(useNormalMap != 0u){
+                diffuseLight = lightColor * max(dot(texture(sampler2D(textures[texIndex + 1], linearSampler), texCoord).xyz, normalize(-directionToLight)), 0) * (1.0 - shadow);
+            }else{
+                diffuseLight = lightColor * max(dot(normalize(worldNormal), normalize(-directionToLight)), 0) * (1.0 - shadow);
+            }
+            
             totalLight += diffuseLight;
             totalAmbient += shadowLightsUBO.ambientColors[i].xyz * shadowLightsUBO.ambientColors[i].w;
 

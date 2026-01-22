@@ -7,6 +7,7 @@
 struct Texture {
 public:
 	Image image;
+	Image normalMap;
 
 	uint32_t mipLevels;
 	uint32_t index;
@@ -15,9 +16,11 @@ public:
 	Texture* prev = nullptr;
 	
 	uint32_t instances;
+	bool hasNormals = false;
 
 	Texture();
 	Texture(std::string filename, CommandPool& command, Buffer& stagingBuffer);
+	Texture(std::string filename, CommandPool& command, Buffer& stagingBuffer, std::string normalMapFilename);
 	~Texture();
 };
 
@@ -36,5 +39,5 @@ public:
 
 	Material();
 	Material(Texture* texture, float metallic, float roughness, CommandPool& command, Buffer& stagingBuffer);
-	Material(std::string filename, float metallic, float roughness, CommandPool& command, Buffer& stagingBuffer);
+	Material(std::string filename, float metallic, float roughness, CommandPool& command, Buffer& stagingBuffer, std::string normalMapFilename);
 };

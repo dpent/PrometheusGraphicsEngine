@@ -3,7 +3,10 @@
 struct ObjectData {
     mat4 model;
     uint textureIndex;
-    uint padding[3];// 12 bytes padding to align to 16 bytes
+    uint padding[3];  // 12 bytes
+
+    uint hasNormal;   // offset 80
+    uint padding1[3]; // offset 84
 };
 
 layout(std430, binding = 1) readonly buffer instanceData

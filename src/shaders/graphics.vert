@@ -4,7 +4,10 @@
 struct ObjectData {
     mat4 model;
     uint textureIndex;
-    uint padding[3];// 12 bytes padding to align to 16 bytes
+    uint padding[3];  // 12 bytes
+
+    uint hasNormal;   // offset 80
+    uint padding1[3]; // offset 84
 };
 
 layout(std430, binding = 1) readonly buffer instanceData
@@ -29,6 +32,7 @@ layout(location = 2) out vec2 texCoord;
 layout(location = 3) out uint texIndex;
 layout(location = 4) out vec3 worldPos;
 layout(location = 5) out vec3 worldNormal;
+layout(location = 6) out flat uint useNormalMap;
 
 void main() {
 
@@ -41,5 +45,11 @@ void main() {
     vertColor = inColor;
     texCoord = inTexCoord;
     worldPos = (obj.model * vec4(inPosition, 1.0)).xyz;
-    worldNormal = normalize(mat3(obj.model) * inNormal);
+
+    if(useNormalMap != 0u){
+        worldNormal = vec3(0.0);
+    }else{
+        worldNormal = normalize(mat3(obj.model) * inNormal);
+    }
+    useNormalMap = obj.hasNormal;
 }

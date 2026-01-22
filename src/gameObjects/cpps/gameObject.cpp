@@ -21,6 +21,11 @@ GameObject::GameObject(Mesh* mesh, Material* material) {
 
 	Engine::textureMutex.lock();
 	this->material->texture->instances++;
+
+	if (this->material->texture->hasNormals) {
+		this->hasNormalMap = 1;
+	}
+
 	Engine::textureMutex.unlock();
 
 	this->transform = new Transform();
@@ -40,16 +45,20 @@ GameObject::GameObject(Mesh* mesh, Material* material) {
 	Engine::remakeInstanceDataSSBO = true;
 }
 
-GameObject::GameObject(Mesh* mesh, std::string textureFilename) {
+GameObject::GameObject(Mesh* mesh, std::string textureFilename, std::string normalMapFilename) {
 	this->mesh = mesh;
 	Engine::meshMutex.lock();
 	this->mesh->instances++;
 	Engine::meshMutex.unlock();
 
-	this->material = new Material(textureFilename, 0.0f, 1.0f, Engine::command, Engine::stagingBuffer);
+	this->material = new Material(textureFilename, 0.0f, 1.0f, Engine::command, Engine::stagingBuffer, normalMapFilename);
 	Engine::materialMutex.lock();
 	this->material->instances++;
 	Engine::materialMutex.unlock();
+
+	if (normalMapFilename != ".") {
+		this->hasNormalMap = 1;
+	}
 
 	Engine::textureMutex.lock();
 	this->material->texture->instances++;
@@ -84,6 +93,11 @@ GameObject::GameObject(std::string modelFilename, Material* material) {
 
 	Engine::textureMutex.lock();
 	this->material->texture->instances++;
+	
+	if (this->material->texture->hasNormals) {
+		this->hasNormalMap = 1;
+	}
+
 	Engine::textureMutex.unlock();
 
 	this->transform = new Transform();
@@ -102,17 +116,22 @@ GameObject::GameObject(std::string modelFilename, Material* material) {
 
 	Engine::remakeInstanceDataSSBO = true;
 
+
 }
 
-GameObject::GameObject(std::string modelFilename, std::string textureFilename) {
+GameObject::GameObject(std::string modelFilename, std::string textureFilename, std::string normalMapFilename) {
 
 	this->mesh = new Mesh(modelFilename);
 	this->mesh->instances++;
 
-	this->material = new Material(textureFilename, 0.0f, 1.0f, Engine::command, Engine::stagingBuffer);
+	this->material = new Material(textureFilename, 0.0f, 1.0f, Engine::command, Engine::stagingBuffer, normalMapFilename);
 	Engine::materialMutex.lock();
 	this->material->instances++;
 	Engine::materialMutex.unlock();
+
+	if (normalMapFilename != ".") {
+		this->hasNormalMap = 1;
+	}
 
 	Engine::textureMutex.lock();
 	this->material->texture->instances++;
@@ -161,7 +180,7 @@ void GameObject::initialise(InitInfo& info, CommandPool& command, Buffer& stagin
 	}
 
 	if (info.materialPointer == nullptr) {
-		this->material = new Material(info.textureFilename, 0.0f, 1.0f, command, stagingBuffer);
+		this->material = new Material(info.textureFilename, 0.0f, 1.0f, command, stagingBuffer, info.normalMapFilename);
 		this->material->instances++;
 		this->material->texture->instances++;
 	}
@@ -176,6 +195,10 @@ void GameObject::initialise(InitInfo& info, CommandPool& command, Buffer& stagin
 		Engine::textureMutex.unlock();
 	}
 	
+	if (info.normalMapFilename != ".") {
+		this->hasNormalMap = 1;
+	}
+
 	//this->transform = new Transform(); //Already created by default const/tor
 
 	Engine::objectCreateMutex.lock();
@@ -276,9 +299,10 @@ std::string InstanceInfo::toString() {
 
 InitInfo::InitInfo(){}
 
-InitInfo::InitInfo(std::string modelFilename, Mesh* modelPointer, std::string textureFilename, Material* materialPointer) {
+InitInfo::InitInfo(std::string modelFilename, Mesh* modelPointer, std::string textureFilename, Material* materialPointer, std::string normalMapFilename) {
 	this->modelFilename = modelFilename;
 	this->modelPointer = modelPointer;
 	this->textureFilename = textureFilename;
 	this->materialPointer = materialPointer;
+	this->normalMapFilename = normalMapFilename;
 }
