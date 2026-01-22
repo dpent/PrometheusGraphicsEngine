@@ -63,6 +63,11 @@ void GUIManager::initImGUI() {
 	style.Colors[ImGuiCol_TabActive] = Engine::IMGUI_BACKGROUND_COLOR; // active tab
 	style.Colors[ImGuiCol_TabUnfocused] = Engine::IMGUI_ACTIVE_COLOR; // inactive when window unfocused
 	style.Colors[ImGuiCol_TabUnfocusedActive] = Engine::IMGUI_HIGHLIGHT_COLOR;
+	style.Colors[ImGuiCol_DockingPreview] = Engine::IMGUI_HIGHLIGHT_COLOR;
+	style.Colors[ImGuiCol_HeaderHovered] = Engine::IMGUI_HIGHLIGHT_COLOR;
+	style.Colors[ImGuiCol_HeaderActive] = Engine::IMGUI_ACTIVE_COLOR;
+	style.Colors[ImGuiCol_Header] = Engine::IMGUI_BACKGROUND_COLOR;
+	style.Colors[ImGuiCol_PopupBg] = Engine::IMGUI_BACKGROUND_COLOR;
 }
 
 void GUIManager::check_vk_result(VkResult err)
@@ -99,6 +104,7 @@ void GUIManager::startNewFrame() {
 
 void GUIManager::renderGUI(uint32_t& imageIndex) {
 
+	GUIManager::createMainDockspace();
 	GUIManager::createDockSpaceWindow();
 	GUIManager::createInfoWindow();
 	GUIManager::createCameraInfoWindow();
@@ -208,7 +214,9 @@ void GUIManager::createImageWindow() {
 	ImGui::Begin("Texture view");
 	
 	std::string preview = GUIManager::textureDisplayNames[GUIManager::currentTextureViewIndex];
-
+	
+	ImGui::SetNextItemWidth(-1);
+	
 	if (ImGui::BeginCombo("",preview.c_str()))
 	{
 		for (int i = 0; i < GUIManager::textureDisplayIds.size(); ++i)
@@ -245,4 +253,37 @@ void GUIManager::makeBufferDiagram(std::vector<float>& history, const char* labe
 		max,           // scale_max
 		ImVec2(avail.x, 50)     // size of the graph
 	);
+}
+
+void GUIManager::createMainDockspace() {
+
+	ImGuiViewport* viewport = ImGui::GetMainViewport();
+	ImGui::SetNextWindowPos(viewport->Pos);
+	ImGui::SetNextWindowSize(viewport->Size);
+	ImGui::SetNextWindowViewport(viewport->ID);
+
+	ImGuiWindowFlags window_flags =
+		ImGuiWindowFlags_NoDocking |
+		ImGuiWindowFlags_NoTitleBar |
+		ImGuiWindowFlags_NoCollapse |
+		ImGuiWindowFlags_NoResize |
+		ImGuiWindowFlags_NoMove |
+		ImGuiWindowFlags_NoBringToFrontOnFocus |
+		ImGuiWindowFlags_NoNavFocus |
+		ImGuiWindowFlags_NoBackground;
+
+	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
+
+	ImGui::Begin("##RenderDockHost", nullptr, window_flags);
+
+	ImGuiID dockspace_id = ImGui::GetID("RenderDockSpace");
+	ImGui::DockSpace(
+		dockspace_id,
+		ImVec2(0, 0),
+		ImGuiDockNodeFlags_PassthruCentralNode
+	);
+
+	ImGui::End();
+
+	ImGui::PopStyleVar();
 }

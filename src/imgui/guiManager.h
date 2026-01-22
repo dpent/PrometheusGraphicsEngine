@@ -20,6 +20,7 @@ public:
 	static void startNewFrame();
 	static void renderGUI(uint32_t& imageIndex);
 
+	static void createMainDockspace();
 	static void createInfoWindow();
 	static void createCameraInfoWindow();
 	static void createDockSpaceWindow();
