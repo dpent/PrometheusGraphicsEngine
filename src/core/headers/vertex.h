@@ -8,10 +8,11 @@ public:
     glm::vec3 color;
     glm::vec2 texCoord;
     glm::vec3 normal;
+    glm::vec4 tangent{0.0f,0.0f,0.0f,0.0f};
 
     static std::array<VkVertexInputBindingDescription, 1> getBindingDescription();
 
-    static std::array<VkVertexInputAttributeDescription, 4> getAttributeDescriptions();
+    static std::array<VkVertexInputAttributeDescription, 5> getAttributeDescriptions();
 
     bool operator==(const Vertex& other) const {
         return pos == other.pos && color == other.color && texCoord == other.texCoord;

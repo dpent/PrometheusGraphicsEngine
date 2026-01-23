@@ -10,6 +10,8 @@ layout(location = 3) in flat uint texIndex;
 layout(location = 4) in vec3 worldPos;
 layout(location = 5) in vec3 worldNormal;
 layout(location = 6) in flat uint useNormalMap;
+layout(location = 7) in vec3 vT;
+layout(location = 8) in vec3 vB;
 
 layout(set = 0, binding = 0) uniform sampler linearSampler;
 layout(set = 0, binding = 2) uniform Lights {
@@ -115,6 +117,11 @@ float shadowCalculation(vec4 fragPosLightSpace, uint shadowIndex, float lightSiz
 }
 
 void main(){
+
+    vec3 N = normalize(worldNormal);
+    vec3 T = normalize(vT);
+    vec3 B = normalize(vB);
+
     vec4 texColor = texture(sampler2D(textures[texIndex], linearSampler), texCoord);
     vec3 totalLight = vec3(0.0);
     vec3 totalAmbient = vec3(0.0);
@@ -140,9 +147,13 @@ void main(){
             vec3 diffuseLight;
 
             if(useNormalMap != 0u){
-                diffuseLight = lightColor * max(dot(texture(sampler2D(textures[texIndex + 1], linearSampler), texCoord).xyz, normalize(directionToLight)), 0);
+                
+                vec3 n = (texture(sampler2D(textures[texIndex + 1], linearSampler), texCoord).rgb);
+                vec3 normal = normalize(n.x * T + n.y * B + n.z * N);
+
+                diffuseLight = lightColor * max(dot(normal, normalize(directionToLight)), 0);
             }else{
-                diffuseLight = lightColor * max(dot(normalize(worldNormal), normalize(-directionToLight)), 0) * (1.0 - shadow);
+                diffuseLight = lightColor * max(dot(normalize(worldNormal), normalize(directionToLight)), 0);
             }
 
             totalLight += diffuseLight * attenuation;
@@ -173,7 +184,11 @@ void main(){
             vec3 diffuseLight;
 
             if(useNormalMap != 0u){
-                diffuseLight = lightColor * max(dot(texture(sampler2D(textures[texIndex + 1], linearSampler), texCoord).xyz, normalize(-directionToLight)), 0) * (1.0 - shadow);
+                
+                vec3 n = (texture(sampler2D(textures[texIndex + 1], linearSampler), texCoord).rgb);
+                vec3 normal = normalize(n.x * T + n.y * B + n.z * N);
+
+                diffuseLight = lightColor * max(dot(normal, normalize(-directionToLight)), 0) * (1.0 - shadow);
             }else{
                 diffuseLight = lightColor * max(dot(normalize(worldNormal), normalize(-directionToLight)), 0) * (1.0 - shadow);
             }
@@ -184,7 +199,7 @@ void main(){
         }
     }
 
-    vec3 lightColor = totalAmbient + totalLight;
-    vec3 finalColor = texColor.rgb * lightColor;
+    vec3 lightColor = totalLight + totalAmbient;
+    vec3 finalColor = lightColor * texColor.xyz;
 	outColor = vec4(finalColor, 1.0);
 }

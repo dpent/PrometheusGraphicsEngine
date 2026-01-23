@@ -19,6 +19,7 @@ layout(location = 0) in vec3 inPosition;
 layout(location = 1) in vec3 inColor;
 layout(location = 2) in vec2 inTexCoord;
 layout(location = 3) in vec3 inNormal;
+layout(location = 4) in vec4 tangent;
 
 layout(push_constant) uniform CameraObject {
     mat4 view;
@@ -33,6 +34,8 @@ layout(location = 3) out uint texIndex;
 layout(location = 4) out vec3 worldPos;
 layout(location = 5) out vec3 worldNormal;
 layout(location = 6) out flat uint useNormalMap;
+layout(location = 7) out vec3 vT;
+layout(location = 8) out vec3 vB;
 
 void main() {
 
@@ -46,10 +49,12 @@ void main() {
     texCoord = inTexCoord;
     worldPos = (obj.model * vec4(inPosition, 1.0)).xyz;
 
-    if(useNormalMap != 0u){
-        worldNormal = vec3(0.0);
-    }else{
-        worldNormal = normalize(mat3(obj.model) * inNormal);
-    }
+    mat3 normalMatrix = transpose(inverse(mat3(obj.model)));
+
+    worldNormal  = normalize(normalMatrix  * inNormal);
+    vT = normalize(normalMatrix  * tangent.xyz);
+
+    vB = normalize(cross(worldNormal, vT)) * tangent.w;
+
     useNormalMap = obj.hasNormal;
 }

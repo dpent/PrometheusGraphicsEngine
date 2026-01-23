@@ -22,4 +22,6 @@ public:
     std::string toString();
 
     void load();
+    static void loadVertex(tinyobj::attrib_t& attrib, tinyobj::index_t& index, glm::vec3& minCoords, glm::vec3& maxCoords, Vertex& vertex);
+    static void computeNormals(Vertex& v0, Vertex& v1, Vertex& v2);
 };
