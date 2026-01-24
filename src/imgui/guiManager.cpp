@@ -6,6 +6,8 @@ size_t GUIManager::currentTextureViewIndex = 0;
 std::vector<VkDescriptorSet> GUIManager::textureDisplayIds;
 std::vector<std::string> GUIManager::textureDisplayNames;
 
+ImGuiDockNode* GUIManager::mainDockspace = nullptr;
+
 void GUIManager::initImGUI() {
 
 	IMGUI_CHECKVERSION();
@@ -114,6 +116,8 @@ void GUIManager::renderGUI(uint32_t& imageIndex) {
 		GUIManager::createImageWindow();
 	}
 
+	GUIManager::calculateViewportLimitations();
+
 	ImGui::Render();
 	ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), Engine::command.buffers[Engine::currentFrame]);
 	ImGui::UpdatePlatformWindows();
@@ -158,14 +162,12 @@ void GUIManager::createCameraInfoWindow() {
 	
 	ImGui::End();
 }
-
+	
 void GUIManager::createDockSpaceWindow() {
 
 	ImGui::Begin("Debug");
-
 	ImGuiID dockspaceId = ImGui::GetID("Debug");
 	ImGui::DockSpace(dockspaceId, ImVec2(0.0f, 0.0f));
-
 	ImGui::End();
 
 	if (Engine::firstFrame)
@@ -176,16 +178,21 @@ void GUIManager::createDockSpaceWindow() {
 		ImGui::DockBuilderAddNode(dockspaceId, ImGuiDockNodeFlags_DockSpace);
 		ImGui::DockBuilderSetNodeSize(dockspaceId, ImGui::GetIO().DisplaySize);
 
-		ImGuiID dock_id_main = dockspaceId;
-		ImGuiID dock_id_bottom = ImGui::DockBuilderSplitNode(dock_id_main, ImGuiDir_Down, 0.4f, nullptr, &dock_id_main);
+		ImGuiID dock_id_top;
+		ImGuiID dock_id_mid;
+		ImGuiID dock_id_bottom;
 
-		ImGui::DockBuilderDockWindow("General Info", dock_id_main);
-		ImGui::DockBuilderDockWindow("Buffers", dock_id_main);
+		ImGui::DockBuilderSplitNode(dockspaceId, ImGuiDir_Up, 0.5f, &dock_id_top, &dock_id_mid);
+
+		ImGui::DockBuilderSplitNode(dock_id_mid, ImGuiDir_Up, 0.25f, &dock_id_mid, &dock_id_bottom);
+
+		ImGui::DockBuilderDockWindow("General Info", dock_id_top);
+		ImGui::DockBuilderDockWindow("Buffers", dock_id_mid);
+
 		ImGui::DockBuilderDockWindow("Camera", dock_id_bottom);
-		
-		if (GUIManager::textureDisplayIds.size() != 0) {
+
+		if (!GUIManager::textureDisplayIds.empty())
 			ImGui::DockBuilderDockWindow("Texture view", dock_id_bottom);
-		}
 
 		ImGui::DockBuilderFinish(dockspaceId);
 	}
@@ -276,9 +283,9 @@ void GUIManager::createMainDockspace() {
 
 	ImGui::Begin("##RenderDockHost", nullptr, window_flags);
 
-	ImGuiID dockspace_id = ImGui::GetID("RenderDockSpace");
+	ImGuiID dockspaceId = ImGui::GetID("RenderDockSpace");
 	ImGui::DockSpace(
-		dockspace_id,
+		dockspaceId,
 		ImVec2(0, 0),
 		ImGuiDockNodeFlags_PassthruCentralNode
 	);
@@ -286,4 +293,147 @@ void GUIManager::createMainDockspace() {
 	ImGui::End();
 
 	ImGui::PopStyleVar();
+
+
+	if (Engine::firstFrame)
+	{
+
+		ImGui::DockBuilderRemoveNode(dockspaceId);
+		ImGui::DockBuilderAddNode(dockspaceId, ImGuiDockNodeFlags_DockSpace);
+		ImGui::DockBuilderSetNodeSize(dockspaceId, ImGui::GetIO().DisplaySize);
+
+		GUIManager::mainDockspace = getDockNode(dockspaceId);
+
+		ImGuiID dock_id_left;
+		ImGuiID dock_id_main;
+		ImGui::DockBuilderSplitNode(dockspaceId, ImGuiDir_Left, 0.25f, &dock_id_left, &dock_id_main);
+
+		ImGui::DockBuilderDockWindow("Debug", dock_id_left);
+
+		ImGui::DockBuilderFinish(dockspaceId);
+	}
+
+}
+
+void GUIManager::calculateViewportLimitations() {
+
+	std::vector<DockedWindowInfo> infos = GUIManager::getDockedWindowInfo(GUIManager::mainDockspace);
+
+	Engine::viewportLimitsOffsets = glm::vec4(0.0f);
+	ImGuiViewport* vp = ImGui::GetMainViewport();
+
+	for (auto info : infos) {
+
+		info.limitUpdater->updateLimit(info, vp);
+
+		delete info.limitUpdater;
+	}
+
+}
+
+ImGuiDockNode* GUIManager::getDockNode(ImGuiID id)
+{
+	ImGuiContext* ctx = ImGui::GetCurrentContext();
+	ImGuiDockContext& dock_ctx = ctx->DockContext;
+
+	for (int i = 0; i < dock_ctx.Nodes.Data.Size; i++)
+	{
+		ImGuiStoragePair& p = dock_ctx.Nodes.Data[i];
+		if (p.key == id)
+			return (ImGuiDockNode*)p.val_p;
+	}
+
+	return nullptr;
+}
+
+std::vector<DockedWindowInfo> GUIManager::getDockedWindowInfo(ImGuiDockNode* dockNode)
+{
+	std::vector<DockedWindowInfo> children;
+
+	// Root has 0..2 children (Binary tree so thats how they do up/down - left/right)
+	for (int i = 0; i < 2; i++)
+	{
+		ImGuiDockNode* child = dockNode->ChildNodes[i];
+		if (!child) continue;
+
+		if (child->Windows.Size == 0) continue;
+
+		DockedWindowInfo info;
+		info.node = child;
+		info.pos = child->Pos;
+		info.size = child->Size;
+		info.name = child->Windows[0]->Name;
+		info.limitUpdater = getLimitUpdater(child);
+
+		children.push_back(info);
+	}
+
+	return children;
+}
+
+limitUpdater* GUIManager::getLimitUpdater(ImGuiDockNode* window) {
+
+	ImGuiDockNode* parent = window->ParentNode;
+
+	//if (!parent)
+		//return "Center";
+
+	bool is_first = (parent->ChildNodes[0] == window);
+
+	if (parent->SplitAxis == ImGuiAxis_X) {
+
+		if (is_first) {
+			return new leftLimitUpdater();
+		}
+		
+		return new rightLimitUpdater();
+	}
+
+
+	if (parent->SplitAxis == ImGuiAxis_Y) {
+
+		if (is_first) {
+			return new topLimitUpdater();
+		}
+
+		return new bottomLimitUpdater();
+	}
+}
+
+void limitUpdater::updateLimit(DockedWindowInfo& info, ImGuiViewport* vp) {
+	return;
+}
+
+void leftLimitUpdater::updateLimit(DockedWindowInfo& info, ImGuiViewport* vp) {
+
+	float right = (info.pos.x - vp->Pos.x) + info.size.x;
+
+	Engine::viewportLimitsOffsets.x =
+		std::max(Engine::viewportLimitsOffsets.x, right);
+}
+
+void rightLimitUpdater::updateLimit(DockedWindowInfo& info, ImGuiViewport* vp) {
+
+	float left = info.pos.x - vp->Pos.x;
+
+	Engine::viewportLimitsOffsets.z =
+		std::max(Engine::viewportLimitsOffsets.z,
+			Engine::swapChainInfo.extent.width - left);
+}
+
+void topLimitUpdater::updateLimit(DockedWindowInfo& info, ImGuiViewport* vp) {
+
+	float bottom = (info.pos.y - vp->Pos.y) + info.size.y;
+
+	Engine::viewportLimitsOffsets.y =
+		std::max(Engine::viewportLimitsOffsets.y, bottom);
+}
+
+void bottomLimitUpdater::updateLimit(DockedWindowInfo& info, ImGuiViewport* vp) {
+
+	float top = info.pos.y - vp->Pos.y;
+
+	Engine::viewportLimitsOffsets.w =
+		std::max(Engine::viewportLimitsOffsets.w,
+			Engine::swapChainInfo.extent.height - top);
 }

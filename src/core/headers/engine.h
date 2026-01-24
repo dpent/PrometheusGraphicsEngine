@@ -152,6 +152,8 @@ public:
 
 	static bool displayGUI;
 
+	static glm::vec4 viewportLimitsOffsets; // X = Offset.x , Y = Offset.y , Z = Viewport.width, W = Viewport.height
+
 	//EDITOR SPECIFIC
 	static std::vector<float> vertexIndexHistory;
 	static std::vector<float> stagingHistory;

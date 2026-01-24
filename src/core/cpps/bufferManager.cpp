@@ -342,17 +342,31 @@ void BufferManager::recordGraphicsPass(VkCommandBuffer& commandBuffer, uint32_t&
     vkCmdBeginRenderPass(commandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
     VkViewport viewport{};
-    viewport.x = 0.0f;
-    viewport.y = 0.0f;
-    viewport.width = static_cast<float>(Engine::swapChainInfo.extent.width);
-    viewport.height = static_cast<float>(Engine::swapChainInfo.extent.height);
+    viewport.x = Engine::viewportLimitsOffsets.x;
+    viewport.y = Engine::viewportLimitsOffsets.y;
+
+    viewport.width =
+        static_cast<float>(Engine::swapChainInfo.extent.width
+        - Engine::viewportLimitsOffsets.x
+        - Engine::viewportLimitsOffsets.z);
+
+    viewport.height =
+        static_cast<float>(Engine::swapChainInfo.extent.height
+        - Engine::viewportLimitsOffsets.y
+        - Engine::viewportLimitsOffsets.w);
     viewport.minDepth = 0.0f;
     viewport.maxDepth = 1.0f;
     vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
 
     VkRect2D scissor{};
-    scissor.offset = { 0, 0 };
-    scissor.extent = Engine::swapChainInfo.extent;
+    scissor.offset = {
+        (int32_t)viewport.x,
+        (int32_t)viewport.y
+    };
+    scissor.extent = {
+        (uint32_t)viewport.width,
+        (uint32_t)viewport.height
+    };;
 
     vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
@@ -411,6 +425,12 @@ void BufferManager::recordGraphicsPass(VkCommandBuffer& commandBuffer, uint32_t&
 
     if (Engine::displayGUI) {
         GUIManager::renderGUI(imageIndex);
+    }
+    else {
+        Engine::viewportLimitsOffsets.x = 0.0f;
+        Engine::viewportLimitsOffsets.y = 0.0f;
+        Engine::viewportLimitsOffsets.z = 0.0f;
+        Engine::viewportLimitsOffsets.w = 0.0f;
     }
 
     vkCmdEndRenderPass(commandBuffer);

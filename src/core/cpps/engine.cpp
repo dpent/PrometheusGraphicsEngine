@@ -106,6 +106,8 @@ Camera Engine::camera;
     bool Engine::displayGUI = true;
 #endif
 
+glm::vec4 Engine::viewportLimitsOffsets{ 0.0f };
+
 //EDITOR SPECIFIC
 std::vector<float> Engine::vertexIndexHistory;
 std::vector<float> Engine::stagingHistory;
