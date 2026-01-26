@@ -6,24 +6,24 @@ class Engine;
 
 class ImageManager {
 public:
-	static void createImageView(
-        VkImage& image, 
-        VkFormat format, 
-        VkImageAspectFlags aspectFlags, 
+    static void createImageView(
+        VkImage& image,
+        VkFormat format,
+        VkImageAspectFlags aspectFlags,
         uint32_t mipLevels,
-		VkImageViewType viewType, 
-        uint32_t layerCount, 
-        uint32_t baseArrayLayer, 
+        VkImageViewType viewType,
+        uint32_t layerCount,
+        uint32_t baseArrayLayer,
         VkImageView& imageView
     );
 
-	static void createImage(
-        uint32_t width, 
-        uint32_t height, 
+    static void createImage(
+        uint32_t width,
+        uint32_t height,
         VkFormat format,
-        VkImageTiling tiling, 
+        VkImageTiling tiling,
         VkImageUsageFlags usage,
-        VkMemoryPropertyFlags properties, 
+        VkMemoryPropertyFlags properties,
         VkImage& image,
         VkDeviceMemory& imageMemory,
         uint32_t mipLevels,
@@ -41,15 +41,17 @@ public:
     static void transitionImageLayout(VkImage& image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout,
         uint32_t mipLevels, VkCommandPool& commandPool);
 
-    static void copyBufferToImage(VkBuffer& buffer, VkImage& image, const uint32_t& width, const uint32_t& height, 
+    static void copyBufferToImage(VkBuffer& buffer, VkImage& image, const uint32_t& width, const uint32_t& height,
         VkCommandPool& commandPool);
 
     static void generateMipMaps(VkImage& image, int32_t& texWidth,
         int32_t& texHeight, uint32_t& mipLevels,
-        VkFormat imageFormat,VkCommandPool& commandPool
+        VkFormat imageFormat, VkCommandPool& commandPool
     );
 
     static void createDummyImage();
+
+    static void createSolidColorFilePNG(std::string filename, unsigned char r, unsigned char g, unsigned char b);
 };
 
 struct Image {

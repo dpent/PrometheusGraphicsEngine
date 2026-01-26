@@ -202,6 +202,8 @@ public:
 	static void enterFullscreen();
 	static void exitFullscreen();
 
+	static void loadDemoScene();
+
 	//LIGHTING
 	static void updateLightData();
 

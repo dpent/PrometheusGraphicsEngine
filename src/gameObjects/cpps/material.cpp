@@ -142,7 +142,7 @@ Texture::Texture(std::string filename, CommandPool& command, Buffer& stagingBuff
 
     ImageManager::createImage(texWidth,
         texHeight,
-        VK_FORMAT_R8G8B8A8_SRGB,
+        VK_FORMAT_R8G8B8A8_UNORM,
         VK_IMAGE_TILING_OPTIMAL,
         VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
@@ -155,14 +155,14 @@ Texture::Texture(std::string filename, CommandPool& command, Buffer& stagingBuff
     this->mipLevels = mipLevels;
 
     Engine::textureMutex.lock();
-    ImageManager::transitionImageLayout(normalMap.image, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED,
+    ImageManager::transitionImageLayout(normalMap.image, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_LAYOUT_UNDEFINED,
         VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, mipLevels, command.pool);
     ImageManager::copyBufferToImage(stagingBuffer.buffer, normalMap.image, static_cast<uint32_t>(texWidth), static_cast<uint32_t>(texHeight),
         command.pool);
 
-    ImageManager::generateMipMaps(normalMap.image, texWidth, texHeight, mipLevels, VK_FORMAT_R8G8B8A8_SRGB, command.pool);
+    ImageManager::generateMipMaps(normalMap.image, texWidth, texHeight, mipLevels, VK_FORMAT_R8G8B8A8_UNORM, command.pool);
 
-    ImageManager::createImageView(normalMap.image, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT, mipLevels, VK_IMAGE_VIEW_TYPE_2D, 1, 0, normalMap.view);
+    ImageManager::createImageView(normalMap.image, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_ASPECT_COLOR_BIT, mipLevels, VK_IMAGE_VIEW_TYPE_2D, 1, 0, normalMap.view);
 
     Engine::textures.push(this);
     Engine::textureMutex.unlock();

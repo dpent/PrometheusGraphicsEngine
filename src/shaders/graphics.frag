@@ -148,7 +148,7 @@ void main(){
 
             if(useNormalMap != 0u){
                 
-                vec3 n = (texture(sampler2D(textures[texIndex + 1], linearSampler), texCoord).rgb);
+                vec3 n = (texture(sampler2D(textures[texIndex + 1], linearSampler), texCoord).rgb) * 2.0 - 1.0;
                 vec3 normal = normalize(n.x * T + n.y * B + n.z * N);
 
                 diffuseLight = lightColor * max(dot(normal, normalize(directionToLight)), 0);
@@ -185,7 +185,7 @@ void main(){
 
             if(useNormalMap != 0u){
                 
-                vec3 n = (texture(sampler2D(textures[texIndex + 1], linearSampler), texCoord).rgb);
+                vec3 n = (texture(sampler2D(textures[texIndex + 1], linearSampler), texCoord).rgb) * 2.0 - 1.0;
                 vec3 normal = normalize(n.x * T + n.y * B + n.z * N);
 
                 diffuseLight = lightColor * max(dot(normal, normalize(-directionToLight)), 0) * (1.0 - shadow);

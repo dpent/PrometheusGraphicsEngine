@@ -398,6 +398,8 @@ limitUpdater* GUIManager::getLimitUpdater(ImGuiDockNode* window) {
 
 		return new bottomLimitUpdater();
 	}
+
+	return nullptr;
 }
 
 void limitUpdater::updateLimit(DockedWindowInfo& info, ImGuiViewport* vp) {

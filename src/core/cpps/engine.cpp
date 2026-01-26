@@ -213,29 +213,7 @@ void Engine::initVulkan() {
 
 void Engine::mainLoop() {
 
-    DirectionalLight* sun = new DirectionalLight(glm::vec4(-10.0f), glm::vec4(COLOR_WHITE, 10.0f), 5.0f);
-
-    GameObject* floor = new GameObject();
-    InitInfo* fInfo = new InitInfo("cube.obj", nullptr, "marble.jpg", nullptr, ".");
-    floor->transform->position = glm::vec3(10.0f, -0.5f, 10.0f);
-    floor->scale(glm::vec3(20.0f, 0.5f, 20.0f));
-    GameObject::createInitiasationJob(floor, fInfo);
-    delete fInfo;
-
-    GameObject* barrel = new GameObject();
-    InitInfo* bInfo = new InitInfo("Medieval_Barrel.obj", nullptr, "barrel_basecolor.png", nullptr, "barrel_normal.png");
-    barrel->transform->position = glm::vec3(20.0f, 0.0f, 20.0f);
-    barrel->scale(glm::vec3(0.03f));
-    GameObject::createInitiasationJob(barrel, bInfo);
-    delete bInfo;
-
-    GameObject* house = new GameObject();
-    InitInfo* hInfo = new InitInfo("Cottage_FREE.obj", nullptr, "Cottage_Clean_Base_Color.png", nullptr, "Cottage_Clean_Normal.png");
-    house->transform->position = glm::vec3(5.0f, -0.5f, 5.0f);
-    house->scale(glm::vec3(2.0f));
-    house->rotate(glm::angleAxis(glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f)));
-    GameObject::createInitiasationJob(house, hInfo);
-    delete hInfo;
+    Engine::loadDemoScene();
 
     uint64_t framesThisSecond = 0;
 
@@ -867,4 +845,40 @@ void Engine::updateLightData() {
 
     Engine::shadowLightData.lightCount = static_cast<uint32_t>(Engine::shadowCreatingLights.size);
 
+}
+
+void Engine::loadDemoScene() {
+
+    DirectionalLight* sun = new DirectionalLight(glm::vec4(-10.0f), glm::vec4(COLOR_WHITE, 10.0f), 2.0f);
+
+    ImageManager::createSolidColorFilePNG("brown.png", 92, 64, 51);
+
+    GameObject* floor = new GameObject();
+    InitInfo* fInfo = new InitInfo("cube.obj", nullptr, "brown.png", nullptr, "dirt_normal.jpg");
+    floor->transform->position = glm::vec3(10.0f, -0.5f, 10.0f);
+    floor->scale(glm::vec3(20.0f, 0.5f, 20.0f));
+    GameObject::createInitiasationJob(floor, fInfo);
+    delete fInfo;
+
+    GameObject* barrels = new GameObject();
+    InitInfo* bInfo = new InitInfo("seven_barrels.obj", nullptr, "barrel_basecolor.png", nullptr, "barrel_normal.png");
+    barrels->transform->position = glm::vec3(20.0f, 0.0f, 20.0f);
+    barrels->scale(glm::vec3(0.03f));
+    GameObject::createInitiasationJob(barrels, bInfo);
+    delete bInfo;
+
+    GameObject* barrel = new GameObject();
+    InitInfo* b2Info = new InitInfo("Medieval_Barrels.obj", nullptr, "barrel_basecolor.png", nullptr, "barrel_normal.png");
+    barrel->transform->position = glm::vec3(25.0f, 0.0f, 25.0f);
+    barrel->scale(glm::vec3(0.03f));
+    GameObject::createInitiasationJob(barrel, b2Info);
+    delete b2Info;
+
+    GameObject* house = new GameObject();
+    InitInfo* hInfo = new InitInfo("Cottage_FREE.obj", nullptr, "Cottage_Clean_Base_Color.png", nullptr, "Cottage_Clean_Normal.png");
+    house->transform->position = glm::vec3(5.0f, 0.0f, 5.0f);
+    house->scale(glm::vec3(2.0f));
+    house->rotate(glm::angleAxis(glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f)));
+    GameObject::createInitiasationJob(house, hInfo);
+    delete hInfo;
 }

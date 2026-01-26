@@ -1,5 +1,7 @@
 #include "../headers/imageManager.h"
 #include "../headers/engine.h"
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include "../headers/stb_image_write.h"
 
 void ImageManager::createImageView(VkImage& image, VkFormat format, VkImageAspectFlags aspectFlags, uint32_t mipLevels,
     VkImageViewType viewType, uint32_t layerCount, uint32_t baseArrayLayer, VkImageView& imageView) {
@@ -407,6 +409,13 @@ void ImageManager::createDummyImage() {
         Engine::dummyImage->view
     );
 
+}
+
+void ImageManager::createSolidColorFilePNG(std::string filename,
+    unsigned char r, unsigned char g, unsigned char b)
+{
+    unsigned char pixel[3] = { r, g, b };
+    stbi_write_png((std::filesystem::path(TEXTURE_DIR) / filename).lexically_normal().string().c_str(), 1, 1, 3, pixel, 3);
 }
 
 void Image::destroy() {
