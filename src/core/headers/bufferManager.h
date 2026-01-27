@@ -51,9 +51,12 @@ public:
 	static void createVertexIndexBuffer(VkDeviceSize size);
 	static void createVertexIndexBufferCheckSize(VkDeviceSize size);
 
+	static void createDebugVertexBuffer(VkDeviceSize size);
+
 	static void recordCommandBuffer(VkCommandBuffer& commandBuffer, uint32_t& imageIndex);
 	static void recordShadowMapCommands(VkCommandBuffer& commandBuffer, uint32_t& imageIndex);
 	static void recordGraphicsPass(VkCommandBuffer& commandBuffer, uint32_t& imageIndex);
+	static void recordDebugCommands(VkCommandBuffer& commandBuffer, uint32_t& imageIndex);
 
 	static void createUniformBuffer(Buffer& buffer, VkDeviceSize size);
 	template <typename T>static void updateUniformBuffer(Buffer& buffer, T& data) {

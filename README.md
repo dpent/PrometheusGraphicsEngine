@@ -84,9 +84,10 @@ Check the feature list below to see what is currently implemented and what is pl
 - MSAA
 - Point lights & Directional lights
 - Dockable GUI
+- Debug line drawing
 
 ## In progress
-- Debug line drawing
+
 - Collisions
 - Cascading shadow maps
 - Scene tree window
@@ -107,3 +108,4 @@ Check the feature list below to see what is currently implemented and what is pl
 - WASD keys for camera movement + RF for up or down
 - Scroll wheel for camera acceleration adjustment
 - Horizontal scroll for camera FOV adjustment
+- L key for fullscreen

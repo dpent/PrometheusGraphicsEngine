@@ -212,6 +212,10 @@ void GUIManager::createBufferInfoWindow() {
 	ImGui::SeparatorText("INSTANCE DATA SSBO");
 	ImGui::Text((std::string("Size: ") +Buffer::getSizeHumanReadable(Engine::instanceDataSSBO.size)).c_str());
 	GUIManager::makeBufferDiagram(Engine::instanceDataHistory, "###InstanceDataHistory");
+	
+	ImGui::SeparatorText("DEBUG LINES SSBO");
+	ImGui::Text((std::string("Size: ") + Buffer::getSizeHumanReadable(Debug::lineSSBO.size)).c_str());
+	GUIManager::makeBufferDiagram(Engine::instanceDataHistory, "###DebugDataHistory");
 
 	ImGui::End();
 }

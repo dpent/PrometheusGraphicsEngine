@@ -46,3 +46,35 @@ std::array<VkVertexInputAttributeDescription, 5> Vertex::getAttributeDescription
 
     return attributeDescriptions;
 }
+
+std::array<VkVertexInputBindingDescription, 1> DebugVertex::getBindingDescription() {
+
+    std::array<VkVertexInputBindingDescription, 1> bindingDescriptions = {};
+
+    bindingDescriptions[0].binding = 0;
+    bindingDescriptions[0].stride = sizeof(DebugVertex);
+    bindingDescriptions[0].inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+
+    return bindingDescriptions;
+}
+
+std::array<VkVertexInputAttributeDescription, 1> DebugVertex::getAttributeDescriptions() {
+
+    std::array<VkVertexInputAttributeDescription, 1> attributeDescriptions{};
+
+    attributeDescriptions[0].binding = 0; //VALUE OF LINE LOCATION
+    attributeDescriptions[0].location = 0;
+    attributeDescriptions[0].format = VK_FORMAT_R32_SFLOAT;
+    attributeDescriptions[0].offset = offsetof(DebugVertex, t);
+
+    return attributeDescriptions;
+}
+
+Line::Line(){}
+
+Line::Line(glm::vec3 start, glm::vec3 end, glm::vec3 color) {
+
+    this->start = glm::vec4(start, 1.0f);
+    this->end = glm::vec4(end,1.0f);
+    this->color = glm::vec4(color,1.0f);
+}

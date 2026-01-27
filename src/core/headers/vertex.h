@@ -31,6 +31,36 @@ struct LightVPObject {
     uint32_t objectIndex;
 };
 
+struct DebugVertex {
+public:
+    float t; //Either 0 or 1. The vertex shader interpolates between
+
+    static std::array<VkVertexInputBindingDescription, 1> getBindingDescription();
+
+    static std::array<VkVertexInputAttributeDescription, 1> getAttributeDescriptions();
+
+    bool operator==(const DebugVertex& other) const {
+        return t == other.t;
+    }
+};
+
+struct Line {
+    glm::vec4 start;
+    glm::vec4 end;
+    glm::vec4 color;
+
+    Line();
+    Line(glm::vec3 start, glm::vec3 end, glm::vec3 color);
+};
+
+namespace std {
+    template<> struct hash<DebugVertex> {
+        size_t operator()(DebugVertex const& vertex) const {
+            return (hash<float>()(vertex.t));
+        }
+    };
+}
+
 namespace std {
     template<> struct hash<Vertex> {
         size_t operator()(Vertex const& vertex) const {

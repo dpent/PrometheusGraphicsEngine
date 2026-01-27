@@ -11,6 +11,10 @@ public:
 	static void createShadowLightsSetLayout();
 	static void createShadowLightsPool();
 	static void createShadowLightsSets();
+
+	static void createDebugSetLayout();
+	static void createDebugDescriptorPool();
+	static void createDebugDescriptorSets();
 };
 
 struct Descriptor {

@@ -12,6 +12,7 @@
 #include "inputManager.h"
 #include "../../gameObjects/headers/material.h"
 #include "../../physics/headers/light.h"
+#include "debug.h"
 
 class WorkerThread;
 struct Job;
@@ -158,6 +159,7 @@ public:
 	static std::vector<float> vertexIndexHistory;
 	static std::vector<float> stagingHistory;
 	static std::vector<float> instanceDataHistory;
+	static std::vector<float> debugDataHistory;
 
 	static uint16_t maxSamples;
 

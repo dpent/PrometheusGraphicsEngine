@@ -423,6 +423,12 @@ void BufferManager::recordGraphicsPass(VkCommandBuffer& commandBuffer, uint32_t&
         object = object->next;
     }
 
+    #ifndef RELEASE
+    if (Debug::lines.size() != 0) {
+        BufferManager::recordDebugCommands(commandBuffer, imageIndex);
+    }
+    #endif
+
     if (Engine::displayGUI) {
         GUIManager::renderGUI(imageIndex);
     }
@@ -443,6 +449,66 @@ void BufferManager::createUniformBuffer(Buffer& buffer, VkDeviceSize size) {
         VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
     vkMapMemory(Engine::deviceInfo.logicalDevice, buffer.memory, 0, size, 0, &buffer.mapped);
+}
+
+void BufferManager::recordDebugCommands(VkCommandBuffer& commandBuffer, uint32_t& imageIndex) {
+
+    CameraObject* cameraPushConstants = new CameraObject();
+    cameraPushConstants->view = Engine::camera.getViewMatrix();
+    cameraPushConstants->proj = Engine::camera.getProjectionMatrix();
+
+    vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, Debug::debugPipeline.pipeline);
+
+    VkBuffer vertexBuffers[] = { Debug::debugVertexBuffer.buffer };
+    VkDeviceSize offsets[] = { 0 };
+
+    vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
+
+    vkCmdBindDescriptorSets(
+        commandBuffer,
+        VK_PIPELINE_BIND_POINT_GRAPHICS,
+        Debug::debugPipeline.layout,
+        0,
+        1,
+        &Debug::debugDescriptor.sets[0],
+        0,
+        nullptr
+    );
+
+    vkCmdPushConstants(
+        commandBuffer,
+        Debug::debugPipeline.layout,
+        VK_SHADER_STAGE_VERTEX_BIT,
+        0,
+        sizeof(*cameraPushConstants),
+        cameraPushConstants
+    );
+
+    vkCmdDraw(
+        commandBuffer,
+        static_cast<uint32_t>(Debug::debugVertices.size()),
+        static_cast<uint32_t>(Debug::lines.size()),
+        0,
+        0
+    );
+}
+
+void BufferManager::createDebugVertexBuffer(VkDeviceSize size) {
+
+    if (size > Engine::stagingBuffer.size) {
+        BufferManager::createStagingBuffer(size, Engine::stagingBuffer);
+    }
+    Debug::debugVertexBuffer.size = size;
+
+    void* data;
+    vkMapMemory(Engine::deviceInfo.logicalDevice, Engine::stagingBuffer.memory, 0, Debug::debugVertexBuffer.size, 0, &data);
+    memcpy(data, Debug::debugVertices.data(), (size_t)(sizeof(DebugVertex) * Debug::debugVertices.size()));
+    vkUnmapMemory(Engine::deviceInfo.logicalDevice, Engine::stagingBuffer.memory);
+
+    BufferManager::createBuffer(Debug::debugVertexBuffer, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+
+    BufferManager::copyBuffer(Engine::stagingBuffer, Debug::debugVertexBuffer, size);
+
 }
 
 void CommandPool ::initialize() {

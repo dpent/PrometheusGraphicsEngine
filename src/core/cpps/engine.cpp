@@ -112,6 +112,7 @@ glm::vec4 Engine::viewportLimitsOffsets{ 0.0f };
 std::vector<float> Engine::vertexIndexHistory;
 std::vector<float> Engine::stagingHistory;
 std::vector<float> Engine::instanceDataHistory;
+std::vector<float> Engine::debugDataHistory;
 
 uint16_t Engine::maxSamples = 20;
 
@@ -204,6 +205,10 @@ void Engine::initVulkan() {
 
     BufferManager::createUniformBuffer(Engine::uniformLightBuffer, sizeof(LightUBOData));
     BufferManager::createUniformBuffer(Engine::uniformShadowLightBuffer, sizeof(ShadowLightUBOData));
+    
+    #ifndef RELEASE
+    Debug::init();
+    #endif
 
     ImageManager::createDummyImage();
 
@@ -214,7 +219,6 @@ void Engine::initVulkan() {
 void Engine::mainLoop() {
 
     Engine::loadDemoScene();
-
     uint64_t framesThisSecond = 0;
 
     auto nextFrameTime = std::chrono::steady_clock::now();
@@ -226,7 +230,6 @@ void Engine::mainLoop() {
         Engine::camera.updateCameraVectors();
 
         if (Engine::gameObjects.size != 0) {
-
             nextFrameTime += std::chrono::duration_cast<std::chrono::steady_clock::duration>(std::chrono::duration<double>(1.0 / Engine::targetFPS));
             Engine::drawFrame();
             std::this_thread::sleep_until(nextFrameTime);
@@ -240,10 +243,12 @@ void Engine::mainLoop() {
             framesThisSecond = 0;
         }
 
+        #ifndef RELEASE
         if (Engine::frameCount % 60 == 0)
         {
             Engine::updateSampleVectors();
         }
+        #endif
 
         Engine::createUpdateGarbageJob();
 
@@ -507,10 +512,20 @@ void Engine::drawFrame() {
     }
 
     Engine::currentFrame = (Engine::currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
+    
+    #ifndef RELEASE
+    Debug::clearDebugData();
+    #endif 
 }
 
 void Engine::prepareFrameData() {
 
+    #ifndef RELEASE
+    if (Debug::lines.size() != 0 && BufferManager::createSSBOCheckSize(Debug::lineSSBO, Debug::lines)) {
+        DescriptorManager::createDebugDescriptorPool();
+        DescriptorManager::createDebugDescriptorSets();
+    }
+    #endif
     if (Engine::remakeVertexIndexBuffer) {
         Engine::recreateVertexIndexData();
         BufferManager::createVertexIndexBufferCheckSize(Engine::vertexIndexData.vertices.size() * sizeof(Vertex) + Engine::vertexIndexData.indices.size() * sizeof(uint32_t));
@@ -657,6 +672,10 @@ void Engine::updateSampleVectors() {
     Engine::instanceDataHistory.push_back(static_cast<float>(Engine::instanceDataSSBO.size) / (1024.0f * 1024.0f));
     if (Engine::instanceDataHistory.size() > Engine::maxSamples)
         Engine::instanceDataHistory.erase(Engine::instanceDataHistory.begin());
+
+    Engine::debugDataHistory.push_back(static_cast<float>(Debug::lineSSBO.size) / (1024.0f * 1024.0f));
+    if (Engine::debugDataHistory.size() > Engine::maxSamples)
+        Engine::debugDataHistory.erase(Engine::debugDataHistory.begin());
 }
 
 float Engine::getMax(std::vector<float>& vector) {
