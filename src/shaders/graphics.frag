@@ -26,6 +26,7 @@ layout(set = 0, binding = 2) uniform Lights {
 
 layout(set = 1, binding = 3) uniform ShadowLights {
     vec4 positions[64];
+    vec4 directions[64];
     vec4 colors[64];
     vec4 ambientColors[64];
     vec4 intensities[64];
@@ -174,7 +175,7 @@ void main(){
         uint shadowIndex = (packedIndex >> (8u * (3u - bytePos))) & 0xFFu;
 
         if(type == 0u){ //DIRECTIONAL
-            vec3 directionToLight = normalize(shadowLightsUBO.positions[i].xyz);
+            vec3 lightDir = normalize(shadowLightsUBO.directions[i].xyz);
             vec3 lightColor = shadowLightsUBO.colors[i].xyz * shadowLightsUBO.intensities[i].x;
             lightColor = lightColor/2.0;
 
@@ -188,14 +189,66 @@ void main(){
                 vec3 n = (texture(sampler2D(textures[texIndex + 1], linearSampler), texCoord).rgb) * 2.0 - 1.0;
                 vec3 normal = normalize(n.x * T + n.y * B + n.z * N);
 
-                diffuseLight = lightColor * max(dot(normal, normalize(-directionToLight)), 0) * (1.0 - shadow);
+                diffuseLight = lightColor * max(dot(normal, normalize(-lightDir)), 0) * (1.0 - shadow);
             }else{
-                diffuseLight = lightColor * max(dot(normalize(worldNormal), normalize(-directionToLight)), 0) * (1.0 - shadow);
+                diffuseLight = lightColor * max(dot(normalize(worldNormal), normalize(-lightDir)), 0) * (1.0 - shadow);
             }
             
             totalLight += diffuseLight;
             totalAmbient += shadowLightsUBO.ambientColors[i].xyz * shadowLightsUBO.ambientColors[i].w;
 
+        }else if(type == 2u){
+            
+            vec3 lightDir = normalize(shadowLightsUBO.directions[i].xyz);
+            vec3 directionToLight = normalize(shadowLightsUBO.positions[i].xyz - worldPos);
+
+            const float cutoffCos = shadowLightsUBO.directions[i].w;
+            const float startOfFalloffCos = shadowLightsUBO.positions[i].w;
+
+            float d = dot(directionToLight, - lightDir);
+
+            vec3 diffuseLight = vec3(0.0);
+            float spot = smoothstep(cutoffCos, startOfFalloffCos, d);
+
+            float distance2 = dot(directionToLight, directionToLight);
+            float attenuation = 1.0 / max(distance2, 0.001);
+
+            vec3 lightColor =
+                shadowLightsUBO.colors[i].xyz *
+                shadowLightsUBO.intensities[i].x * 0.5;
+
+            vec4 fragLightPos =
+                shadowLightsUBO.lightVPs[i] * vec4(worldPos, 1.0);
+
+            shadow = shadowCalculation(
+                fragLightPos,
+                shadowIndex,
+                shadowLightsUBO.colors[i].w
+            );
+
+            if (useNormalMap != 0u) {
+                vec3 n = texture(
+                    sampler2D(textures[texIndex + 1], linearSampler),
+                    texCoord
+                ).rgb * 2.0 - 1.0;
+
+                vec3 normal = normalize(n.x * T + n.y * B + n.z * N);
+
+                diffuseLight =
+                    lightColor *
+                    max(dot(normal, -lightDir), 0.0) *
+                    (1.0 - shadow) * spot * attenuation;
+            } else {
+                diffuseLight =
+                    lightColor *
+                    max(dot(normalize(worldNormal), -lightDir), 0.0) *
+                    (1.0 - shadow) * spot * attenuation;
+            }
+
+            
+            totalLight += diffuseLight;
+            totalAmbient += shadowLightsUBO.ambientColors[i].xyz * shadowLightsUBO.ambientColors[i].w;
+        
         }
     }
 

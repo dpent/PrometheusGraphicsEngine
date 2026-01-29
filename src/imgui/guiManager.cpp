@@ -70,6 +70,7 @@ void GUIManager::initImGUI() {
 	style.Colors[ImGuiCol_HeaderActive] = Engine::IMGUI_ACTIVE_COLOR;
 	style.Colors[ImGuiCol_Header] = Engine::IMGUI_BACKGROUND_COLOR;
 	style.Colors[ImGuiCol_PopupBg] = Engine::IMGUI_BACKGROUND_COLOR;
+	style.Colors[ImGuiCol_Border] = Engine::IMGUI_ACTIVE_COLOR;
 }
 
 void GUIManager::check_vk_result(VkResult err)

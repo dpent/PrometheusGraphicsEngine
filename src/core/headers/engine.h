@@ -116,7 +116,7 @@ public:
 
 	//LIGHTING
 	static DoubleEndedQueue<Light*> lights;
-	static DoubleEndedQueue<Light*> shadowCreatingLights;
+	static DoubleEndedQueue<ShadowLight*> shadowCreatingLights;
 
 	static Buffer uniformLightBuffer;
 	static LightUBOData lightData;

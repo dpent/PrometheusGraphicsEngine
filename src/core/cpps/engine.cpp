@@ -65,7 +65,7 @@ uint16_t Engine::FPS = 0;
 
 //LIGHTING
 DoubleEndedQueue<Light*> Engine::lights;
-DoubleEndedQueue<Light*> Engine::shadowCreatingLights;
+DoubleEndedQueue<ShadowLight*> Engine::shadowCreatingLights;
 
 Buffer Engine::uniformLightBuffer;
 LightUBOData Engine::lightData;
@@ -231,6 +231,7 @@ void Engine::mainLoop() {
 
         if (Engine::gameObjects.size != 0) {
             nextFrameTime += std::chrono::duration_cast<std::chrono::steady_clock::duration>(std::chrono::duration<double>(1.0 / Engine::targetFPS));
+
             Engine::drawFrame();
             std::this_thread::sleep_until(nextFrameTime);
         }
@@ -520,12 +521,6 @@ void Engine::drawFrame() {
 
 void Engine::prepareFrameData() {
 
-    #ifndef RELEASE
-    if (Debug::lines.size() != 0 && BufferManager::createSSBOCheckSize(Debug::lineSSBO, Debug::lines)) {
-        DescriptorManager::createDebugDescriptorPool();
-        DescriptorManager::createDebugDescriptorSets();
-    }
-    #endif
     if (Engine::remakeVertexIndexBuffer) {
         Engine::recreateVertexIndexData();
         BufferManager::createVertexIndexBufferCheckSize(Engine::vertexIndexData.vertices.size() * sizeof(Vertex) + Engine::vertexIndexData.indices.size() * sizeof(uint32_t));
@@ -559,6 +554,13 @@ void Engine::prepareFrameData() {
 
     BufferManager::updateUniformBuffer(Engine::uniformLightBuffer, Engine::lightData);
     BufferManager::updateUniformBuffer(Engine::uniformShadowLightBuffer, Engine::shadowLightData);
+
+#ifndef RELEASE
+    if (Debug::lines.size() != 0 && BufferManager::createSSBOCheckSize(Debug::lineSSBO, Debug::lines)) {
+        DescriptorManager::createDebugDescriptorPool();
+        DescriptorManager::createDebugDescriptorSets();
+    }
+#endif
 
     if (!Engine::remakeInstanceDataSSBO) {
 
@@ -808,58 +810,22 @@ void Engine::updateLightData() {
 
         light->update();
 
-        Engine::lightData.positions[i] = light->position;
-        Engine::lightData.colors[i] = light->color;
-        Engine::lightData.ambientLightColors[i] = light->ambientLightColor;
-        Engine::lightData.intensities[i] = glm::vec4(light->intensity);
-        Engine::lightData.lightVPs[i] = light->getLightVP();
-
-        size_t idx = i / 4;        // which uint32_t
-        uint32_t bytePos = i % 4;    // which byte in that uint32_t
-        uint32_t shift = 8 * (3 - bytePos);
-        uint32_t mask = 0xFFu << shift;
-
-        uint32_t  uvecIndex = static_cast<uint32_t>(idx) / 4;      // which uvec4
-        uint32_t  uvecElement = idx % 4;    // which uint inside that uvec4
-
-        Engine::lightData.types[uvecIndex][uvecElement] =
-            (Engine::lightData.types[uvecIndex][uvecElement] & ~mask) |
-            ((uint32_t)light->type << shift);
+        light->placeDataInUBO(i);
 
         light = light->next;
     }
 
     Engine::lightData.lightCount = static_cast<uint32_t>(Engine::lights.size);
 
-    light = Engine::shadowCreatingLights.head;
+    ShadowLight* shadowLight = Engine::shadowCreatingLights.head;
 
     for (size_t i = 0; i < Engine::shadowCreatingLights.size; i++) {
 
-        light->update();
+        shadowLight->update();
 
-        Engine::shadowLightData.positions[i] = light->position;
-        Engine::shadowLightData.colors[i] = light->color;
-        Engine::shadowLightData.ambientLightColors[i] = light->ambientLightColor;
-        Engine::shadowLightData.intensities[i] = glm::vec4(light->intensity);
-        Engine::shadowLightData.lightVPs[i] = light->getLightVP();
+        shadowLight->placeDataInUBO(i);
 
-        size_t  idx = i / 4;        // which uint32_t
-        uint32_t bytePos = i % 4;    // which byte in that uint32_t
-        uint32_t shift = 8 * (3 - bytePos);
-        uint32_t mask = 0xFFu << shift;
-
-        uint32_t  uvecIndex = static_cast<uint32_t>(idx) / 4;      // which uvec4
-        uint32_t  uvecElement = idx % 4;    // which uint inside that uvec4
-
-        Engine::shadowLightData.types[uvecIndex][uvecElement] =
-            (Engine::shadowLightData.types[uvecIndex][uvecElement] & ~mask) |
-            ((uint32_t)light->type << shift);
-
-        Engine::shadowLightData.shadowMapIndices[uvecIndex][uvecElement] =
-            (Engine::shadowLightData.shadowMapIndices[uvecIndex][uvecElement] & ~mask) |
-            ((uint32_t)i << shift);
-
-        light = light->next;
+        shadowLight = shadowLight->next;
     }
 
     Engine::shadowLightData.lightCount = static_cast<uint32_t>(Engine::shadowCreatingLights.size);

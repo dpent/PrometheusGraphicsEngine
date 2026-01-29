@@ -238,7 +238,7 @@ void BufferManager::recordShadowMapCommands(VkCommandBuffer& commandBuffer, uint
     shadowPassInfo.clearValueCount = static_cast<uint32_t>(shadowClearValues.size());
     shadowPassInfo.pClearValues = shadowClearValues.data();
 
-    Light* light = Engine::shadowCreatingLights.head;
+    ShadowLight* light = Engine::shadowCreatingLights.head;
     int i = 0;
     while (light != nullptr) {
 
