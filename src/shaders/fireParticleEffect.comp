@@ -1,0 +1,37 @@
+#version 450
+
+struct Particle {
+    vec4 position;
+    vec4 color;
+    vec4 velocity;
+};
+
+layout(std430, binding = 0) readonly buffer ParticleSSBOIn {
+   Particle particlesIn[ ];
+};
+
+layout(std430, binding = 1) buffer ParticleSSBOOut {
+   Particle particlesOut[ ];
+};
+
+layout (local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
+/*
+    This defines the number invocations of this compute shader in the current work group. 
+    As noted earlier, this is the local part of the compute space. 
+    Hence the local_ prefix. As we work on a linear 1D array of particles we only need to specify a number for x dimension in local_size_x.
+*/
+
+void main() 
+{
+    uint index = gl_GlobalInvocationID.x;  
+
+    if (index >= particlesOut.length())
+        return;
+
+    Particle particleIn = particlesIn[index];
+
+    particlesOut[index].position = particleIn.position + vec4(0.0,0.1,0.0,0.0);
+    particlesOut[index].color = vec4(0.0, 1.0, 0.0, 0.0);
+
+    particlesOut[index].velocity = particleIn.velocity;
+}

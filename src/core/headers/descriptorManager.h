@@ -2,6 +2,8 @@
 
 #include "Prometheus.h"
 
+class ParticleEffect;
+
 class DescriptorManager {
 public:
 	static void createGraphicsDescriptorSetLayout();
@@ -15,10 +17,19 @@ public:
 	static void createDebugSetLayout();
 	static void createDebugDescriptorPool();
 	static void createDebugDescriptorSets();
+
+	static void createParticleSetLayout();
+	static void createParticleDescriptorPool();
+	static void createParticleDescriptorSets(ParticleEffect& pEffect);
 };
 
 struct Descriptor {
 	VkDescriptorSetLayout layout;
 	std::vector<VkDescriptorSet> sets;
+	VkDescriptorPool pool;
+};
+
+struct SetlessDescriptor {
+	VkDescriptorSetLayout layout;
 	VkDescriptorPool pool;
 };

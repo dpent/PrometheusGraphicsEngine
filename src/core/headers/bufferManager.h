@@ -57,6 +57,10 @@ public:
 	static void recordShadowMapCommands(VkCommandBuffer& commandBuffer, uint32_t& imageIndex);
 	static void recordGraphicsPass(VkCommandBuffer& commandBuffer, uint32_t& imageIndex);
 	static void recordDebugCommands(VkCommandBuffer& commandBuffer, uint32_t& imageIndex);
+	static void recordParticleGraphicsCommands(VkCommandBuffer& commandBuffer, uint32_t& imageIndex);
+
+	static void recordComputeCommandBuffer(VkCommandBuffer& commandBuffer);
+	static void recordParticleComputeCommands(VkCommandBuffer& commandBuffer);
 
 	static void createUniformBuffer(Buffer& buffer, VkDeviceSize size);
 	template <typename T>static void updateUniformBuffer(Buffer& buffer, T& data) {
@@ -90,12 +94,25 @@ public:
 		void* data;
 		vkMapMemory(Engine::deviceInfo.logicalDevice, buffer.memory, 0, buffer.size, 0, &data);
 		memcpy(data, bufferData.data(), buffer.size);
-		//vkUnmapMemory(Engine::deviceInfo.logicalDevice , buffer.memory);
+
 		buffer.mapped = data;
 	}
 
 	template <typename T> static void updateSSBO(Buffer& buffer, std::vector<T>& bufferData) {
 		memcpy(buffer.mapped, bufferData.data(), buffer.size);
+	}
+
+	template <typename T> static void createParticleSSBO(Buffer& buffer, Buffer& stagingBuffer, std::vector<T>& bufferData)
+	{
+
+		VkDeviceSize bufferSize = sizeof(T) * bufferData.size();
+		buffer.size = bufferSize;
+
+		BufferManager::createBuffer(buffer, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT 
+			| VK_BUFFER_USAGE_VERTEX_BUFFER_BIT 
+			| VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+			VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
+		);	
 	}
 };
 

@@ -320,6 +320,8 @@ void BufferManager::recordShadowMapCommands(VkCommandBuffer& commandBuffer, uint
 
         light = light->next;
         i++;
+
+        delete lightPushConstants;
     }
 }
 
@@ -423,6 +425,10 @@ void BufferManager::recordGraphicsPass(VkCommandBuffer& commandBuffer, uint32_t&
         object = object->next;
     }
 
+    if (Engine::particleEffect != nullptr) {
+        BufferManager::recordParticleGraphicsCommands(commandBuffer, imageIndex);
+    }
+
     #ifndef RELEASE
     if (Debug::lines.size() != 0) {
         BufferManager::recordDebugCommands(commandBuffer, imageIndex);
@@ -440,6 +446,8 @@ void BufferManager::recordGraphicsPass(VkCommandBuffer& commandBuffer, uint32_t&
     }
 
     vkCmdEndRenderPass(commandBuffer);
+
+    delete cameraPushConstants;
 }
 
 void BufferManager::createUniformBuffer(Buffer& buffer, VkDeviceSize size) {
@@ -491,6 +499,51 @@ void BufferManager::recordDebugCommands(VkCommandBuffer& commandBuffer, uint32_t
         0,
         0
     );
+
+    delete cameraPushConstants;
+}
+
+void BufferManager::recordParticleGraphicsCommands(VkCommandBuffer& commandBuffer, uint32_t& imageIndex) {
+	CameraVPObject* cameraPushConstants = new CameraVPObject();
+    cameraPushConstants->view = Engine::camera.getViewMatrix();
+    cameraPushConstants->proj = Engine::camera.getProjectionMatrix();
+
+	vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, Engine::particlePipeline.pipeline);
+
+    VkBuffer vertexBuffers[] = { Engine::particleEffect->buffers[Engine::currentFrame].buffer};
+    VkDeviceSize offsets[] = { 0 };
+
+    vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
+
+    vkCmdPushConstants(
+        commandBuffer,
+        Engine::particlePipeline.layout,
+        VK_SHADER_STAGE_VERTEX_BIT,
+        0,
+        sizeof(*cameraPushConstants),
+        cameraPushConstants
+    );
+
+    std::array<VkDescriptorSet, 2> sets{
+        Engine::graphicsDescriptor.sets[0],
+        Engine::shadowLightsDescriptor.sets[0]
+    };
+
+    vkCmdBindDescriptorSets(
+        commandBuffer,
+        VK_PIPELINE_BIND_POINT_GRAPHICS,
+        Engine::particlePipeline.layout,
+        0,
+        static_cast<uint32_t>(sets.size()),
+        sets.data(),
+        0,
+        nullptr
+    );
+
+    vkCmdDraw(commandBuffer, static_cast<uint32_t>(Engine::particleEffect->particles.size()), 1, 0, 0);
+
+    delete cameraPushConstants;
+
 }
 
 void BufferManager::createDebugVertexBuffer(VkDeviceSize size) {
@@ -509,6 +562,48 @@ void BufferManager::createDebugVertexBuffer(VkDeviceSize size) {
 
     BufferManager::copyBuffer(Engine::stagingBuffer, Debug::debugVertexBuffer, size);
 
+}
+
+void BufferManager::recordComputeCommandBuffer(VkCommandBuffer& commandBuffer) {
+
+    vkResetCommandBuffer(commandBuffer, 0);
+
+    VkCommandBufferBeginInfo beginInfo{};
+    beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+
+    if (vkBeginCommandBuffer(commandBuffer, &beginInfo) != VK_SUCCESS) {
+        throw std::runtime_error("failed to begin recording command buffer!");
+    }
+
+    if (Engine::particleEffect != nullptr) {
+
+        BufferManager::recordParticleComputeCommands(commandBuffer);
+    }
+
+    if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS) {
+        throw std::runtime_error("failed to record command buffer!");
+    }
+}
+
+void BufferManager::recordParticleComputeCommands(VkCommandBuffer& commandBuffer) {
+   
+    vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, Engine::particleEffect->pipeline.pipeline);
+    vkCmdBindDescriptorSets(
+        commandBuffer, 
+        VK_PIPELINE_BIND_POINT_COMPUTE, 
+        Engine::particleEffect->pipeline.layout,
+        0,
+        1, 
+        &Engine::particleEffect->sets[Engine::currentFrame], 
+        0, 
+        0
+    );
+
+    uint32_t particleCount =static_cast<uint32_t>(Engine::particleEffect->particles.size());
+    const uint32_t localSize = 256;
+    uint32_t groupCount = (particleCount + localSize - 1) / localSize;
+
+    vkCmdDispatch(commandBuffer, groupCount, 1, 1);
 }
 
 void CommandPool ::initialize() {

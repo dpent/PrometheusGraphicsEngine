@@ -13,6 +13,7 @@
 #include "../../gameObjects/headers/material.h"
 #include "../../physics/headers/light.h"
 #include "debug.h"
+#include "../../physics/headers/particleEffect.h"
 
 class WorkerThread;
 struct Job;
@@ -114,6 +115,18 @@ public:
 	static int targetFPS;
 	static uint16_t FPS;
 
+	//COMPUTE
+	static SetlessDescriptor particleDescriptor;
+
+	static CommandPool computeCommand;
+
+	static std::vector<VkFence> computeInFlightFences;
+	static std::vector<VkSemaphore> computeFinishedSemaphores;
+
+	static Pipeline particlePipeline;
+
+	static ParticleEffect* particleEffect;
+
 	//LIGHTING
 	static DoubleEndedQueue<Light*> lights;
 	static DoubleEndedQueue<ShadowLight*> shadowCreatingLights;
@@ -194,6 +207,7 @@ public:
 		const VkSpecializationInfo* pSpecializationInfo = nullptr);
 
 	static void drawFrame();
+	static void submitCompute();
 	static void prepareFrameData();
 
 	static void createSyncObjects();

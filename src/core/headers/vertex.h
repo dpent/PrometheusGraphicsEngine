@@ -19,6 +19,11 @@ public:
     }
 };
 
+struct CameraVPObject {
+    glm::mat4 view;
+    glm::mat4 proj;
+};
+
 struct CameraObject
 {
     glm::mat4 view;

@@ -1,6 +1,6 @@
 #include "../headers/descriptorManager.h"
 #include "../headers/engine.h"
-
+#include "../../physics/headers/particleEffect.h"
 
 void DescriptorManager::createGraphicsDescriptorSetLayout() {
 
@@ -473,4 +473,131 @@ void DescriptorManager::createDebugDescriptorSets() {
     };
 
     vkUpdateDescriptorSets(Engine::deviceInfo.logicalDevice, static_cast<uint32_t>(writes.size()), writes.data(), 0, nullptr);
+}
+
+void DescriptorManager::createParticleSetLayout() {
+    if (Engine::particleDescriptor.layout != VK_NULL_HANDLE) {
+        vkDestroyDescriptorSetLayout(Engine::deviceInfo.logicalDevice, Engine::particleDescriptor.layout, nullptr);
+    }
+
+    VkDescriptorSetLayoutBinding SSBO1{};
+    SSBO1.binding = 0;
+    SSBO1.descriptorCount = 1;
+    SSBO1.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    SSBO1.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT | VK_SHADER_STAGE_VERTEX_BIT;
+
+    VkDescriptorSetLayoutBinding SSBO2{};
+    SSBO2.binding = 1;
+    SSBO2.descriptorCount = 1;
+    SSBO2.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    SSBO2.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT | VK_SHADER_STAGE_VERTEX_BIT;
+
+    std::array<VkDescriptorSetLayoutBinding, 2> bindings = {
+    SSBO1,
+    SSBO2
+    };
+
+    std::array<VkDescriptorBindingFlags, 2> bindingFlags = {
+    0, // SSBO1 (binding 0) no flags
+	0, // SSBO2 (binding 1) no flags
+    };
+
+    VkDescriptorSetLayoutBindingFlagsCreateInfo flagsInfo{};
+    flagsInfo.sType =
+        VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO;
+    flagsInfo.bindingCount = static_cast<uint32_t>(bindingFlags.size());
+    flagsInfo.pBindingFlags = bindingFlags.data();
+
+    VkDescriptorSetLayoutCreateInfo layoutInfo{};
+    layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    layoutInfo.bindingCount = static_cast<uint32_t>(bindings.size());
+    layoutInfo.pBindings = bindings.data();
+    layoutInfo.flags = VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT;
+    layoutInfo.pNext = &flagsInfo;
+
+    if (vkCreateDescriptorSetLayout(Engine::deviceInfo.logicalDevice, &layoutInfo, nullptr, &Engine::particleDescriptor.layout) != VK_SUCCESS) {
+        throw std::runtime_error("failed to create descriptor set layout!");
+    }
+
+}
+
+void DescriptorManager::createParticleDescriptorPool() {
+
+    if (Engine::particleDescriptor.pool != VK_NULL_HANDLE) {
+        Engine::garbage.lock();
+        Engine::garbage.descriptors.push_back(Engine::particleDescriptor.pool);
+        Engine::garbage.descriptorFramesPassed.push_back(0);
+        Engine::garbage.unlock();
+    }
+
+    std::array<VkDescriptorPoolSize, 2> poolSizes{};
+
+    poolSizes[0].type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    poolSizes[0].descriptorCount = Engine::MAX_FRAMES_IN_FLIGHT;
+
+	poolSizes[1].type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+	poolSizes[1].descriptorCount = Engine::MAX_FRAMES_IN_FLIGHT;
+
+    VkDescriptorPoolCreateInfo poolInfo{};
+    poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+    poolInfo.flags =
+        VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT;
+    poolInfo.maxSets = Engine::MAX_FRAMES_IN_FLIGHT; //PER FRAME
+    poolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
+    poolInfo.pPoolSizes = poolSizes.data();
+
+    if (vkCreateDescriptorPool(Engine::deviceInfo.logicalDevice, &poolInfo, nullptr, &Engine::particleDescriptor.pool) != VK_SUCCESS) {
+        throw std::runtime_error("failed to create descriptor pool!");
+    }
+}
+
+void DescriptorManager::createParticleDescriptorSets(ParticleEffect& pEffect) {
+
+    pEffect.sets.resize(Engine::MAX_FRAMES_IN_FLIGHT);
+    std::vector<VkDescriptorSetLayout> layouts(Engine::MAX_FRAMES_IN_FLIGHT, Engine::particleDescriptor.layout);
+
+    VkDescriptorSetAllocateInfo allocInfo{};
+    allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+    allocInfo.pNext = nullptr;
+    allocInfo.descriptorPool = Engine::particleDescriptor.pool;
+    allocInfo.descriptorSetCount = Engine::MAX_FRAMES_IN_FLIGHT;
+    allocInfo.pSetLayouts = layouts.data();
+
+    if (vkAllocateDescriptorSets(Engine::deviceInfo.logicalDevice, &allocInfo, pEffect.sets.data()) != VK_SUCCESS) {
+        throw std::runtime_error("failed to allocate descriptor set!");
+    }
+
+
+    for (size_t i = 0; i < Engine::MAX_FRAMES_IN_FLIGHT; i++) {
+
+        std::array<VkWriteDescriptorSet, 2> writes{};
+        VkDescriptorBufferInfo storageBufferInfoLastFrame{};
+        storageBufferInfoLastFrame.buffer = pEffect.buffers[(i - 1) % Engine::MAX_FRAMES_IN_FLIGHT].buffer;
+        storageBufferInfoLastFrame.offset = 0;
+        storageBufferInfoLastFrame.range = pEffect.buffers[(i - 1) % Engine::MAX_FRAMES_IN_FLIGHT].size;
+
+        writes[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        writes[0].dstSet = pEffect.sets[i];
+        writes[0].dstBinding = 0;
+        writes[0].dstArrayElement = 0;
+        writes[0].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+        writes[0].descriptorCount = 1;
+        writes[0].pBufferInfo = &storageBufferInfoLastFrame;
+
+        VkDescriptorBufferInfo storageBufferInfoCurrentFrame{};
+        storageBufferInfoCurrentFrame.buffer = pEffect.buffers[i].buffer;
+        storageBufferInfoCurrentFrame.offset = 0;
+        storageBufferInfoCurrentFrame.range = pEffect.buffers[i].size;
+
+        writes[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        writes[1].dstSet = pEffect.sets[i];
+        writes[1].dstBinding = 1;
+        writes[1].dstArrayElement = 0;
+        writes[1].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+        writes[1].descriptorCount = 1;
+        writes[1].pBufferInfo = &storageBufferInfoCurrentFrame;
+
+        vkUpdateDescriptorSets(Engine::deviceInfo.logicalDevice, 2, writes.data(), 0, nullptr);
+    }
+
 }

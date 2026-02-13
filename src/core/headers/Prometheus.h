@@ -87,7 +87,7 @@ constexpr glm::vec3 COLOR_BEIGE = glm::vec3(0.961f, 0.961f, 0.863f);
 
 
 template<int C, int R, typename T, glm::qualifier Q>
-std::string printMatrix(const glm::mat<C, R, T, Q>& m)
+constexpr std::string printMatrix(const glm::mat<C, R, T, Q>& m)
 {
     std::ostringstream oss;
     for (int row = 0; row < R; ++row)

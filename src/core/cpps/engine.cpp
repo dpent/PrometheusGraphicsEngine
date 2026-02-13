@@ -63,6 +63,18 @@ GarbageQueues Engine::garbage;
 int Engine::targetFPS = 60;
 uint16_t Engine::FPS = 0;
 
+//COMPUTE
+SetlessDescriptor Engine::particleDescriptor;
+
+CommandPool Engine::computeCommand;
+
+std::vector<VkFence> Engine::computeInFlightFences;
+std::vector<VkSemaphore> Engine::computeFinishedSemaphores;
+
+Pipeline Engine::particlePipeline;
+
+ParticleEffect* Engine::particleEffect;
+
 //LIGHTING
 DoubleEndedQueue<Light*> Engine::lights;
 DoubleEndedQueue<ShadowLight*> Engine::shadowCreatingLights;
@@ -170,6 +182,7 @@ void Engine::initVulkan() {
     SwapChainManager::createSwapChain(Engine::swapChainInfo.chain);
 
     Engine::command.initialize();
+    Engine::computeCommand.initialize();
 
     RenderPassManager::createRenderPass();
     RenderPassManager::createShadowRenderPass();
@@ -196,6 +209,7 @@ void Engine::initVulkan() {
     
     PipelineManager::createGraphicsPipeline();
     PipelineManager::createShadowPipeline();
+    PipelineManager::createParticleGraphicsPipeline();
 
     BufferManager::createStagingBuffer(8192, Engine::stagingBuffer); //8KB TO START
 
@@ -214,12 +228,17 @@ void Engine::initVulkan() {
 
     DescriptorManager::createShadowLightsPool();
     DescriptorManager::createShadowLightsSets();
+
+    DescriptorManager::createParticleSetLayout();
+	DescriptorManager::createParticleDescriptorPool();
 }
 
 void Engine::mainLoop() {
 
     Engine::loadDemoScene();
     uint64_t framesThisSecond = 0;
+    
+    Engine::particleEffect = new ParticleEffect(1000, "fireParticleEffectComp.spv");
 
     auto nextFrameTime = std::chrono::steady_clock::now();
     auto secondStart = std::chrono::steady_clock::now();
@@ -231,6 +250,8 @@ void Engine::mainLoop() {
 
         if (Engine::gameObjects.size != 0) {
             nextFrameTime += std::chrono::duration_cast<std::chrono::steady_clock::duration>(std::chrono::duration<double>(1.0 / Engine::targetFPS));
+
+            Engine::submitCompute();
 
             Engine::drawFrame();
             std::this_thread::sleep_until(nextFrameTime);
@@ -426,6 +447,25 @@ VkPipelineShaderStageCreateInfo Engine::createShaderStageInfo(VkStructureType sT
     return ShaderStageInfo;
 }
 
+void Engine::submitCompute() {
+
+    vkWaitForFences(Engine::deviceInfo.logicalDevice, 1, &Engine::computeInFlightFences[Engine::currentFrame], VK_TRUE, UINT64_MAX);
+    vkResetFences(Engine::deviceInfo.logicalDevice, 1, &Engine::computeInFlightFences[Engine::currentFrame]);
+
+    BufferManager::recordComputeCommandBuffer(Engine::computeCommand.buffers[Engine::currentFrame]);
+
+    VkSubmitInfo submitInfo{};
+    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submitInfo.commandBufferCount = 1;
+    submitInfo.pCommandBuffers = &Engine::computeCommand.buffers[Engine::currentFrame];
+    submitInfo.signalSemaphoreCount = 1;
+    submitInfo.pSignalSemaphores = &Engine::computeFinishedSemaphores[Engine::currentFrame];
+
+    if (vkQueueSubmit(Engine::queues.compute, 1, &submitInfo, Engine::computeInFlightFences[Engine::currentFrame]) != VK_SUCCESS) {
+        throw std::runtime_error("failed to submit compute command buffer!");
+    };
+}
+
 void Engine::drawFrame() {
 
     if (Engine::displayGUI) {
@@ -468,15 +508,17 @@ void Engine::drawFrame() {
 
     VkSemaphore waitSemaphores[] =
     {
+        Engine::computeFinishedSemaphores[Engine::currentFrame],
         Engine::imageAvailableSemaphores[Engine::currentFrame]
     };
 
     VkPipelineStageFlags waitStages[] =
     {
+        VK_PIPELINE_STAGE_VERTEX_INPUT_BIT,
         VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT
     };
 
-    submitInfo.waitSemaphoreCount = 1;
+    submitInfo.waitSemaphoreCount = 2;
     submitInfo.pWaitSemaphores = waitSemaphores;
     submitInfo.pWaitDstStageMask = waitStages;
     submitInfo.commandBufferCount = 1;
@@ -577,6 +619,9 @@ void Engine::createSyncObjects() {
     Engine::renderFinishedSemaphores.resize(Engine::MAX_FRAMES_IN_FLIGHT);
     Engine::inFlightFences.resize(Engine::MAX_FRAMES_IN_FLIGHT);
 
+    Engine::computeInFlightFences.resize(Engine::MAX_FRAMES_IN_FLIGHT);
+    Engine::computeFinishedSemaphores.resize(Engine::MAX_FRAMES_IN_FLIGHT);
+
     VkSemaphoreCreateInfo semaphoreInfo{};
     semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
 
@@ -590,6 +635,11 @@ void Engine::createSyncObjects() {
             vkCreateFence(Engine::deviceInfo.logicalDevice, &fenceInfo, nullptr, &Engine::inFlightFences[i]) != VK_SUCCESS) {
 
             throw std::runtime_error("failed to create synchronization objects for a frame!");
+        }
+
+        if (vkCreateSemaphore(Engine::deviceInfo.logicalDevice, &semaphoreInfo, nullptr, &Engine::computeFinishedSemaphores[i]) != VK_SUCCESS ||
+            vkCreateFence(Engine::deviceInfo.logicalDevice, &fenceInfo, nullptr, &Engine::computeInFlightFences[i]) != VK_SUCCESS) {
+            throw std::runtime_error("failed to create compute synchronization objects for a frame!");
         }
     }
 }
@@ -845,7 +895,7 @@ void Engine::loadDemoScene() {
     GameObject::createInitiasationJob(floor, fInfo);
     delete fInfo;
 
-    GameObject* barrels = new GameObject();
+    /*GameObject* barrels = new GameObject();
     InitInfo* bInfo = new InitInfo("seven_barrels.obj", nullptr, "barrel_basecolor.png", nullptr, "barrel_normal.png");
     barrels->transform->position = glm::vec3(20.0f, 0.0f, 20.0f);
     barrels->scale(glm::vec3(0.03f));
@@ -865,5 +915,5 @@ void Engine::loadDemoScene() {
     house->scale(glm::vec3(2.0f));
     house->rotate(glm::angleAxis(glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f)));
     GameObject::createInitiasationJob(house, hInfo);
-    delete hInfo;
+    delete hInfo;*/
 }
