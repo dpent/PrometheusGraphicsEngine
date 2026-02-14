@@ -21,6 +21,46 @@ layout (local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
     Hence the local_ prefix. As we work on a linear 1D array of particles we only need to specify a number for x dimension in local_size_x.
 */
 
+layout(push_constant) uniform envDetails {
+    float maxHeight;
+    float windSpeed;
+    vec4 emmiterPosition;
+    vec4 windDirection;
+} pc;
+
+
+float rand(vec2 co){ return fract(sin(dot(co.xy ,vec2(12.9898,78.233))) * 43758.5453); }
+
+void updateParticle(uint index, Particle particleIn){
+     particlesOut[index].position = particleIn.position + particleIn.velocity;
+
+        float angle = radians(2.0); // mostly vertical
+        float heightFactor = particleIn.position.y * 0.001; 
+        float sideJitter = (rand(vec2(particleIn.position.z, particleIn.position.y)) - 0.5) * 0.01;
+
+        particlesOut[index].velocity.x = particleIn.velocity.x + pc.windDirection.x * pc.windSpeed + sideJitter;//sideJitter + cos(angle) * heightFactor;
+        particlesOut[index].velocity.z = particleIn.velocity.z + pc.windDirection.z * pc.windSpeed + sideJitter;//sin(angle) * heightFactor;
+
+        // Upward movement slightly randomized
+        float vyJitter = (rand(vec2(particleIn.position.x, particleIn.position.y + 5678.0)) - 0.5) * 0.02;
+        particlesOut[index].velocity.y = 0.1 + vyJitter + pc.windDirection.y * pc.windSpeed;
+}
+
+void resetParticle(uint index, Particle particleIn){
+
+     particlesOut[index].position.y = pc.emmiterPosition.y;
+
+        float vy = 0.05;
+
+        float vx = (rand(vec2(index, particleIn.position.x)) - 0.5) * 0.05;
+        float vz = (rand(vec2(index, particleIn.position.z)) - 0.5) * 0.05;
+
+        particlesOut[index].velocity = vec4(vx, vy, vz, 0.0);
+
+        particlesOut[index].position.x = rand(vec2(index, particleIn.position.x)) * 0.2 - 0.1;
+        particlesOut[index].position.z = rand(vec2(index, particleIn.position.z)) * 0.2 - 0.1;
+}
+
 void main() 
 {
     uint index = gl_GlobalInvocationID.x;  
@@ -30,8 +70,28 @@ void main()
 
     Particle particleIn = particlesIn[index];
 
-    particlesOut[index].position = particleIn.position + vec4(0.0,0.1,0.0,0.0);
-    particlesOut[index].color = vec4(0.0, 1.0, 0.0, 0.0);
+    if(particleIn.position.y > pc.maxHeight){
+        
+        float prob = rand(vec2(particleIn.position.y, particleIn.velocity.y));
 
-    particlesOut[index].velocity = particleIn.velocity;
+        if(prob < 0.8){
+            updateParticle(index,particleIn);
+
+            float t = clamp(particlesOut[index].position.y / pc.maxHeight, 0.0, 1.0);
+            float alpha = 1.0 - t; // or pow(1.0 - t, 2.0) for smoother fade
+            particlesOut[index].color = vec4(1.0, 1.0, 1.0, alpha);
+
+            return;
+        }
+
+        resetParticle(index, particleIn);
+
+    }
+    else{
+        updateParticle(index, particleIn);
+    }
+
+    float t = clamp(particlesOut[index].position.y / pc.maxHeight, 0.0, 1.0);
+    float alpha = 1.0 - t; // or pow(1.0 - t, 2.0) for smoother fade
+    particlesOut[index].color = vec4(1.0, 1.0, 1.0, alpha);
 }

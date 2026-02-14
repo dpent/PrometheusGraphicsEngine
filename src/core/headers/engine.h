@@ -123,8 +123,6 @@ public:
 	static std::vector<VkFence> computeInFlightFences;
 	static std::vector<VkSemaphore> computeFinishedSemaphores;
 
-	static Pipeline particlePipeline;
-
 	static ParticleEffect* particleEffect;
 
 	//LIGHTING

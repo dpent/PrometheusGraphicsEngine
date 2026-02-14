@@ -30,7 +30,7 @@ std::array<VkVertexInputBindingDescription, 1> Particle::getBindingDescription()
 
     bindingDescriptions[0].binding = 0;
     bindingDescriptions[0].stride = sizeof(Particle);
-    bindingDescriptions[0].inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+    bindingDescriptions[0].inputRate = VK_VERTEX_INPUT_RATE_INSTANCE;
 
     return bindingDescriptions;
 }

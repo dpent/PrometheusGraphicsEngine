@@ -71,8 +71,6 @@ CommandPool Engine::computeCommand;
 std::vector<VkFence> Engine::computeInFlightFences;
 std::vector<VkSemaphore> Engine::computeFinishedSemaphores;
 
-Pipeline Engine::particlePipeline;
-
 ParticleEffect* Engine::particleEffect;
 
 //LIGHTING
@@ -209,7 +207,6 @@ void Engine::initVulkan() {
     
     PipelineManager::createGraphicsPipeline();
     PipelineManager::createShadowPipeline();
-    PipelineManager::createParticleGraphicsPipeline();
 
     BufferManager::createStagingBuffer(8192, Engine::stagingBuffer); //8KB TO START
 
@@ -238,8 +235,15 @@ void Engine::mainLoop() {
     Engine::loadDemoScene();
     uint64_t framesThisSecond = 0;
     
-    Engine::particleEffect = new ParticleEffect(1000, "fireParticleEffectComp.spv");
+    SmokeComputePushConstant* cPC = new SmokeComputePushConstant(
+        10.0f,
+        1.0f,
+        glm::vec4(7.0f, 7.0f, 7.0f, 0.0f),
+        glm::vec4(1.0f, 0.0f, 0.0f, 0.0f)
+    );
 
+    Engine::particleEffect = new SmokeEffect("fireParticleEffectComp.spv", "particlesVert.spv", "particlesFrag.spv", cPC);
+    Engine::particleEffect->addParticles(1000);
     auto nextFrameTime = std::chrono::steady_clock::now();
     auto secondStart = std::chrono::steady_clock::now();
 
@@ -250,6 +254,8 @@ void Engine::mainLoop() {
 
         if (Engine::gameObjects.size != 0) {
             nextFrameTime += std::chrono::duration_cast<std::chrono::steady_clock::duration>(std::chrono::duration<double>(1.0 / Engine::targetFPS));
+
+			Engine::particleEffect->update();
 
             Engine::submitCompute();
 
@@ -278,6 +284,8 @@ void Engine::mainLoop() {
     }
 
     Engine::killThreadPool();
+
+    delete cPC;
 }
 
 void Engine::frameBufferResizeCallback(GLFWwindow* window, int width, int height) {

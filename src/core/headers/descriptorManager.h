@@ -20,7 +20,6 @@ public:
 
 	static void createParticleSetLayout();
 	static void createParticleDescriptorPool();
-	static void createParticleDescriptorSets(ParticleEffect& pEffect);
 };
 
 struct Descriptor {

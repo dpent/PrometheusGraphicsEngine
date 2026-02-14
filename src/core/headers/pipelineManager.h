@@ -11,9 +11,6 @@ public:
 	static void createShadowPipeline();
 
 	static void createDebugPipeline();
-
-	static void createParticleComputePipeline(ParticleEffect& pEffect);
-	static void createParticleGraphicsPipeline();
 };
 
 struct Pipeline {
