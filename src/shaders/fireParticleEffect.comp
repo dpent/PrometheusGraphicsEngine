@@ -57,8 +57,8 @@ void resetParticle(uint index, Particle particleIn){
 
         particlesOut[index].velocity = vec4(vx, vy, vz, 0.0);
 
-        particlesOut[index].position.x = rand(vec2(index, particleIn.position.x)) * 0.2 - 0.1;
-        particlesOut[index].position.z = rand(vec2(index, particleIn.position.z)) * 0.2 - 0.1;
+        particlesOut[index].position.x = pc.emmiterPosition.x + rand(vec2(index, particleIn.position.x)) * 0.2 - 0.1;
+        particlesOut[index].position.z = pc.emmiterPosition.z + rand(vec2(index, particleIn.position.z)) * 0.2 - 0.1;
 }
 
 void main() 
@@ -74,7 +74,7 @@ void main()
         
         float prob = rand(vec2(particleIn.position.y, particleIn.velocity.y));
 
-        if(prob < 0.8){
+        if(prob < 0.9){
             updateParticle(index,particleIn);
 
             float t = clamp(particlesOut[index].position.y / pc.maxHeight, 0.0, 1.0);
@@ -93,5 +93,5 @@ void main()
 
     float t = clamp(particlesOut[index].position.y / pc.maxHeight, 0.0, 1.0);
     float alpha = 1.0 - t; // or pow(1.0 - t, 2.0) for smoother fade
-    particlesOut[index].color = vec4(1.0, 1.0, 1.0, alpha);
+    particlesOut[index].color = vec4(0.7, 0.7, 0.7, alpha);
 }

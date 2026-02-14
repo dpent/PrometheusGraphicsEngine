@@ -425,7 +425,7 @@ void BufferManager::recordGraphicsPass(VkCommandBuffer& commandBuffer, uint32_t&
         object = object->next;
     }
 
-    if (Engine::particleEffect != nullptr) {
+    if (Engine::particleEffects.size != 0) {
         BufferManager::recordParticleGraphicsCommands(commandBuffer, imageIndex);
     }
 
@@ -508,34 +508,42 @@ void BufferManager::recordParticleGraphicsCommands(VkCommandBuffer& commandBuffe
     cameraPushConstants->view = Engine::camera.getViewMatrix();
     cameraPushConstants->proj = Engine::camera.getProjectionMatrix();
 
-	vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, Engine::particleEffect->graphicsPipeline.pipeline);
+    ParticleEffect* effect = Engine::particleEffects.head;
 
-    VkBuffer vertexBuffers[] = { Engine::particleEffect->buffers[Engine::currentFrame].buffer};
-    VkDeviceSize offsets[] = { 0 };
+    while (effect != nullptr) {
+    
+	    vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, effect->graphicsPipeline.pipeline);
 
-    vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
+        VkBuffer vertexBuffers[] = { effect->buffers[Engine::currentFrame].buffer};
+        VkDeviceSize offsets[] = { 0 };
 
-    vkCmdPushConstants(
-        commandBuffer,
-        Engine::particleEffect->graphicsPipeline.layout,
-        VK_SHADER_STAGE_VERTEX_BIT,
-        0,
-        sizeof(*cameraPushConstants),
-        cameraPushConstants
-    );
+        vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
 
-    vkCmdBindDescriptorSets(
-        commandBuffer,
-        VK_PIPELINE_BIND_POINT_GRAPHICS,
-        Engine::particleEffect->graphicsPipeline.layout,
-        0,
-        static_cast<uint32_t>(Engine::particleEffect->graphicsDescriptor.sets.size()),
-        Engine::particleEffect->graphicsDescriptor.sets.data(),
-        0,
-        nullptr
-    );
+        vkCmdPushConstants(
+            commandBuffer,
+            effect->graphicsPipeline.layout,
+            VK_SHADER_STAGE_VERTEX_BIT,
+            0,
+            sizeof(*cameraPushConstants),
+            cameraPushConstants
+        );
 
-    vkCmdDraw(commandBuffer, 4, static_cast<uint32_t>(Engine::particleEffect->particles.size()), 0, 0);
+        vkCmdBindDescriptorSets(
+            commandBuffer,
+            VK_PIPELINE_BIND_POINT_GRAPHICS,
+            effect->graphicsPipeline.layout,
+            0,
+            static_cast<uint32_t>(effect->graphicsDescriptor.sets.size()),
+            effect->graphicsDescriptor.sets.data(),
+            0,
+            nullptr
+        );
+
+        vkCmdDraw(commandBuffer, 4, static_cast<uint32_t>(effect->particles.size()), 0, 0);
+
+        effect = effect->next;
+    }
+
 
     delete cameraPushConstants;
 
@@ -570,10 +578,7 @@ void BufferManager::recordComputeCommandBuffer(VkCommandBuffer& commandBuffer) {
         throw std::runtime_error("failed to begin recording command buffer!");
     }
 
-    if (Engine::particleEffect != nullptr) {
-
-        BufferManager::recordParticleComputeCommands(commandBuffer);
-    }
+    BufferManager::recordParticleComputeCommands(commandBuffer);
 
     if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS) {
         throw std::runtime_error("failed to record command buffer!");
@@ -582,35 +587,43 @@ void BufferManager::recordComputeCommandBuffer(VkCommandBuffer& commandBuffer) {
 
 void BufferManager::recordParticleComputeCommands(VkCommandBuffer& commandBuffer) {
 
-    vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, Engine::particleEffect->pipeline.pipeline);
+    ParticleEffect* effect = Engine::particleEffects.head;
 
-    auto pc = Engine::particleEffect->getComputePushConstants();
+    while (effect != nullptr) {
 
-    vkCmdPushConstants(
-        commandBuffer,
-        Engine::particleEffect->pipeline.layout,
-        VK_SHADER_STAGE_COMPUTE_BIT,
-        0,
-        pc->size(),
-		pc->data()
-    );
+        vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, effect->pipeline.pipeline);
 
-    vkCmdBindDescriptorSets(
-        commandBuffer, 
-        VK_PIPELINE_BIND_POINT_COMPUTE, 
-        Engine::particleEffect->pipeline.layout,
-        0,
-        1, 
-        &Engine::particleEffect->sets[Engine::currentFrame], 
-        0, 
-        0
-    );
+        auto pc = effect->getComputePushConstants();
 
-    uint32_t particleCount =static_cast<uint32_t>(Engine::particleEffect->particles.size());
-    const uint32_t localSize = 256;
-    uint32_t groupCount = (particleCount + localSize - 1) / localSize;
+        vkCmdPushConstants(
+            commandBuffer,
+            effect->pipeline.layout,
+            VK_SHADER_STAGE_COMPUTE_BIT,
+            0,
+            pc->size(),
+		    pc->data()
+        );
 
-    vkCmdDispatch(commandBuffer, groupCount, 1, 1);
+        vkCmdBindDescriptorSets(
+            commandBuffer, 
+            VK_PIPELINE_BIND_POINT_COMPUTE, 
+            effect->pipeline.layout,
+            0,
+            1, 
+            &effect->sets[Engine::currentFrame],
+            0, 
+            0
+        );
+
+        uint32_t particleCount =static_cast<uint32_t>(effect->particles.size());
+        const uint32_t localSize = 256;
+        uint32_t groupCount = (particleCount + localSize - 1) / localSize;
+
+        vkCmdDispatch(commandBuffer, groupCount, 1, 1);
+
+        effect = effect->next;
+    }
+
 }
 
 void CommandPool ::initialize() {

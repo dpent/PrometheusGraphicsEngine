@@ -29,6 +29,11 @@ ParticleEffect::ParticleEffect(uint64_t numParticles, std::string computeShaderF
 	}
 
     createBuffers();
+
+    Engine::particleEffects.push(this);
+    Engine::remakeComputeDescriptors = true;
+
+    DescriptorManager::createParticleDescriptorPool();
 }
 
 ParticleEffect::ParticleEffect(std::string computeShaderFilename, std::string vertexShaderFilename, std::string fragmentShaderFilename, ComputePushContant* cPC) {
@@ -36,6 +41,11 @@ ParticleEffect::ParticleEffect(std::string computeShaderFilename, std::string ve
 	this->vertexShaderFilename = vertexShaderFilename;
 	this->fragmentShaderFilename = fragmentShaderFilename;
     this->computePushConstant = cPC;
+
+    Engine::particleEffects.push(this);
+    Engine::remakeComputeDescriptors = true;
+
+    DescriptorManager::createParticleDescriptorPool();
 }
 
 void ParticleEffect::createGraphicsDescriptor() {
@@ -355,7 +365,6 @@ void ParticleEffect::createComputeDescriptorSets(){
         throw std::runtime_error("failed to allocate descriptor set!");
     }
 
-
     for (size_t i = 0; i < Engine::MAX_FRAMES_IN_FLIGHT; i++) {
 
         std::array<VkWriteDescriptorSet, 2> writes{};
@@ -427,8 +436,29 @@ void ParticleEffect::update() {
     return;
 }
 
+glm::vec4 ParticleEffect::getEmitterPos() {
+
+    return computePushConstant->getEmitterPos();
+}
+
 ComputePushContant* ParticleEffect::getComputePushConstants() {
     return computePushConstant;
+}
+
+ParticleEffect::~ParticleEffect() {
+}
+
+void ParticleEffect::destroy() {
+    delete computePushConstant;
+    Engine::remakeComputeDescriptors = true;
+
+    Engine::particleEffects.popItem(this);
+
+    delete this;
+}
+
+glm::vec4 ComputePushContant::getEmitterPos() {
+        return glm::vec4(0.0f);
 }
 
 ComputePushContant::ComputePushContant() {
@@ -448,6 +478,8 @@ SmokeEffect::SmokeEffect(uint64_t numParticles, std::string computeShaderFilenam
     : ParticleEffect(numParticles, computeShaderFilename, vertexShaderFilename, fragmentShaderFilename, cPC)
 {
 
+    image = new Image();
+
     this->createComputeDescriptorSets();
     this->createComputePipeline();
     this->loadImage();
@@ -458,6 +490,7 @@ SmokeEffect::SmokeEffect(uint64_t numParticles, std::string computeShaderFilenam
 SmokeEffect::SmokeEffect(std::string computeShaderFilename, std::string vertexShaderFilename, std::string fragmentShaderFilename, ComputePushContant* cPC)
     : ParticleEffect(computeShaderFilename, vertexShaderFilename, fragmentShaderFilename, cPC)
 {
+    image = new Image();
     this->loadImage();
 }
 
@@ -549,7 +582,7 @@ void SmokeEffect::createGraphicsDescriptor() {
     }
 
     VkDescriptorImageInfo imageInfo{};
-    imageInfo.imageView = image.view;
+    imageInfo.imageView = image->view;
     imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
     VkDescriptorImageInfo samplerInfo{};
@@ -614,8 +647,8 @@ void SmokeEffect::loadImage() {
         VK_IMAGE_TILING_OPTIMAL,
         VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-        this->image.image,
-        this->image.memory,
+        this->image->image,
+        this->image->memory,
         mipLevels,
         VK_SAMPLE_COUNT_1_BIT
     );
@@ -623,14 +656,14 @@ void SmokeEffect::loadImage() {
     this->mipLevels = mipLevels;
 
     Engine::textureMutex.lock();
-    ImageManager::transitionImageLayout(image.image, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED,
+    ImageManager::transitionImageLayout(image->image, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED,
         VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, mipLevels, Engine::command.pool);
-    ImageManager::copyBufferToImage(Engine::stagingBuffer.buffer, image.image, static_cast<uint32_t>(texWidth), static_cast<uint32_t>(texHeight),
+    ImageManager::copyBufferToImage(Engine::stagingBuffer.buffer, image->image, static_cast<uint32_t>(texWidth), static_cast<uint32_t>(texHeight),
         Engine::command.pool);
 
-    ImageManager::generateMipMaps(image.image, texWidth, texHeight, mipLevels, VK_FORMAT_R8G8B8A8_SRGB, Engine::command.pool);
+    ImageManager::generateMipMaps(image->image, texWidth, texHeight, mipLevels, VK_FORMAT_R8G8B8A8_SRGB, Engine::command.pool);
 
-    ImageManager::createImageView(image.image, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT, mipLevels, VK_IMAGE_VIEW_TYPE_2D, 1, 0, image.view);
+    ImageManager::createImageView(image->image, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT, mipLevels, VK_IMAGE_VIEW_TYPE_2D, 1, 0, image->view);
 
     Engine::textureMutex.unlock();
 }
@@ -642,9 +675,12 @@ void SmokeEffect::addParticles(uint64_t numParticles) {
     std::default_random_engine gen;
     std::uniform_real_distribution<float> distribution(0.0f, 2.0f);
 
+	glm::vec4 emitterPos = computePushConstant->getEmitterPos();
+	//std::cout << emitterPos.x << " " << emitterPos.y << " " << emitterPos.z << " " << emitterPos.w << std::endl;
+
     for (uint64_t i = 0; i < numParticles; i++) {
 
-        glm::vec3 position{ distribution(gen), distribution(gen), distribution(gen) };
+        glm::vec3 position{ emitterPos.x + distribution(gen), emitterPos.y + distribution(gen), emitterPos.z + distribution(gen) };
         glm::vec3 color{ distribution(gen) / 2.0f, distribution(gen) / 2.0f, distribution(gen) / 2.0f };
         glm::vec3 velocity{ 0.0f, 0.1f, 0.0f };
 
@@ -718,6 +754,30 @@ void SmokeEffect::update() {
     return;
 }
 
+SmokeEffect::~SmokeEffect() {
+}
+
+void SmokeEffect::destroy() {
+    delete computePushConstant;
+    Engine::remakeComputeDescriptors = true;
+
+    Engine::particleEffects.popItem(this);
+    DescriptorManager::createParticleDescriptorPool();
+
+    Engine::garbage.lock();
+    Engine::garbage.images.push_back(image);
+    Engine::garbage.imageFramesPassed.push_back(0);
+
+    for (size_t i = 0; i < buffers.size(); i++) {
+        Engine::garbage.buffers.push_back(buffers[i]);
+        Engine::garbage.bufferFramesPassed.push_back(-1);
+    }
+
+    Engine::garbage.unlock();
+
+    delete this;
+}
+
 SmokeComputePushConstant::SmokeComputePushConstant(float maxHeight, float windSpeed, glm::vec4 emitterPosition, glm::vec4 windDirection) {
      
 
@@ -741,10 +801,10 @@ const uint32_t SmokeComputePushConstant::size(){
 
 void SmokeComputePushConstant::update() {
 
-    /*float time = static_cast<float>(glfwGetTime());
+    float time = static_cast<float>(glfwGetTime());
 
     float windChangeSpeed = 0.5f; // how fast wind direction changes
-    float windMaxAngle = glm::radians(30.0f);
+    float windMaxAngle = glm::radians(90.0f);
 
     float yawOffset = sin(time * windChangeSpeed) * windMaxAngle;
     float pitchOffset = cos(time * windChangeSpeed * 0.7f) * (windMaxAngle * 0.5f);
@@ -752,6 +812,9 @@ void SmokeComputePushConstant::update() {
     glm::vec3 dir = glm::rotateY(pc.windDirection, yawOffset);
     dir = glm::rotateX(dir, pitchOffset);
 
-    pc.windDirection = glm::vec4(glm::normalize(dir), 0.0f);*/
-    pc.windDirection = pc.windDirection;
+    pc.windDirection = glm::vec4(glm::normalize(dir), 0.0f);
+}
+
+glm::vec4 SmokeComputePushConstant::getEmitterPos() {
+    return pc.emitterPosition;
 }

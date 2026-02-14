@@ -85,6 +85,7 @@ Check the feature list below to see what is currently implemented and what is pl
 - Point lights & Directional lights
 - Dockable GUI
 - Debug line drawing
+- Particle effects
 
 ## In progress
 
@@ -99,7 +100,6 @@ Check the feature list below to see what is currently implemented and what is pl
 - Ray-tracing (Path tracing)
 - Emission maps etc.
 - Reflections
-- Particle effects
 - Animations
 
 # CONTROLS

@@ -23,12 +23,12 @@ public:
 };
 
 struct Descriptor {
-	VkDescriptorSetLayout layout;
+	VkDescriptorSetLayout layout = VK_NULL_HANDLE;
 	std::vector<VkDescriptorSet> sets;
-	VkDescriptorPool pool;
+	VkDescriptorPool pool = VK_NULL_HANDLE;
 };
 
 struct SetlessDescriptor {
-	VkDescriptorSetLayout layout;
-	VkDescriptorPool pool;
+	VkDescriptorSetLayout layout = VK_NULL_HANDLE;
+	VkDescriptorPool pool = VK_NULL_HANDLE;
 };

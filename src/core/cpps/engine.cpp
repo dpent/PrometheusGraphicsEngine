@@ -71,7 +71,9 @@ CommandPool Engine::computeCommand;
 std::vector<VkFence> Engine::computeInFlightFences;
 std::vector<VkSemaphore> Engine::computeFinishedSemaphores;
 
-ParticleEffect* Engine::particleEffect;
+DoubleEndedQueue<ParticleEffect*> Engine::particleEffects;
+
+bool Engine::remakeComputeDescriptors = false;
 
 //LIGHTING
 DoubleEndedQueue<Light*> Engine::lights;
@@ -227,7 +229,6 @@ void Engine::initVulkan() {
     DescriptorManager::createShadowLightsSets();
 
     DescriptorManager::createParticleSetLayout();
-	DescriptorManager::createParticleDescriptorPool();
 }
 
 void Engine::mainLoop() {
@@ -235,15 +236,6 @@ void Engine::mainLoop() {
     Engine::loadDemoScene();
     uint64_t framesThisSecond = 0;
     
-    SmokeComputePushConstant* cPC = new SmokeComputePushConstant(
-        10.0f,
-        1.0f,
-        glm::vec4(7.0f, 7.0f, 7.0f, 0.0f),
-        glm::vec4(1.0f, 0.0f, 0.0f, 0.0f)
-    );
-
-    Engine::particleEffect = new SmokeEffect("fireParticleEffectComp.spv", "particlesVert.spv", "particlesFrag.spv", cPC);
-    Engine::particleEffect->addParticles(1000);
     auto nextFrameTime = std::chrono::steady_clock::now();
     auto secondStart = std::chrono::steady_clock::now();
 
@@ -255,9 +247,7 @@ void Engine::mainLoop() {
         if (Engine::gameObjects.size != 0) {
             nextFrameTime += std::chrono::duration_cast<std::chrono::steady_clock::duration>(std::chrono::duration<double>(1.0 / Engine::targetFPS));
 
-			Engine::particleEffect->update();
-
-            Engine::submitCompute();
+            Engine::handleComputeJobs();
 
             Engine::drawFrame();
             std::this_thread::sleep_until(nextFrameTime);
@@ -284,8 +274,6 @@ void Engine::mainLoop() {
     }
 
     Engine::killThreadPool();
-
-    delete cPC;
 }
 
 void Engine::frameBufferResizeCallback(GLFWwindow* window, int width, int height) {
@@ -845,6 +833,28 @@ void GarbageQueues::update() {
         }
     }
 
+    auto itImg = images.begin();
+    auto itImgCount = imageFramesPassed.begin();
+
+    while (itImg != images.end()) {
+
+        (*itImgCount)++;
+
+        if (*itImgCount == Engine::MAX_FRAMES_IN_FLIGHT) {
+
+            (*itImg)->destroy();
+
+            delete* itImg;
+
+            itImg = images.erase(itImg);
+            itImgCount = imageFramesPassed.erase(itImgCount);
+        }
+        else {
+            itImg++;
+            itImgCount++;
+        }
+    }
+
     mutex.unlock();
 
 }
@@ -903,7 +913,7 @@ void Engine::loadDemoScene() {
     GameObject::createInitiasationJob(floor, fInfo);
     delete fInfo;
 
-    /*GameObject* barrels = new GameObject();
+    GameObject* barrels = new GameObject();
     InitInfo* bInfo = new InitInfo("seven_barrels.obj", nullptr, "barrel_basecolor.png", nullptr, "barrel_normal.png");
     barrels->transform->position = glm::vec3(20.0f, 0.0f, 20.0f);
     barrels->scale(glm::vec3(0.03f));
@@ -923,5 +933,57 @@ void Engine::loadDemoScene() {
     house->scale(glm::vec3(2.0f));
     house->rotate(glm::angleAxis(glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f)));
     GameObject::createInitiasationJob(house, hInfo);
-    delete hInfo;*/
+    delete hInfo;
+
+    SmokeComputePushConstant* cPC = new SmokeComputePushConstant(
+        17.0f,
+        0.01f,
+        glm::vec4(7.2f, 11.0f, 11.0f, 0.0f),
+        glm::vec4(0.1f, 0.0f, 0.0f, 0.0f)
+    );
+
+    SmokeEffect* sEffectLowerChimney = new SmokeEffect("fireParticleEffectComp.spv", "particlesVert.spv", "particlesFrag.spv", cPC);
+    sEffectLowerChimney->addParticles(1000);
+
+    SmokeComputePushConstant* cPC2 = new SmokeComputePushConstant(
+        19.0f,
+        0.01f,
+        glm::vec4(14.2f, 13.0f, 6.6f, 0.0f),
+        glm::vec4(0.1f, 0.0f, 0.0f, 0.0f)
+    );
+
+    SmokeEffect* sEffectHigherChimney = new SmokeEffect("fireParticleEffectComp.spv", "particlesVert.spv", "particlesFrag.spv", cPC2);
+    sEffectHigherChimney->addParticles(1000);
+}
+
+void Engine::updateParticleEffects() {
+
+    ParticleEffect* effect = Engine::particleEffects.head;
+
+    while (effect != nullptr) {
+        effect->update();
+        effect = effect->next;
+    }
+
+}
+
+void Engine::prepareComputeData() {
+    if (Engine::remakeComputeDescriptors) {
+        Engine::remakeComputeDescriptors = false;
+
+        ParticleEffect* pf = Engine::particleEffects.head;
+
+        while (pf != nullptr) {
+            pf->createComputeDescriptorSets();
+            pf = pf->next;
+        }
+    }
+}
+
+void Engine::handleComputeJobs() {
+
+    prepareComputeData();
+    updateParticleEffects();
+    submitCompute();
+
 }

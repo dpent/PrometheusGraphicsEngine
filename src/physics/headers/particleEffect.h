@@ -7,30 +7,36 @@
 #include "../../core/headers/descriptorManager.h"
 #include "../../core/headers/imageManager.h"
 
+struct PCData {
+};
+
 struct ComputePushContant {
+	PCData pc;
 
 	virtual const void* data() { return 0; };
 	virtual const uint32_t size() { return 0; };
 	virtual void update();
+	virtual glm::vec4 getEmitterPos();
 
 	ComputePushContant();
 };
 
-struct SmokePCData {
+struct SmokePCData{
 	float maxHeight;
-	float windSpeed;
+	float windSpeed; 
+	float padding[2]; // padding so the vectors are at %16 byte offset
 	glm::vec4 emitterPosition;
 	glm::vec4 windDirection;
 };
 
 struct SmokeComputePushConstant : ComputePushContant {
-	
-	SmokePCData pc;
 
+	SmokePCData pc;
 	const void* data() override;
 
 	const uint32_t size() override;
 	void update() override;
+	glm::vec4 getEmitterPos() override;
 
 	SmokeComputePushConstant();
 	SmokeComputePushConstant(float maxHeight, float windSpeed, glm::vec4 emitterPosition, glm::vec4 windDirection);
@@ -55,9 +61,14 @@ public:
 
 	ComputePushContant* computePushConstant;
 
+	ParticleEffect* next = nullptr;
+	ParticleEffect* prev = nullptr;
+
 	ParticleEffect();
 	ParticleEffect(uint64_t numParticles, std::string computeShaderFilename, std::string vertexShaderFilename, std::string fragmentShaderFilename, ComputePushContant* cPC);
 	ParticleEffect(std::string computeShaderFilename, std::string vertexShaderFilename, std::string fragmentShaderFilename, ComputePushContant* cPC);
+	~ParticleEffect();
+
 
 	virtual void createGraphicsDescriptor();
 	virtual void addParticles(uint64_t numParticles);
@@ -65,7 +76,9 @@ public:
 	virtual void createComputeDescriptorSets();
 	virtual void createComputePipeline();
 	virtual void update();
+	virtual void destroy();
 
+	glm::vec4 getEmitterPos();
 	ComputePushContant* getComputePushConstants();
 	void createBuffers();
 };
@@ -73,12 +86,13 @@ public:
 class SmokeEffect : public ParticleEffect {
 public:
 
-	Image image;
+	Image* image;
 	uint32_t mipLevels;
 
 	SmokeEffect();
 	SmokeEffect(uint64_t numParticles, std::string computeShaderFilename, std::string vertexShaderFilename, std::string fragmentShaderFilename, ComputePushContant* cPC);
 	SmokeEffect(std::string computeShaderFilename, std::string vertexShaderFilename, std::string fragmentShaderFilename, ComputePushContant* cPC);
+	~SmokeEffect();
 
 	void createGraphicsDescriptor() override;
 	void addParticles(uint64_t numParticles) override;
@@ -86,6 +100,7 @@ public:
 	void createComputeDescriptorSets() override;
 	void createComputePipeline() override;
 	void update() override;
+	void destroy() override;
 
 	void loadImage();
 };

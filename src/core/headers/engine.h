@@ -28,6 +28,8 @@ struct GarbageQueues {
 	std::list<uint8_t> bufferFramesPassed;
 	std::list<ImageVector*> imageVectors;
 	std::list<uint8_t> imageVectorFramesPassed;
+	std::list<Image*> images;
+	std::list<uint8_t> imageFramesPassed;
 	
 	std::mutex mutex;
 
@@ -123,7 +125,9 @@ public:
 	static std::vector<VkFence> computeInFlightFences;
 	static std::vector<VkSemaphore> computeFinishedSemaphores;
 
-	static ParticleEffect* particleEffect;
+	static DoubleEndedQueue<ParticleEffect*> particleEffects;
+
+	static bool remakeComputeDescriptors;
 
 	//LIGHTING
 	static DoubleEndedQueue<Light*> lights;
@@ -220,6 +224,11 @@ public:
 
 	//LIGHTING
 	static void updateLightData();
+
+	//COMPUTE
+	static void updateParticleEffects();
+	static void prepareComputeData();
+	static void handleComputeJobs();
 
 	//USED BY GLFW TO NOTIFY WINDOW RESIZE
 	static void frameBufferResizeCallback(GLFWwindow* window, int width, int height);
