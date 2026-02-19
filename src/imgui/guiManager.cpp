@@ -322,8 +322,9 @@ void GUIManager::createMainDockspace() {
 
 void GUIManager::calculateViewportLimitations() {
 
-	std::vector<DockedWindowInfo> infos = GUIManager::getDockedWindowInfo(GUIManager::mainDockspace);
+	std::vector<DockedWindowInfo> infos;
 
+	GUIManager::getDockedWindowInfo(GUIManager::mainDockspace, infos);
 	Engine::viewportLimitsOffsets = glm::vec4(0.0f);
 	ImGuiViewport* vp = ImGui::GetMainViewport();
 
@@ -351,9 +352,8 @@ ImGuiDockNode* GUIManager::getDockNode(ImGuiID id)
 	return nullptr;
 }
 
-std::vector<DockedWindowInfo> GUIManager::getDockedWindowInfo(ImGuiDockNode* dockNode)
+void GUIManager::getDockedWindowInfo(ImGuiDockNode* dockNode, std::vector<DockedWindowInfo>& children)
 {
-	std::vector<DockedWindowInfo> children;
 
 	// Root has 0..2 children (Binary tree so thats how they do up/down - left/right)
 	for (int i = 0; i < 2; i++)
@@ -361,7 +361,10 @@ std::vector<DockedWindowInfo> GUIManager::getDockedWindowInfo(ImGuiDockNode* doc
 		ImGuiDockNode* child = dockNode->ChildNodes[i];
 		if (!child) continue;
 
-		if (child->Windows.Size == 0) continue;
+		if (child->Windows.Size == 0) {
+			GUIManager::getDockedWindowInfo(child, children);
+			continue;
+		}
 
 		DockedWindowInfo info;
 		info.node = child;
@@ -372,8 +375,6 @@ std::vector<DockedWindowInfo> GUIManager::getDockedWindowInfo(ImGuiDockNode* doc
 
 		children.push_back(info);
 	}
-
-	return children;
 }
 
 limitUpdater* GUIManager::getLimitUpdater(ImGuiDockNode* window) {

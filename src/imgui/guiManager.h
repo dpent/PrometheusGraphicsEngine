@@ -74,6 +74,6 @@ public:
 
 	static void calculateViewportLimitations();
 	static ImGuiDockNode* getDockNode(ImGuiID id);
-	static std::vector<DockedWindowInfo> getDockedWindowInfo(ImGuiDockNode* dockNode);
+	static void getDockedWindowInfo(ImGuiDockNode* dockNode, std::vector<DockedWindowInfo>& children);
 	static limitUpdater* getLimitUpdater(ImGuiDockNode* window);
 };

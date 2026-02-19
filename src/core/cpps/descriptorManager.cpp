@@ -532,16 +532,16 @@ void DescriptorManager::createParticleDescriptorPool() {
 
     std::array<VkDescriptorPoolSize, 2> poolSizes{};
     poolSizes[0].type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-    poolSizes[0].descriptorCount = Engine::MAX_FRAMES_IN_FLIGHT * (Engine::particleEffects.size + 1); //For some reason this works
+    poolSizes[0].descriptorCount = Engine::MAX_FRAMES_IN_FLIGHT * static_cast<uint32_t>(Engine::particleEffects.size + 1); //For some reason this works
 
 	poolSizes[1].type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-    poolSizes[1].descriptorCount = Engine::MAX_FRAMES_IN_FLIGHT * (Engine::particleEffects.size + 1);
+    poolSizes[1].descriptorCount = Engine::MAX_FRAMES_IN_FLIGHT * static_cast<uint32_t>(Engine::particleEffects.size + 1);
 
     VkDescriptorPoolCreateInfo poolInfo{};
     poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
     poolInfo.flags =
         VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT;
-    poolInfo.maxSets = Engine::MAX_FRAMES_IN_FLIGHT * (Engine::particleEffects.size + 1); //PER FRAME
+    poolInfo.maxSets = Engine::MAX_FRAMES_IN_FLIGHT * static_cast<uint32_t>(Engine::particleEffects.size + 1); //PER FRAME
     poolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
     poolInfo.pPoolSizes = poolSizes.data();
 
