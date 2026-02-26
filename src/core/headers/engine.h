@@ -14,6 +14,7 @@
 #include "../../physics/headers/light.h"
 #include "debug.h"
 #include "../../physics/headers/particleEffect.h"
+#include "../../physics/headers/rayTracingStructs.h"
 
 class WorkerThread;
 struct Job;
@@ -134,6 +135,11 @@ public:
 	static Pipeline rayTracingPipeline;
 
 	static Descriptor rayTracingDescriptor;
+	static Descriptor rayTracingSpheresDescriptor;
+
+	static Buffer rayTracingSpheres;
+
+	static std::vector<VkDescriptorSetLayout> layoutsUsed;
 	#endif
 
 	//LIGHTING

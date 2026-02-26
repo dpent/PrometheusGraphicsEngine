@@ -182,7 +182,7 @@ void ParticleEffect::createBuffers() {
 
     for (size_t i = 0; i < buffers.size(); i++) {
 
-        BufferManager::createParticleSSBO(buffers[i], Engine::stagingBuffer, particles);
+        BufferManager::createParticleSSBO(buffers[i], particles);
         BufferManager::copyBuffer(Engine::stagingBuffer, buffers[i], bufferSize);
     }
 }
@@ -394,7 +394,7 @@ void ParticleEffect::createComputeDescriptorSets(){
         writes[1].descriptorCount = 1;
         writes[1].pBufferInfo = &storageBufferInfoCurrentFrame;
 
-        vkUpdateDescriptorSets(Engine::deviceInfo.logicalDevice, 2, writes.data(), 0, nullptr);
+        vkUpdateDescriptorSets(Engine::deviceInfo.logicalDevice, static_cast<uint32_t>(writes.size()), writes.data(), 0, nullptr);
     }
 }
 

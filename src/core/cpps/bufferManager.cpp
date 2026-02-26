@@ -664,11 +664,16 @@ void BufferManager::recordRayTracingComputeCommands(VkCommandBuffer& commandBuff
     Engine::swapChainInfo.imageLayouts[imageIndex] = VK_IMAGE_LAYOUT_GENERAL;
 
     vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, Engine::rayTracingPipeline.pipeline);
+
+    std::vector<VkDescriptorSet> sets{
+        Engine::rayTracingDescriptor.sets[Engine::currentFrame],
+        Engine::rayTracingSpheresDescriptor.sets[0]
+    };
     
     vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE,
         Engine::rayTracingPipeline.layout,
-        0, 1,
-        &Engine::rayTracingDescriptor.sets[Engine::currentFrame],
+        0, static_cast<uint32_t>(sets.size()),
+        sets.data(),
         0, nullptr);
 
     RayTracingCameraObject* cam = Engine::camera.getRayTracingDetails();

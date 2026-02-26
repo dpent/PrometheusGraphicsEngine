@@ -484,8 +484,8 @@ void PipelineManager::createRayTracingPipeline() {
 
     VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
     pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-    pipelineLayoutInfo.setLayoutCount = 1;
-    pipelineLayoutInfo.pSetLayouts = &Engine::rayTracingDescriptor.layout;
+    pipelineLayoutInfo.setLayoutCount = static_cast<uint32_t>(Engine::layoutsUsed.size());
+    pipelineLayoutInfo.pSetLayouts = Engine::layoutsUsed.data();
     pipelineLayoutInfo.pushConstantRangeCount = 1;
     pipelineLayoutInfo.pPushConstantRanges = &pushConstantRange;
 

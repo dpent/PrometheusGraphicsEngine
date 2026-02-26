@@ -82,6 +82,11 @@ bool Engine::remakeComputeDescriptors = false;
 Pipeline Engine::rayTracingPipeline;
 
 Descriptor Engine::rayTracingDescriptor;
+Descriptor Engine::rayTracingSpheresDescriptor;
+
+Buffer Engine::rayTracingSpheres;
+
+std::vector<VkDescriptorSetLayout> Engine::layoutsUsed;
 #endif
 
 //LIGHTING
@@ -241,9 +246,6 @@ void Engine::initVulkan() {
 
     #ifdef RAY_TRACING
     DescriptorManager::createRayTracingSetLayout();
-
-    PipelineManager::createRayTracingPipeline();
-
     DescriptorManager::createRayTracingDescriptorPool();
     DescriptorManager::createRayTracingDescriptorSets();
     #endif
@@ -256,6 +258,10 @@ void Engine::mainLoop() {
     
     auto nextFrameTime = std::chrono::steady_clock::now();
     auto secondStart = std::chrono::steady_clock::now();
+
+    #ifdef RAY_TRACING
+    PipelineManager::createRayTracingPipeline();
+    #endif
 
     while (!glfwWindowShouldClose(Engine::window)) {
         glfwPollEvents();
@@ -927,6 +933,7 @@ void Engine::updateLightData() {
 
 void Engine::loadDemoScene() {
 
+    #ifndef RAY_TRACING
     DirectionalLight* sun = new DirectionalLight(glm::vec4(-10.0f), glm::vec4(COLOR_WHITE, 10.0f), 2.0f);
 
     ImageManager::createSolidColorFilePNG("brown.png", 92, 64, 51);
@@ -979,6 +986,57 @@ void Engine::loadDemoScene() {
 
     SmokeEffect* sEffectHigherChimney = new SmokeEffect("fireParticleEffectComp.spv", "particlesVert.spv", "particlesFrag.spv", cPC2);
     sEffectHigherChimney->addParticles(1000);
+
+    #else
+    Sphere sphere{
+        .center = glm::vec4(0.0,0.0,0.0, 5.0),
+        .color = glm::vec4(1.0,0.0,1.0,1.0)
+    };
+
+    Sphere sphere2{
+        .center = glm::vec4(11.0,6.0,6.0, 10.0),
+        .color = glm::vec4(1.0,0.0,0.0,1.0)
+    };
+
+    Sphere sphere3{
+        .center = glm::vec4(-15.0,15.0,15.0, 12.0),
+        .color = glm::vec4(0.0,0.0,1.0,1.0)
+    };
+
+    Sphere sphere4{
+        .center = glm::vec4(25.0,25.0,25.0, 18.0),
+        .color = glm::vec4(1.0,1.0,0.0,1.0)
+    };
+
+    Sphere sphere5{
+        .center = glm::vec4(25.0, -20.0, 60.0, 50.0),
+        .color = glm::vec4(1.0,1.0,1.0,1.0)
+    };
+
+    std::vector<Sphere> spheres;
+    spheres.push_back(sphere);
+    spheres.push_back(sphere2);
+    spheres.push_back(sphere3);
+    spheres.push_back(sphere4);
+    spheres.push_back(sphere5);
+
+    BufferManager::createParticleSSBO(Engine::rayTracingSpheres, spheres);
+
+    if (Engine::rayTracingSpheres.size > Engine::stagingBuffer.size) {
+        BufferManager::createStagingBuffer(Engine::rayTracingSpheres.size, Engine::stagingBuffer);
+    }
+
+    void* data;
+    vkMapMemory(Engine::deviceInfo.logicalDevice, Engine::stagingBuffer.memory, 0, Engine::rayTracingSpheres.size, 0, &data);
+    memcpy(data, spheres.data(), Engine::rayTracingSpheres.size);
+    vkUnmapMemory(Engine::deviceInfo.logicalDevice, Engine::stagingBuffer.memory);
+
+    BufferManager::copyBuffer(Engine::stagingBuffer, Engine::rayTracingSpheres, Engine::rayTracingSpheres.size);
+
+    DescriptorManager::createRaySpheresSetLayout();
+    DescriptorManager::createRaySpheresPool();
+    DescriptorManager::createRaySpheresSets();
+    #endif
 }
 
 void Engine::updateParticleEffects() {

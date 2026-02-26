@@ -107,7 +107,7 @@ public:
 		memcpy(buffer.mapped, bufferData.data(), buffer.size);
 	}
 
-	template <typename T> static void createParticleSSBO(Buffer& buffer, Buffer& stagingBuffer, std::vector<T>& bufferData)
+	template <typename T> static void createParticleSSBO(Buffer& buffer, std::vector<T>& bufferData)
 	{
 
 		VkDeviceSize bufferSize = sizeof(T) * bufferData.size();
