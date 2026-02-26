@@ -11,6 +11,9 @@ public:
 	static void createShadowPipeline();
 
 	static void createDebugPipeline();
+	#ifdef RAY_TRACING
+	static void createRayTracingPipeline();
+	#endif
 };
 
 struct Pipeline {

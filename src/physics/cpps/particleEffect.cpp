@@ -369,9 +369,9 @@ void ParticleEffect::createComputeDescriptorSets(){
 
         std::array<VkWriteDescriptorSet, 2> writes{};
         VkDescriptorBufferInfo storageBufferInfoLastFrame{};
-        storageBufferInfoLastFrame.buffer = this->buffers[(i - 1) % Engine::MAX_FRAMES_IN_FLIGHT].buffer;
+        storageBufferInfoLastFrame.buffer = this->buffers[(i + Engine::MAX_FRAMES_IN_FLIGHT - 1) % Engine::MAX_FRAMES_IN_FLIGHT].buffer;
         storageBufferInfoLastFrame.offset = 0;
-        storageBufferInfoLastFrame.range = this->buffers[(i - 1) % Engine::MAX_FRAMES_IN_FLIGHT].size;
+        storageBufferInfoLastFrame.range = this->buffers[(i + Engine::MAX_FRAMES_IN_FLIGHT - 1) % Engine::MAX_FRAMES_IN_FLIGHT].size;
 
         writes[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
         writes[0].dstSet = this->sets[i];
@@ -402,7 +402,7 @@ void ParticleEffect::createComputePipeline() {
     auto compShaderCode = Engine::readFile((std::filesystem::path(BIN_DIR) / this->computeShaderFilename).string());
     VkShaderModule compShaderModule = Engine::createShaderModule(compShaderCode);
 
-    VkPipelineShaderStageCreateInfo compShaderStage = Engine::createShaderStageInfo( //Vertex
+    VkPipelineShaderStageCreateInfo compShaderStage = Engine::createShaderStageInfo(
         VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
         VK_SHADER_STAGE_COMPUTE_BIT,
         compShaderModule,

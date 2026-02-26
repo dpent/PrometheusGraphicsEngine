@@ -31,6 +31,16 @@ void SwapChainManager::createSwapChain(VkSwapchainKHR oldSwapChain) {
     SwapChainSupportDetails swapChainSupport = SwapChainSupportDetails::querySwapChainSupport(Engine::deviceInfo.physicalDevice, Engine::surface);
 
     VkSurfaceFormatKHR surfaceFormat = SwapChainManager::chooseSwapSurfaceFormat(swapChainSupport.formats);
+
+    VkFormatProperties props;
+    vkGetPhysicalDeviceFormatProperties(Engine::deviceInfo.physicalDevice, surfaceFormat.format, &props);
+
+    #ifdef RAY_TRACING
+    if ((props.optimalTilingFeatures & VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT) == 0) {
+        throw std::runtime_error("Swap chain image format does not support storage image usage!");
+    }
+    #endif
+
     Engine::swapChainInfo.presentMode = SwapChainManager::chooseSwapPresentMode(swapChainSupport.presentModes);
     VkExtent2D extent = SwapChainManager::chooseSwapExtent(swapChainSupport.capabilities);
 
@@ -49,7 +59,12 @@ void SwapChainManager::createSwapChain(VkSwapchainKHR oldSwapChain) {
     createInfo.imageColorSpace = surfaceFormat.colorSpace;
     createInfo.imageExtent = extent;
     createInfo.imageArrayLayers = 1;
+
+    #ifndef RAY_TRACING
     createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+    #else
+    createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_STORAGE_BIT;
+    #endif
                                                                 /*It is also possible that you'll render images to a separate
                                                                 image first to perform operations like post-processing. In that
                                                                 case you may use a value like VK_IMAGE_USAGE_TRANSFER_DST_BIT
@@ -94,13 +109,23 @@ void SwapChainManager::createSwapChain(VkSwapchainKHR oldSwapChain) {
 
     Engine::swapChainInfo.imageFormat = surfaceFormat.format;
     Engine::swapChainInfo.extent = extent;
+
+	Engine::swapChainInfo.imageLayouts.resize(Engine::swapChainInfo.images.size(), VK_IMAGE_LAYOUT_UNDEFINED);
+	Engine::MAX_FRAMES_IN_FLIGHT = static_cast<int>(Engine::swapChainInfo.images.size());
 }
 
 VkSurfaceFormatKHR SwapChainManager::chooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats) {
     for (const auto& availableFormat : availableFormats) {
+        #ifdef RAY_TRACING
+        if (availableFormat.format == VK_FORMAT_R8G8B8A8_UNORM && availableFormat.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR)
+        {
+            return availableFormat;
+        }
+        #else
         if (availableFormat.format == VK_FORMAT_B8G8R8A8_SRGB && availableFormat.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
             return availableFormat;
         }
+        #endif
     }
 
     return availableFormats[0];

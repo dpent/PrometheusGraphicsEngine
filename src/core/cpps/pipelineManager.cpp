@@ -463,3 +463,38 @@ void PipelineManager::createDebugPipeline() {
     vkDestroyShaderModule(Engine::deviceInfo.logicalDevice, fragShaderModule, nullptr);
     vkDestroyShaderModule(Engine::deviceInfo.logicalDevice, vertShaderModule, nullptr);
 }
+
+#ifdef RAY_TRACING
+void PipelineManager::createRayTracingPipeline() {
+    auto compShaderCode = Engine::readFile((std::filesystem::path(BIN_DIR) / "rayTracingComp.spv").string());
+    VkShaderModule compShaderModule = Engine::createShaderModule(compShaderCode);
+
+    VkPipelineShaderStageCreateInfo compShaderStage = Engine::createShaderStageInfo(
+        VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+        VK_SHADER_STAGE_COMPUTE_BIT,
+        compShaderModule,
+        "main",
+        nullptr
+    );
+
+    VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
+    pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+    pipelineLayoutInfo.setLayoutCount = 1;
+    pipelineLayoutInfo.pSetLayouts = &Engine::rayTracingDescriptor.layout;
+
+    if (vkCreatePipelineLayout(Engine::deviceInfo.logicalDevice, &pipelineLayoutInfo, nullptr, &Engine::rayTracingPipeline.layout) != VK_SUCCESS) {
+        throw std::runtime_error("failed to create compute pipeline layout!");
+    }
+
+    VkComputePipelineCreateInfo pipelineInfo{};
+    pipelineInfo.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
+    pipelineInfo.layout = Engine::rayTracingPipeline.layout;
+    pipelineInfo.stage = compShaderStage;
+
+    if (vkCreateComputePipelines(Engine::deviceInfo.logicalDevice, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &Engine::rayTracingPipeline.pipeline) != VK_SUCCESS) {
+        throw std::runtime_error("failed to create compute pipeline!");
+    }
+
+    vkDestroyShaderModule(Engine::deviceInfo.logicalDevice, compShaderModule, nullptr);
+}
+#endif

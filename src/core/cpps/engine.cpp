@@ -9,6 +9,8 @@
 #endif
 
 //CORE
+int Engine::MAX_FRAMES_IN_FLIGHT = 2;
+
 VulkanInstance Engine::vkInstanceInfo;
 DeviceInfo Engine::deviceInfo;
 SwapChain Engine::swapChainInfo;
@@ -74,6 +76,15 @@ std::vector<VkSemaphore> Engine::computeFinishedSemaphores;
 DoubleEndedQueue<ParticleEffect*> Engine::particleEffects;
 
 bool Engine::remakeComputeDescriptors = false;
+
+#ifdef RAY_TRACING
+//RAY TRACING
+CommandPool Engine::rayTracingCommand;
+
+Pipeline Engine::rayTracingPipeline;
+
+Descriptor Engine::rayTracingDescriptor;
+#endif
 
 //LIGHTING
 DoubleEndedQueue<Light*> Engine::lights;
@@ -177,9 +188,9 @@ void Engine::initVulkan() {
     DeviceManager::pickPhysicalDevice();
     DeviceManager::createLogicalDevice();
 
-    Engine::createSyncObjects();
-
     SwapChainManager::createSwapChain(Engine::swapChainInfo.chain);
+
+    Engine::createSyncObjects();
 
     Engine::command.initialize();
     Engine::computeCommand.initialize();
@@ -229,6 +240,17 @@ void Engine::initVulkan() {
     DescriptorManager::createShadowLightsSets();
 
     DescriptorManager::createParticleSetLayout();
+
+    #ifdef RAY_TRACING
+    Engine::rayTracingCommand.initialize();
+
+    DescriptorManager::createRayTracingSetLayout();
+
+    PipelineManager::createRayTracingPipeline();
+
+    DescriptorManager::createRayTracingDescriptorPool();
+    DescriptorManager::createRayTracingDescriptorSets();
+    #endif
 }
 
 void Engine::mainLoop() {
@@ -244,9 +266,15 @@ void Engine::mainLoop() {
         InputManager::consumeInput(Engine::window);
         Engine::camera.updateCameraVectors();
 
+        #ifdef RAY_TRACING
+        nextFrameTime += std::chrono::duration_cast<std::chrono::steady_clock::duration>(std::chrono::duration<double>(1.0 / Engine::targetFPS));
+
+        Engine::rayTrace();
+
+        std::this_thread::sleep_until(nextFrameTime);
+        #else
         if (Engine::gameObjects.size != 0) {
             nextFrameTime += std::chrono::duration_cast<std::chrono::steady_clock::duration>(std::chrono::duration<double>(1.0 / Engine::targetFPS));
-
             Engine::handleComputeJobs();
 
             Engine::drawFrame();
@@ -261,6 +289,7 @@ void Engine::mainLoop() {
             framesThisSecond = 0;
         }
 
+        #endif
         #ifndef RELEASE
         if (Engine::frameCount % 60 == 0)
         {
@@ -987,3 +1016,80 @@ void Engine::handleComputeJobs() {
     submitCompute();
 
 }
+
+#ifdef RAY_TRACING
+void Engine::rayTrace() {
+    uint32_t imageIndex;
+    VkResult result = vkAcquireNextImageKHR(
+        Engine::deviceInfo.logicalDevice,
+        Engine::swapChainInfo.chain,
+        UINT64_MAX,
+        Engine::imageAvailableSemaphores[Engine::currentFrame],
+        VK_NULL_HANDLE,
+        &imageIndex
+    );
+
+    if (result == VK_ERROR_OUT_OF_DATE_KHR) {
+        SwapChainManager::recreateSwapChain();
+        framebufferResized = false;
+        return;
+    }
+    else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) {
+        throw std::runtime_error("failed to acquire swap chain image!");
+    }
+
+    // Wait fences for **this swapchain image**
+    vkWaitForFences(Engine::deviceInfo.logicalDevice, 1, &Engine::inFlightFences[imageIndex], VK_TRUE, UINT64_MAX);
+    vkResetFences(Engine::deviceInfo.logicalDevice, 1, &Engine::inFlightFences[imageIndex]);
+
+    vkWaitForFences(Engine::deviceInfo.logicalDevice, 1, &Engine::computeInFlightFences[imageIndex], VK_TRUE, UINT64_MAX);
+    vkResetFences(Engine::deviceInfo.logicalDevice, 1, &Engine::computeInFlightFences[imageIndex]);
+
+    BufferManager::recordRayTracingCommandBuffer(Engine::command.buffers[imageIndex], imageIndex);
+
+    VkSemaphore waitSemaphoresCompute[] = { Engine::imageAvailableSemaphores[imageIndex] };
+    VkPipelineStageFlags waitStagesCompute[] = { VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT };
+    VkSubmitInfo computeSubmit{};
+    computeSubmit.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    computeSubmit.waitSemaphoreCount = 1;
+    computeSubmit.pWaitSemaphores = waitSemaphoresCompute;
+    computeSubmit.pWaitDstStageMask = waitStagesCompute;
+    computeSubmit.commandBufferCount = 1;
+    computeSubmit.pCommandBuffers = &Engine::command.buffers[imageIndex];
+    computeSubmit.signalSemaphoreCount = 1;
+    computeSubmit.pSignalSemaphores = &Engine::computeFinishedSemaphores[imageIndex];
+
+    if (vkQueueSubmit(Engine::queues.compute, 1, &computeSubmit, Engine::computeInFlightFences[imageIndex]) != VK_SUCCESS) {
+        throw std::runtime_error("failed to submit compute command buffer!");
+    }
+
+    VkSemaphore waitSemaphoresGraphics[] = { Engine::computeFinishedSemaphores[imageIndex] };
+    VkPipelineStageFlags waitStagesGraphics[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
+    VkSubmitInfo graphicsSubmit{};
+    graphicsSubmit.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    graphicsSubmit.waitSemaphoreCount = 1;
+    graphicsSubmit.pWaitSemaphores = waitSemaphoresGraphics;
+    graphicsSubmit.pWaitDstStageMask = waitStagesGraphics;
+    graphicsSubmit.commandBufferCount = 1;
+    graphicsSubmit.pCommandBuffers = &Engine::command.buffers[imageIndex];
+    VkSemaphore signalSemaphores[] = { Engine::renderFinishedSemaphores[imageIndex] };
+    graphicsSubmit.signalSemaphoreCount = 1;
+    graphicsSubmit.pSignalSemaphores = signalSemaphores;
+
+    if (vkQueueSubmit(Engine::queues.graphics, 1, &graphicsSubmit, Engine::inFlightFences[imageIndex]) != VK_SUCCESS) {
+        throw std::runtime_error("failed to submit graphics command buffer!");
+    }
+
+    VkPresentInfoKHR presentInfo{};
+    presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+    presentInfo.waitSemaphoreCount = 1;
+    presentInfo.pWaitSemaphores = signalSemaphores;
+    VkSwapchainKHR swapChains[] = { Engine::swapChainInfo.chain };
+    presentInfo.swapchainCount = 1;
+    presentInfo.pSwapchains = swapChains;
+    presentInfo.pImageIndices = &imageIndex;
+    vkQueuePresentKHR(Engine::queues.present, &presentInfo);
+
+    Engine::currentFrame = (Engine::currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
+}
+#endif

@@ -549,3 +549,108 @@ void DescriptorManager::createParticleDescriptorPool() {
         throw std::runtime_error("failed to create descriptor pool!");
     }
 }
+
+#ifdef RAY_TRACING
+void DescriptorManager::createRayTracingSetLayout() {
+    if (Engine::rayTracingDescriptor.layout != VK_NULL_HANDLE) {
+        vkDestroyDescriptorSetLayout(Engine::deviceInfo.logicalDevice, Engine::rayTracingDescriptor.layout, nullptr);
+    }
+
+    VkDescriptorSetLayoutBinding storageImage{};
+    storageImage.binding = 0;
+    storageImage.descriptorCount = 1;
+    storageImage.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+    storageImage.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+
+    std::array<VkDescriptorSetLayoutBinding, 1> bindings = {
+    storageImage,
+    };
+
+    std::array<VkDescriptorBindingFlags, 1> bindingFlags = {
+    0, // storageImage (binding 0) no flags
+    };
+
+    VkDescriptorSetLayoutBindingFlagsCreateInfo flagsInfo{};
+    flagsInfo.sType =
+        VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO;
+    flagsInfo.bindingCount = static_cast<uint32_t>(bindingFlags.size());
+    flagsInfo.pBindingFlags = bindingFlags.data();
+
+    VkDescriptorSetLayoutCreateInfo layoutInfo{};
+    layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    layoutInfo.bindingCount = static_cast<uint32_t>(bindings.size());
+    layoutInfo.pBindings = bindings.data();
+    layoutInfo.flags = VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT;
+    layoutInfo.pNext = &flagsInfo;
+
+    if (vkCreateDescriptorSetLayout(Engine::deviceInfo.logicalDevice, &layoutInfo, nullptr, &Engine::rayTracingDescriptor.layout) != VK_SUCCESS) {
+        throw std::runtime_error("failed to create descriptor set layout!");
+    }
+}
+
+void DescriptorManager::createRayTracingDescriptorPool() {
+
+    if (Engine::rayTracingDescriptor.pool != VK_NULL_HANDLE) {
+        Engine::garbage.lock();
+        Engine::garbage.descriptors.push_back(Engine::rayTracingDescriptor.pool);
+        Engine::garbage.descriptorFramesPassed.push_back(0);
+        Engine::garbage.unlock();
+    }
+
+    std::array<VkDescriptorPoolSize, 1> poolSizes{};
+    poolSizes[0].type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+    poolSizes[0].descriptorCount = Engine::MAX_FRAMES_IN_FLIGHT;
+
+    VkDescriptorPoolCreateInfo poolInfo{};
+    poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+    poolInfo.flags =
+        VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT;
+    poolInfo.maxSets = Engine::MAX_FRAMES_IN_FLIGHT; //PER FRAME
+    poolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
+    poolInfo.pPoolSizes = poolSizes.data();
+
+    if (vkCreateDescriptorPool(Engine::deviceInfo.logicalDevice, &poolInfo, nullptr, &Engine::rayTracingDescriptor.pool) != VK_SUCCESS) {
+        throw std::runtime_error("failed to create descriptor pool!");
+    }
+}
+
+void DescriptorManager::createRayTracingDescriptorSets() {
+
+    Engine::rayTracingDescriptor.sets.resize(Engine::MAX_FRAMES_IN_FLIGHT);
+    std::vector<VkDescriptorSetLayout> layouts(Engine::MAX_FRAMES_IN_FLIGHT, Engine::rayTracingDescriptor.layout);
+
+    VkDescriptorSetAllocateInfo allocInfo{};
+    allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+    allocInfo.pNext = nullptr;
+    allocInfo.descriptorPool = Engine::rayTracingDescriptor.pool;
+    allocInfo.descriptorSetCount = Engine::MAX_FRAMES_IN_FLIGHT;
+    allocInfo.pSetLayouts = layouts.data();
+
+    if (vkAllocateDescriptorSets(Engine::deviceInfo.logicalDevice, &allocInfo, Engine::rayTracingDescriptor.sets.data()) != VK_SUCCESS) {
+        throw std::runtime_error("failed to allocate descriptor set!");
+    }
+
+    for (size_t i = 0; i < Engine::MAX_FRAMES_IN_FLIGHT; i++) {
+
+        VkDescriptorImageInfo imageInfo{};
+        imageInfo.imageView = Engine::swapChainInfo.imageViews[i];
+        imageInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+
+        VkWriteDescriptorSet imageWrite{};
+        imageWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        imageWrite.dstSet = Engine::rayTracingDescriptor.sets[i];
+        imageWrite.dstBinding = 0;
+        imageWrite.dstArrayElement = 0;
+        imageWrite.descriptorCount = 1;
+        imageWrite.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+        imageWrite.pImageInfo = &imageInfo;
+
+        std::array<VkWriteDescriptorSet, 1> writes = {
+            imageWrite
+        };
+
+        vkUpdateDescriptorSets(Engine::deviceInfo.logicalDevice, static_cast<uint32_t>(writes.size()), writes.data(), 0, nullptr);
+    }
+
+}
+#endif

@@ -47,8 +47,6 @@ public:
 	VK_KHR_SWAPCHAIN_EXTENSION_NAME
 	};
 
-	static const int MAX_FRAMES_IN_FLIGHT = 2;
-
 	static std::filesystem::path exeDir;
 
 	static const uint32_t MAX_TEXTURES = 1024;
@@ -61,6 +59,8 @@ public:
 	inline static const glm::vec3 WORLD_UP = glm::vec3(0.0f, 1.0f, 0.0f);
 
 	//CORE
+	static int MAX_FRAMES_IN_FLIGHT;
+
 	static VulkanInstance vkInstanceInfo;
 	static DeviceInfo deviceInfo;
 	static SwapChain swapChainInfo;
@@ -128,6 +128,15 @@ public:
 	static DoubleEndedQueue<ParticleEffect*> particleEffects;
 
 	static bool remakeComputeDescriptors;
+
+	#ifdef RAY_TRACING
+	//RAY TRACING
+	static CommandPool rayTracingCommand;
+
+	static Pipeline rayTracingPipeline;
+
+	static Descriptor rayTracingDescriptor;
+	#endif
 
 	//LIGHTING
 	static DoubleEndedQueue<Light*> lights;
@@ -224,6 +233,9 @@ public:
 
 	//LIGHTING
 	static void updateLightData();
+
+	//RAY TRACING
+	static void rayTrace();
 
 	//COMPUTE
 	static void updateParticleEffects();

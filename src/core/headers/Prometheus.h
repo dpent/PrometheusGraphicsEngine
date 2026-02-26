@@ -4,6 +4,7 @@
 #pragma once
 
 //#define RELEASE
+//#define RAY_TRACING
 
 #include <iostream>
 #define GLFW_INCLUDE_VULKAN

@@ -41,6 +41,9 @@ public:
     static void transitionImageLayout(VkImage& image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout,
         uint32_t mipLevels, VkCommandPool& commandPool);
 
+    static void transitionImageLayout(VkImage& image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout,
+        uint32_t mipLevels, VkCommandBuffer& commandBuffer);
+
     static void copyBufferToImage(VkBuffer& buffer, VkImage& image, const uint32_t& width, const uint32_t& height,
         VkCommandPool& commandPool);
 

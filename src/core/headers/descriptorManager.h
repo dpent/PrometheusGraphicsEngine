@@ -20,6 +20,12 @@ public:
 
 	static void createParticleSetLayout();
 	static void createParticleDescriptorPool();
+
+	#ifdef RAY_TRACING
+	static void createRayTracingSetLayout();
+	static void createRayTracingDescriptorPool();
+	static void createRayTracingDescriptorSets();
+	#endif
 };
 
 struct Descriptor {

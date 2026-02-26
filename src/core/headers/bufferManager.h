@@ -62,6 +62,11 @@ public:
 	static void recordComputeCommandBuffer(VkCommandBuffer& commandBuffer);
 	static void recordParticleComputeCommands(VkCommandBuffer& commandBuffer);
 
+	#ifdef RAY_TRACING
+	static void recordRayTracingCommandBuffer(VkCommandBuffer& commandBuffer, uint32_t imageIndex);
+	static void recordRayTracingComputeCommands(VkCommandBuffer& commandBuffer, uint32_t imageIndex);
+	#endif
+
 	static void createUniformBuffer(Buffer& buffer, VkDeviceSize size);
 	template <typename T>static void updateUniformBuffer(Buffer& buffer, T& data) {
 		memcpy(buffer.mapped, &data, sizeof(T));
