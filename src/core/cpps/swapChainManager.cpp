@@ -235,6 +235,11 @@ void SwapChainManager::recreateSwapChain() {
         Engine::depthResource.view
     );
 
+    #ifdef RAY_TRACING
+    DescriptorManager::createRayTracingDescriptorPool();
+    DescriptorManager::createRayTracingDescriptorSets();
+    #endif
+
     if (oldSwapChain != VK_NULL_HANDLE) {
         vkDestroySwapchainKHR(Engine::deviceInfo.logicalDevice, oldSwapChain, nullptr);
         oldSwapChain = VK_NULL_HANDLE;

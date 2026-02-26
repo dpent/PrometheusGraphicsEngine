@@ -632,7 +632,7 @@ void BufferManager::recordRayTracingCommandBuffer(VkCommandBuffer& commandBuffer
 
     VkCommandBufferBeginInfo beginInfo{};
     beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-    beginInfo.flags = 0; // Optional 
+    beginInfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
     /*
     -- VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT: The command buffer will be rerecorded right after executing it once.
     -- VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT: This is a secondary command buffer that will be entirely within a single render pass.
@@ -664,16 +664,29 @@ void BufferManager::recordRayTracingComputeCommands(VkCommandBuffer& commandBuff
     Engine::swapChainInfo.imageLayouts[imageIndex] = VK_IMAGE_LAYOUT_GENERAL;
 
     vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, Engine::rayTracingPipeline.pipeline);
+    
     vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE,
         Engine::rayTracingPipeline.layout,
         0, 1,
         &Engine::rayTracingDescriptor.sets[Engine::currentFrame],
         0, nullptr);
 
+    RayTracingCameraObject* cam = Engine::camera.getRayTracingDetails();
+
+    vkCmdPushConstants(
+        commandBuffer,
+        Engine::rayTracingPipeline.layout,
+        VK_SHADER_STAGE_COMPUTE_BIT,
+        0,
+        sizeof(RayTracingCameraObject),
+        cam
+    );
+
     vkCmdDispatch(commandBuffer,
-        (Engine::swapChainInfo.extent.width + 15) / 16,
-        (Engine::swapChainInfo.extent.height + 15) / 16,
-        1);
+        (Engine::swapChainInfo.extent.width + 8 - 1) / 8,
+        (Engine::swapChainInfo.extent.height + 8 - 1) / 8,
+        1
+    );
 
     ImageManager::transitionImageLayout(
         Engine::swapChainInfo.images[imageIndex],
@@ -684,6 +697,8 @@ void BufferManager::recordRayTracingComputeCommands(VkCommandBuffer& commandBuff
         commandBuffer);
 
     Engine::swapChainInfo.imageLayouts[imageIndex] = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+
+    delete cam;
 }
 #endif
 

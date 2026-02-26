@@ -2,14 +2,71 @@
 
 layout (binding = 0, rgba8) uniform writeonly image2D outImage;
 
-layout (local_size_x = 16, local_size_y = 16) in;
+layout(push_constant) uniform CameraObject {
+    vec4 up;
+    vec4 forward;
+    vec4 right;
+    vec4 position;
+} camera;
+
+layout (local_size_x = 8, local_size_y = 8) in;
+
+struct Sphere{
+    vec3 center;
+    float radius;
+    vec3 color;
+};
+
+struct Ray{
+    vec3 origin;
+    vec3 direction;
+};
+
+bool hit(Ray ray, Sphere sphere);
 
 void main() {
-    ivec2 coord = ivec2(gl_GlobalInvocationID.xy);
-    vec4 color = vec4(
-        float(coord.x % 256) / 255.0,
-        float(coord.y % 256) / 255.0,
-        0.0, 1.0
-    );
-    imageStore(outImage, coord, color);
+
+    ivec2 screenPos = ivec2(gl_GlobalInvocationID.xy);
+    ivec2 screenSize = imageSize(outImage);
+
+    float aspect = float(screenSize.x) / float(screenSize.y);
+
+    float horizontalCoefficient = (float(screenPos.x) + 0.5) / float(screenSize.x) * 2.0 - 1.0; 
+    horizontalCoefficient *= aspect;
+
+    float verticalCoefficient   = 1.0 - (float(screenPos.y) + 0.5) / float(screenSize.y) * 2.0;
+
+    Ray ray;
+    ray.origin = camera.position.xyz;
+
+    vec3 forward = camera.forward.xyz;
+    vec3 right   = camera.right.xyz;
+    vec3 up      = camera.up.xyz;
+
+    vec3 rayDir = forward + horizontalCoefficient * right + verticalCoefficient * up;
+
+    ray.direction = normalize(rayDir);
+
+    vec3 pixelColor = ray.direction;
+
+    Sphere sphere;
+    sphere.center = vec3(0.0, 0.0, 5.0);
+    sphere.radius = 5.0;
+    sphere.color = vec3(0.7, 0.7, 0.7);
+
+    if(hit(ray, sphere)){
+        pixelColor = sphere.color;
+    }
+
+    imageStore(outImage, screenPos, vec4(pixelColor, 1.0));
+}
+
+bool hit(Ray ray, Sphere sphere){
+    
+    float a = dot(ray.direction, ray.direction);
+    float b = 2.0 * dot(ray.direction, ray.origin - sphere.center);
+    float c = dot(ray.origin - sphere.center, ray.origin - sphere.center) - sphere.radius * sphere.radius;
+    float discriminant = b * b - 4.0 * a * c;
+    
+    return discriminant > 0;
 }

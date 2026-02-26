@@ -79,8 +79,6 @@ bool Engine::remakeComputeDescriptors = false;
 
 #ifdef RAY_TRACING
 //RAY TRACING
-CommandPool Engine::rayTracingCommand;
-
 Pipeline Engine::rayTracingPipeline;
 
 Descriptor Engine::rayTracingDescriptor;
@@ -242,8 +240,6 @@ void Engine::initVulkan() {
     DescriptorManager::createParticleSetLayout();
 
     #ifdef RAY_TRACING
-    Engine::rayTracingCommand.initialize();
-
     DescriptorManager::createRayTracingSetLayout();
 
     PipelineManager::createRayTracingPipeline();
@@ -1019,77 +1015,107 @@ void Engine::handleComputeJobs() {
 
 #ifdef RAY_TRACING
 void Engine::rayTrace() {
-    uint32_t imageIndex;
+    vkWaitForFences(Engine::deviceInfo.logicalDevice, 1, &Engine::inFlightFences[Engine::currentFrame], VK_TRUE, UINT64_MAX); 
+    uint32_t imageIndex; 
     VkResult result = vkAcquireNextImageKHR(
         Engine::deviceInfo.logicalDevice,
-        Engine::swapChainInfo.chain,
-        UINT64_MAX,
-        Engine::imageAvailableSemaphores[Engine::currentFrame],
-        VK_NULL_HANDLE,
+        Engine::swapChainInfo.chain, 
+        UINT64_MAX, 
+        Engine::imageAvailableSemaphores[Engine::currentFrame], 
+        VK_NULL_HANDLE, 
         &imageIndex
     );
-
-    if (result == VK_ERROR_OUT_OF_DATE_KHR) {
-        SwapChainManager::recreateSwapChain();
-        framebufferResized = false;
-        return;
+    
+    if (result == VK_ERROR_OUT_OF_DATE_KHR) 
+    { 
+        SwapChainManager::recreateSwapChain(); 
+        framebufferResized = false; 
+        return; 
     }
-    else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) {
-        throw std::runtime_error("failed to acquire swap chain image!");
-    }
-
-    // Wait fences for **this swapchain image**
-    vkWaitForFences(Engine::deviceInfo.logicalDevice, 1, &Engine::inFlightFences[imageIndex], VK_TRUE, UINT64_MAX);
-    vkResetFences(Engine::deviceInfo.logicalDevice, 1, &Engine::inFlightFences[imageIndex]);
-
-    vkWaitForFences(Engine::deviceInfo.logicalDevice, 1, &Engine::computeInFlightFences[imageIndex], VK_TRUE, UINT64_MAX);
-    vkResetFences(Engine::deviceInfo.logicalDevice, 1, &Engine::computeInFlightFences[imageIndex]);
-
-    BufferManager::recordRayTracingCommandBuffer(Engine::command.buffers[imageIndex], imageIndex);
-
-    VkSemaphore waitSemaphoresCompute[] = { Engine::imageAvailableSemaphores[imageIndex] };
-    VkPipelineStageFlags waitStagesCompute[] = { VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT };
-    VkSubmitInfo computeSubmit{};
-    computeSubmit.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-    computeSubmit.waitSemaphoreCount = 1;
-    computeSubmit.pWaitSemaphores = waitSemaphoresCompute;
-    computeSubmit.pWaitDstStageMask = waitStagesCompute;
-    computeSubmit.commandBufferCount = 1;
-    computeSubmit.pCommandBuffers = &Engine::command.buffers[imageIndex];
-    computeSubmit.signalSemaphoreCount = 1;
-    computeSubmit.pSignalSemaphores = &Engine::computeFinishedSemaphores[imageIndex];
-
-    if (vkQueueSubmit(Engine::queues.compute, 1, &computeSubmit, Engine::computeInFlightFences[imageIndex]) != VK_SUCCESS) {
-        throw std::runtime_error("failed to submit compute command buffer!");
-    }
-
-    VkSemaphore waitSemaphoresGraphics[] = { Engine::computeFinishedSemaphores[imageIndex] };
-    VkPipelineStageFlags waitStagesGraphics[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
-    VkSubmitInfo graphicsSubmit{};
-    graphicsSubmit.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-    graphicsSubmit.waitSemaphoreCount = 1;
-    graphicsSubmit.pWaitSemaphores = waitSemaphoresGraphics;
-    graphicsSubmit.pWaitDstStageMask = waitStagesGraphics;
-    graphicsSubmit.commandBufferCount = 1;
-    graphicsSubmit.pCommandBuffers = &Engine::command.buffers[imageIndex];
-    VkSemaphore signalSemaphores[] = { Engine::renderFinishedSemaphores[imageIndex] };
-    graphicsSubmit.signalSemaphoreCount = 1;
-    graphicsSubmit.pSignalSemaphores = signalSemaphores;
-
-    if (vkQueueSubmit(Engine::queues.graphics, 1, &graphicsSubmit, Engine::inFlightFences[imageIndex]) != VK_SUCCESS) {
-        throw std::runtime_error("failed to submit graphics command buffer!");
-    }
-
-    VkPresentInfoKHR presentInfo{};
-    presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
-    presentInfo.waitSemaphoreCount = 1;
-    presentInfo.pWaitSemaphores = signalSemaphores;
-    VkSwapchainKHR swapChains[] = { Engine::swapChainInfo.chain };
-    presentInfo.swapchainCount = 1;
+    else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) 
+    { 
+        //Lacks logic for suboptimal swap chains 
+        throw std::runtime_error("failed to acquire swap chain image!"); 
+    } 
+    
+    vkResetFences(Engine::deviceInfo.logicalDevice, 1, &Engine::inFlightFences[Engine::currentFrame]); 
+    vkWaitForFences(Engine::deviceInfo.logicalDevice, 1, &Engine::computeInFlightFences[Engine::currentFrame], VK_TRUE, UINT64_MAX); 
+    
+    vkResetFences(Engine::deviceInfo.logicalDevice, 1, &Engine::computeInFlightFences[Engine::currentFrame]); 
+    
+    BufferManager::recordRayTracingCommandBuffer(Engine::command.buffers[Engine::currentFrame], imageIndex); 
+    
+    VkSemaphore waitSemaphoresRayTrace[] = { 
+        Engine::imageAvailableSemaphores[Engine::currentFrame] 
+    }; 
+    
+    VkPipelineStageFlags waitStagesRayTrace[] = { 
+        VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT 
+    }; 
+    
+    VkSubmitInfo submitInfo{}; 
+    
+    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO; 
+    submitInfo.commandBufferCount = 1; 
+    submitInfo.pCommandBuffers = &Engine::command.buffers[Engine::currentFrame]; 
+    submitInfo.signalSemaphoreCount = 1; 
+    submitInfo.pSignalSemaphores = &Engine::computeFinishedSemaphores[Engine::currentFrame];
+    submitInfo.waitSemaphoreCount = 1; 
+    submitInfo.pWaitSemaphores = waitSemaphoresRayTrace; 
+    submitInfo.pWaitDstStageMask = waitStagesRayTrace; 
+    
+    if (vkQueueSubmit(Engine::queues.compute, 1, &submitInfo, Engine::computeInFlightFences[Engine::currentFrame]) != VK_SUCCESS) {
+        throw std::runtime_error("failed to submit compute command buffer!"); 
+    }; 
+    
+    VkSemaphore waitSemaphores[] = { 
+        Engine::computeFinishedSemaphores[Engine::currentFrame]
+    };
+    
+    VkPipelineStageFlags waitStages[] = { 
+        VK_PIPELINE_STAGE_VERTEX_INPUT_BIT, 
+        VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT 
+    };
+    
+    submitInfo.waitSemaphoreCount = 1; 
+    submitInfo.pWaitSemaphores = waitSemaphores; 
+    submitInfo.pWaitDstStageMask = waitStages; 
+    submitInfo.commandBufferCount = 1; 
+    submitInfo.pCommandBuffers = &Engine::command.buffers[Engine::currentFrame]; 
+    
+    VkSemaphore signalSemaphores[] = { 
+        Engine::renderFinishedSemaphores[Engine::currentFrame] 
+    }; 
+    
+    submitInfo.signalSemaphoreCount = 1; 
+    submitInfo.pSignalSemaphores = signalSemaphores; 
+    
+    if (vkQueueSubmit(Engine::queues.graphics, 1, &submitInfo, Engine::inFlightFences[Engine::currentFrame]) != VK_SUCCESS) { 
+        throw std::runtime_error("failed to submit draw command buffer!"); 
+    } 
+    
+    VkPresentInfoKHR presentInfo{}; 
+    presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR; 
+    presentInfo.waitSemaphoreCount = 1; 
+    presentInfo.pWaitSemaphores = signalSemaphores; 
+    
+    VkSwapchainKHR swapChains[] = {
+        Engine::swapChainInfo.chain
+    }; 
+    
+    presentInfo.swapchainCount = 1; 
     presentInfo.pSwapchains = swapChains;
-    presentInfo.pImageIndices = &imageIndex;
-    vkQueuePresentKHR(Engine::queues.present, &presentInfo);
-
+    presentInfo.pImageIndices = &imageIndex; 
+    presentInfo.pResults = nullptr; // Optional 
+    
+    result = vkQueuePresentKHR(Engine::queues.present, &presentInfo); 
+    if (result == VK_ERROR_OUT_OF_DATE_KHR || Engine::framebufferResized) { 
+        SwapChainManager::recreateSwapChain(); 
+        framebufferResized = false; 
+    } else if (result != VK_SUCCESS) { 
+        throw std::runtime_error("failed to present swap chain image!"); 
+    } 
+    
     Engine::currentFrame = (Engine::currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
 }
 #endif

@@ -131,8 +131,6 @@ public:
 
 	#ifdef RAY_TRACING
 	//RAY TRACING
-	static CommandPool rayTracingCommand;
-
 	static Pipeline rayTracingPipeline;
 
 	static Descriptor rayTracingDescriptor;

@@ -24,6 +24,13 @@ struct CameraVPObject {
     glm::mat4 proj;
 };
 
+struct RayTracingCameraObject {
+    glm::vec4 up;
+    glm::vec4 forward;
+    glm::vec4 right;
+    glm::vec4 position;
+};
+
 struct CameraObject
 {
     glm::mat4 view;

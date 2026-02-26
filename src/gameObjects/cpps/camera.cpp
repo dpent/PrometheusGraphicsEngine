@@ -1,5 +1,6 @@
 #include "../headers/camera.h"
 #include "../../core/headers/engine.h"
+#include "../../core/headers/vertex.h"
 
 Camera::Camera(glm::vec3 position, glm::vec3 front,
     glm::vec3 up, glm::vec3 right, glm::quat orientation,
@@ -50,6 +51,17 @@ glm::mat4 Camera::getProjectionMatrix() {
     proj[1][1] *= -1;
 
     return proj;
+}
+
+RayTracingCameraObject* Camera::getRayTracingDetails() {
+
+    RayTracingCameraObject* cam = new RayTracingCameraObject();
+    cam->up = glm::vec4(this->up, 0.0);
+    cam->forward = glm::vec4(this->front, 0.0);
+    cam->right = glm::vec4(this->right, 0.0);
+    cam->position = glm::vec4(this->position, 1.0);
+
+    return cam;
 }
 
 // --- Getters ---

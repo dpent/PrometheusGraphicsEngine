@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../../core/headers/Prometheus.h"
+struct RayTracingCameraObject;
 
 class Camera {
 public:
@@ -38,6 +39,8 @@ public:
     );
 
     void updateCameraVectors();
+
+    RayTracingCameraObject* getRayTracingDetails();
 
     glm::mat4 getViewMatrix();
     glm::mat4 getProjectionMatrix();
