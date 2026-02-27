@@ -569,14 +569,22 @@ void DescriptorManager::createRayTracingSetLayout() {
     accumulationImage.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
     accumulationImage.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
 
-    std::array<VkDescriptorSetLayoutBinding, 2> bindings = {
+    VkDescriptorSetLayoutBinding accumulationImage2{};
+    accumulationImage2.binding = 2;
+    accumulationImage2.descriptorCount = 1;
+    accumulationImage2.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+    accumulationImage2.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+
+    std::array<VkDescriptorSetLayoutBinding, 3> bindings = {
     storageImage,
-    accumulationImage
+    accumulationImage,
+    accumulationImage2,
     };
 
-    std::array<VkDescriptorBindingFlags, 2> bindingFlags = {
+    std::array<VkDescriptorBindingFlags, 3> bindingFlags = {
     0, // storageImage (binding 0) no flags
-    0 // accumulatiobImage (binding 0) no flags
+    0, // accumulatiobImage (binding 1) no flags
+    0 // accumulatiobImage (binding 2) no flags
     };
 
     VkDescriptorSetLayoutBindingFlagsCreateInfo flagsInfo{};
@@ -608,12 +616,15 @@ void DescriptorManager::createRayTracingDescriptorPool() {
         Engine::garbage.unlock();
     }
 
-    std::array<VkDescriptorPoolSize, 2> poolSizes{};
+    std::array<VkDescriptorPoolSize, 3> poolSizes{};
     poolSizes[0].type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
     poolSizes[0].descriptorCount = Engine::MAX_FRAMES_IN_FLIGHT;
 
     poolSizes[1].type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
     poolSizes[1].descriptorCount = Engine::MAX_FRAMES_IN_FLIGHT;
+
+    poolSizes[2].type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+    poolSizes[2].descriptorCount = Engine::MAX_FRAMES_IN_FLIGHT;
 
     VkDescriptorPoolCreateInfo poolInfo{};
     poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
@@ -660,7 +671,7 @@ void DescriptorManager::createRayTracingDescriptorSets() {
         imageWrite.pImageInfo = &imageInfo;
 
         VkDescriptorImageInfo accumuImageInfo{};
-        accumuImageInfo.imageView = Engine::accumulationImage.view;
+        accumuImageInfo.imageView = Engine::accumulationImages->views[(i + Engine::MAX_FRAMES_IN_FLIGHT - 1) % Engine::MAX_FRAMES_IN_FLIGHT];
         accumuImageInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
 
         VkWriteDescriptorSet accumImageWrite{};
@@ -672,9 +683,23 @@ void DescriptorManager::createRayTracingDescriptorSets() {
         accumImageWrite.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
         accumImageWrite.pImageInfo = &accumuImageInfo;
 
-        std::array<VkWriteDescriptorSet, 2> writes = {
+        VkDescriptorImageInfo accumuImage2Info{};
+        accumuImage2Info.imageView = Engine::accumulationImages->views[i];
+        accumuImage2Info.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+
+        VkWriteDescriptorSet accumImage2Write{};
+        accumImage2Write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        accumImage2Write.dstSet = Engine::rayTracingDescriptor.sets[i];
+        accumImage2Write.dstBinding = 2;
+        accumImage2Write.dstArrayElement = 0;
+        accumImage2Write.descriptorCount = 1;
+        accumImage2Write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+        accumImage2Write.pImageInfo = &accumuImage2Info;
+
+        std::array<VkWriteDescriptorSet, 3> writes = {
             imageWrite,
-            accumImageWrite
+            accumImageWrite,
+            accumImage2Write
         };
 
         vkUpdateDescriptorSets(Engine::deviceInfo.logicalDevice, static_cast<uint32_t>(writes.size()), writes.data(), 0, nullptr);

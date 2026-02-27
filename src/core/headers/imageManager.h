@@ -73,5 +73,5 @@ public:
 
     static void createSolidColorFilePNG(std::string filename, unsigned char r, unsigned char g, unsigned char b);
 
-    static void createAccumulationImage(Image& image);
+    static void createAccumulationImages(ImageVector* images);
 };

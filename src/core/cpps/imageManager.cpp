@@ -522,35 +522,51 @@ void ImageManager::createSolidColorFilePNG(std::string filename,
     stbi_write_png((std::filesystem::path(TEXTURE_DIR) / filename).lexically_normal().string().c_str(), 1, 1, 3, pixel, 3);
 }
 
-void ImageManager::createAccumulationImage(Image& image) {
+void ImageManager::createAccumulationImages(ImageVector* images) {
+
+    images->resize(Engine::MAX_FRAMES_IN_FLIGHT);
+
+    if (images->views[0] != VK_NULL_HANDLE) {
+        Engine::garbage.lock();
+        Engine::garbage.imageVectors.push_back(images);
+        Engine::garbage.imageVectorFramesPassed.push_back(0);
+        Engine::garbage.unlock();
+    }
 
     uint32_t width = Engine::swapChainInfo.extent.width;
     uint32_t height = Engine::swapChainInfo.extent.height;
 
-    ImageManager::createImage(
-        width,
-        height,
-        VK_FORMAT_R8G8B8A8_UNORM,      // floating point RGBA for accumulation
-        VK_IMAGE_TILING_OPTIMAL,
-        VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, // storage + sampling
-        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-        image.image,
-        image.memory,
-        1,                                    // mipLevels
-        VK_SAMPLE_COUNT_1_BIT,
-        1                                     // arrayLayers
-    );
+    for (size_t i = 0; i < images->images.size(); i++) {
 
-    ImageManager::createImageView(
-        image.image,
-        VK_FORMAT_R8G8B8A8_UNORM,
-        VK_IMAGE_ASPECT_COLOR_BIT,
-        1,                   // mipLevels
-        VK_IMAGE_VIEW_TYPE_2D,
-        1,                   // layerCount
-        0,                   // baseArrayLayer
-        image.view
-    );
+        ImageManager::createImage(
+            width,
+            height,
+            VK_FORMAT_R8G8B8A8_UNORM,
+            VK_IMAGE_TILING_OPTIMAL,
+            VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+            VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+            images->images[i],
+            images->memories[i],
+            1,
+            VK_SAMPLE_COUNT_1_BIT,
+            1
+        );
+
+        ImageManager::createImageView(
+            images->images[i],
+            VK_FORMAT_R8G8B8A8_UNORM,
+            VK_IMAGE_ASPECT_COLOR_BIT,
+            1, 
+            VK_IMAGE_VIEW_TYPE_2D,
+            1,
+            0,
+            images->views[i]
+        );
+
+        ImageManager::transitionImageLayout(images->images[i], VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_LAYOUT_UNDEFINED,
+            VK_IMAGE_LAYOUT_GENERAL, 1, Engine::command.pool);
+    }
+
 }
 
 void Image::destroy() {

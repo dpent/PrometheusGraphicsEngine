@@ -89,7 +89,7 @@ Buffer Engine::rayTracingSpheres;
 
 Buffer Engine::lightSources;
 
-Image Engine::accumulationImage;
+ImageVector* Engine::accumulationImages;
 
 std::vector<VkDescriptorSetLayout> Engine::layoutsUsed;
 
@@ -253,10 +253,8 @@ void Engine::initVulkan() {
 
     #ifdef RAY_TRACING
 
-    ImageManager::createAccumulationImage(Engine::accumulationImage);
-
-    ImageManager::transitionImageLayout(Engine::accumulationImage.image, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_LAYOUT_UNDEFINED,
-        VK_IMAGE_LAYOUT_GENERAL, 1, command.pool);
+    Engine::accumulationImages = new ImageVector();
+    ImageManager::createAccumulationImages(Engine::accumulationImages);
 
     DescriptorManager::createRayTracingSetLayout();
     DescriptorManager::createRayTracingDescriptorPool();
@@ -999,7 +997,7 @@ void Engine::loadDemoScene() {
 
     #else
     Sphere sphere{
-        .center = glm::vec4(0.0,0.0,0.0, 5.0),
+        .center = glm::vec4(-10.0,5.0,0.0, 5.0),
         .color = glm::vec4(1.0,0.0,1.0,1.0)
     };
 
@@ -1020,7 +1018,7 @@ void Engine::loadDemoScene() {
 
     Sphere sphere5{
         .center = glm::vec4(25.0, -20.0, 60.0, 50.0),
-        .color = glm::vec4(0.5,0.5,0.5,0.5)
+        .color = glm::vec4(1.0,1.0,1.0,0.2)
     };
 
     LightSource lightSource{

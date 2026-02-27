@@ -236,6 +236,7 @@ void SwapChainManager::recreateSwapChain() {
     );
 
     #ifdef RAY_TRACING
+    ImageManager::createAccumulationImages(Engine::accumulationImages);
     DescriptorManager::createRayTracingDescriptorPool();
     DescriptorManager::createRayTracingDescriptorSets();
     #endif

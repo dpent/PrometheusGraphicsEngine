@@ -142,7 +142,7 @@ public:
 
 	static Buffer lightSources;
 
-	static Image accumulationImage;
+	static ImageVector* accumulationImages;
 
 	static std::vector<VkDescriptorSetLayout> layoutsUsed;
 
