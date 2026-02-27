@@ -29,6 +29,10 @@ public:
 	static void createRaySpheresSetLayout();
 	static void createRaySpheresPool();
 	static void createRaySpheresSets();
+
+	static void createRayLightsSetLayout();
+	static void createRayLightsPool();
+	static void createRayLightsSets();
 	#endif
 };
 

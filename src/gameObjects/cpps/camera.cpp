@@ -60,6 +60,7 @@ RayTracingCameraObject* Camera::getRayTracingDetails() {
     cam->forward = glm::vec4(this->front, 0.0);
     cam->right = glm::vec4(this->right, 0.0);
     cam->position = glm::vec4(this->position, 1.0);
+    cam->utils = glm::vec4(static_cast<float>(glfwGetTime()), Engine::notMoving, 0.0, 0.0);
 
     return cam;
 }

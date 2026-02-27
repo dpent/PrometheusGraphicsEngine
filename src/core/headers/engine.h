@@ -136,10 +136,17 @@ public:
 
 	static Descriptor rayTracingDescriptor;
 	static Descriptor rayTracingSpheresDescriptor;
+	static Descriptor rayTracingLightsDescriptor;
 
 	static Buffer rayTracingSpheres;
 
+	static Buffer lightSources;
+
+	static Image accumulationImage;
+
 	static std::vector<VkDescriptorSetLayout> layoutsUsed;
+
+	static float notMoving;
 	#endif
 
 	//LIGHTING

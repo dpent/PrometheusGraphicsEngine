@@ -522,6 +522,37 @@ void ImageManager::createSolidColorFilePNG(std::string filename,
     stbi_write_png((std::filesystem::path(TEXTURE_DIR) / filename).lexically_normal().string().c_str(), 1, 1, 3, pixel, 3);
 }
 
+void ImageManager::createAccumulationImage(Image& image) {
+
+    uint32_t width = Engine::swapChainInfo.extent.width;
+    uint32_t height = Engine::swapChainInfo.extent.height;
+
+    ImageManager::createImage(
+        width,
+        height,
+        VK_FORMAT_R8G8B8A8_UNORM,      // floating point RGBA for accumulation
+        VK_IMAGE_TILING_OPTIMAL,
+        VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, // storage + sampling
+        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+        image.image,
+        image.memory,
+        1,                                    // mipLevels
+        VK_SAMPLE_COUNT_1_BIT,
+        1                                     // arrayLayers
+    );
+
+    ImageManager::createImageView(
+        image.image,
+        VK_FORMAT_R8G8B8A8_UNORM,
+        VK_IMAGE_ASPECT_COLOR_BIT,
+        1,                   // mipLevels
+        VK_IMAGE_VIEW_TYPE_2D,
+        1,                   // layerCount
+        0,                   // baseArrayLayer
+        image.view
+    );
+}
+
 void Image::destroy() {
     vkDestroyImageView(Engine::deviceInfo.logicalDevice, view, nullptr);
     vkDestroyImage(Engine::deviceInfo.logicalDevice, image, nullptr);

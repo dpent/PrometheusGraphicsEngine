@@ -29,6 +29,7 @@ struct RayTracingCameraObject {
     glm::vec4 forward;
     glm::vec4 right;
     glm::vec4 position;
+    glm::vec4 utils;
 };
 
 struct CameraObject

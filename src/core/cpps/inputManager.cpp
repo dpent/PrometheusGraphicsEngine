@@ -74,6 +74,9 @@ void InputManager::mouseButtonCallBack(GLFWwindow* window, int button, int actio
 
         if (button == GLFW_MOUSE_BUTTON_RIGHT) {
             Engine::rightMouseFirstPress = true;
+            #ifdef RAY_TRACING
+            Engine::notMoving = 1.0f;
+            #endif
         }
     }
 }
@@ -99,9 +102,10 @@ void InputManager::cursorPosCallBack(GLFWwindow* window, double xpos, double ypo
         Engine::lastKnownMousePos.second = ypos;
 
         Engine::camera.pitch = glm::clamp(Engine::camera.pitch, -89.0f, 89.0f);
+
+        Engine::notMoving = 0.0f;
     }
     else {
-
         Engine::lastKnownMousePos.first = xpos;
         Engine::lastKnownMousePos.second = ypos;
     }
@@ -110,6 +114,16 @@ void InputManager::cursorPosCallBack(GLFWwindow* window, double xpos, double ypo
 void InputManager::consumeInput(GLFWwindow* window) {
 
     bool reduceCameraSpeed = true;
+
+
+    #ifdef RAY_TRACING
+    if (glm::length2(Engine::camera.velocity) == 0.0 && Engine::rightMouseFirstPress) {
+        Engine::notMoving = 1.0f;
+    }
+    else {
+        Engine::notMoving = 0.0f;
+    }
+    #endif
 
     for (int i = 0; i < (int)Engine::pressed.size(); i++) {
 
@@ -142,6 +156,10 @@ void InputManager::consumeInput(GLFWwindow* window) {
             break;
         case GLFW_MOUSE_BUTTON_RIGHT:
             if (Engine::rightMouseFirstPress) {
+                #ifdef RAY_TRACING
+                Engine::notMoving = 0.0f;
+                #endif
+
                 Engine::rightMouseFirstPress = false;
             }
             break;

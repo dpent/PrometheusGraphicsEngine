@@ -667,7 +667,8 @@ void BufferManager::recordRayTracingComputeCommands(VkCommandBuffer& commandBuff
 
     std::vector<VkDescriptorSet> sets{
         Engine::rayTracingDescriptor.sets[Engine::currentFrame],
-        Engine::rayTracingSpheresDescriptor.sets[0]
+        Engine::rayTracingSpheresDescriptor.sets[0],
+        Engine::rayTracingLightsDescriptor.sets[0]
     };
     
     vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE,

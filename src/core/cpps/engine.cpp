@@ -83,10 +83,17 @@ Pipeline Engine::rayTracingPipeline;
 
 Descriptor Engine::rayTracingDescriptor;
 Descriptor Engine::rayTracingSpheresDescriptor;
+Descriptor Engine::rayTracingLightsDescriptor;
 
 Buffer Engine::rayTracingSpheres;
 
+Buffer Engine::lightSources;
+
+Image Engine::accumulationImage;
+
 std::vector<VkDescriptorSetLayout> Engine::layoutsUsed;
+
+float Engine::notMoving = 1.0f;
 #endif
 
 //LIGHTING
@@ -245,6 +252,12 @@ void Engine::initVulkan() {
     DescriptorManager::createParticleSetLayout();
 
     #ifdef RAY_TRACING
+
+    ImageManager::createAccumulationImage(Engine::accumulationImage);
+
+    ImageManager::transitionImageLayout(Engine::accumulationImage.image, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_LAYOUT_UNDEFINED,
+        VK_IMAGE_LAYOUT_GENERAL, 1, command.pool);
+
     DescriptorManager::createRayTracingSetLayout();
     DescriptorManager::createRayTracingDescriptorPool();
     DescriptorManager::createRayTracingDescriptorSets();
@@ -269,11 +282,8 @@ void Engine::mainLoop() {
         Engine::camera.updateCameraVectors();
 
         #ifdef RAY_TRACING
-        nextFrameTime += std::chrono::duration_cast<std::chrono::steady_clock::duration>(std::chrono::duration<double>(1.0 / Engine::targetFPS));
 
         Engine::rayTrace();
-
-        std::this_thread::sleep_until(nextFrameTime);
         #else
         if (Engine::gameObjects.size != 0) {
             nextFrameTime += std::chrono::duration_cast<std::chrono::steady_clock::duration>(std::chrono::duration<double>(1.0 / Engine::targetFPS));
@@ -1010,6 +1020,11 @@ void Engine::loadDemoScene() {
 
     Sphere sphere5{
         .center = glm::vec4(25.0, -20.0, 60.0, 50.0),
+        .color = glm::vec4(0.5,0.5,0.5,0.5)
+    };
+
+    LightSource lightSource{
+        .position = glm::vec4(-50.0, 40.0, -120.0, 10.0),
         .color = glm::vec4(1.0,1.0,1.0,1.0)
     };
 
@@ -1033,9 +1048,29 @@ void Engine::loadDemoScene() {
 
     BufferManager::copyBuffer(Engine::stagingBuffer, Engine::rayTracingSpheres, Engine::rayTracingSpheres.size);
 
+    std::vector<LightSource> lights;
+    lights.push_back(lightSource);
+
+    BufferManager::createParticleSSBO(Engine::lightSources, lights);
+
+    if (Engine::lightSources.size > Engine::stagingBuffer.size) {
+        BufferManager::createStagingBuffer(Engine::lightSources.size, Engine::stagingBuffer);
+    }
+
+    void* lightData;
+    vkMapMemory(Engine::deviceInfo.logicalDevice, Engine::stagingBuffer.memory, 0, Engine::lightSources.size, 0, &lightData);
+    memcpy(lightData, lights.data(), Engine::lightSources.size);
+    vkUnmapMemory(Engine::deviceInfo.logicalDevice, Engine::stagingBuffer.memory);
+
+    BufferManager::copyBuffer(Engine::stagingBuffer, Engine::lightSources, Engine::lightSources.size);
+
     DescriptorManager::createRaySpheresSetLayout();
     DescriptorManager::createRaySpheresPool();
     DescriptorManager::createRaySpheresSets();
+
+    DescriptorManager::createRayLightsSetLayout();
+    DescriptorManager::createRayLightsPool();
+    DescriptorManager::createRayLightsSets();
     #endif
 }
 

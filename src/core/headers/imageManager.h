@@ -4,6 +4,23 @@
 
 class Engine;
 
+struct Image {
+    VkImage image;
+    VkDeviceMemory memory;
+    VkImageView view;
+
+    void destroy();
+};
+
+struct ImageVector {
+    std::vector<VkImage> images;
+    std::vector<VkDeviceMemory> memories;
+    std::vector<VkImageView> views;
+
+    void destroyAllItems();
+    void resize(uint32_t size);
+};
+
 class ImageManager {
 public:
     static void createImageView(
@@ -55,21 +72,6 @@ public:
     static void createDummyImage();
 
     static void createSolidColorFilePNG(std::string filename, unsigned char r, unsigned char g, unsigned char b);
-};
 
-struct Image {
-	VkImage image;
-	VkDeviceMemory memory;
-	VkImageView view;
-
-    void destroy();
-};
-
-struct ImageVector {
-    std::vector<VkImage> images;
-    std::vector<VkDeviceMemory> memories;
-    std::vector<VkImageView> views;
-
-    void destroyAllItems();
-    void resize(uint32_t size);
+    static void createAccumulationImage(Image& image);
 };

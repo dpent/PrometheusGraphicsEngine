@@ -6,3 +6,8 @@ struct Sphere {
 };
 
 static_assert(sizeof(Sphere) == 32, "Sphere size mismatch");
+
+struct LightSource {
+	glm::vec4 position;
+	glm::vec4 color;
+};

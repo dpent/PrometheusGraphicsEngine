@@ -5,10 +5,20 @@ struct Sphere{
     vec4 color;
 };
 
+struct Light{
+    vec4 position;
+    vec4 color;
+};
+
 layout (set = 0, binding = 0, rgba8) uniform writeonly image2D outImage;
+layout (set = 0, binding = 0, rgba8) uniform image2D accumImage;
 
 layout (std430, set = 1, binding = 0) buffer sphereSSBO{
     Sphere spheres [];
+};
+
+layout (std430, set = 2, binding = 0) buffer lightSSBO{
+    Light lights [];
 };
 
 layout(push_constant) uniform CameraObject {
@@ -16,6 +26,7 @@ layout(push_constant) uniform CameraObject {
     vec4 forward;
     vec4 right;
     vec4 position;
+    vec4 utils;
 } camera;
 
 layout (local_size_x = 8, local_size_y = 8) in;
@@ -23,9 +34,18 @@ layout (local_size_x = 8, local_size_y = 8) in;
 struct Ray{
     vec3 origin;
     vec3 direction;
+    vec3 accumulatedColor;
+    uint numBounces;
 };
 
+#define MAX_BOUNCES 5
+#define RAYS_PER_PIXEL 50
+
 bool hit(Ray ray, Sphere sphere, out float tHit);
+float hash(vec2 p);
+float rand(vec2 p);
+vec3 randomHemisphereDirection(vec3 normal, vec2 seed);
+vec3 randomSphere(vec2 seed);
 
 void main() {
 
@@ -39,33 +59,117 @@ void main() {
 
     float verticalCoefficient   = 1.0 - (float(screenPos.y) + 0.5) / float(screenSize.y) * 2.0;
 
-    Ray ray;
-    ray.origin = camera.position.xyz;
+    vec3 pixelColor = vec3(0.0,0.0,0.0);
 
     vec3 forward = camera.forward.xyz;
     vec3 right   = camera.right.xyz;
     vec3 up      = camera.up.xyz;
 
-    vec3 rayDir = forward + horizontalCoefficient * right + verticalCoefficient * up;
-
-    ray.direction = normalize(rayDir);
-
-    vec3 pixelColor = vec3(0.0,0.0,0.0);
-
     int numSpheres = spheres.length();
-    float minT = 99999999.0;
-    for(int i=0; i<numSpheres; i++){
-        
-        Sphere s = spheres[i];
-        
-        float tHit;
-        if(hit(ray, s, tHit) && tHit < minT){
-            minT = min(tHit, minT);
-            pixelColor = s.color.xyz;
-        }
-    }
+    int numLights = lights.length();
 
-    imageStore(outImage, screenPos, vec4(pixelColor, 1.0));
+    for(int rayNum=0; rayNum<RAYS_PER_PIXEL; rayNum++){
+
+        Ray ray;
+        ray.origin = camera.position.xyz;
+
+        vec3 rayDir = forward + horizontalCoefficient * right + verticalCoefficient * up;
+
+        vec2 jitter = vec2(rand(screenPos), rand(screenPos + vec2(5.2,1.3))) * 0.01;
+
+        ray.direction = normalize(rayDir + vec3(jitter, 0.0));
+        ray.accumulatedColor = vec3(0.0);
+        ray.numBounces = 0;
+
+        vec3 throughput = vec3(1.0);
+        vec3 radiance = vec3(0.0);
+    
+        for(int bounce = 0; bounce < MAX_BOUNCES; bounce++){
+
+            bool hitSomething = false;
+            bool hitLight = false;
+
+            float minT = 1e30;
+            vec3 hitColor;
+            uint closestSphereIndex;
+
+            for(int i=0; i<numSpheres; i++){
+                float tHit;
+                if(hit(ray, spheres[i], tHit) && tHit < minT){
+                    minT = tHit;
+                    hitColor = spheres[i].color.xyz;
+                    hitSomething = true;
+                    hitLight = false;
+                    closestSphereIndex = i;
+                }
+            }
+
+            for(int i=0; i<numLights; i++){
+                Sphere lightSphere;
+                lightSphere.center = lights[i].position;
+                lightSphere.color = lights[i].color;
+
+                float tHit;
+                if(hit(ray, lightSphere, tHit) && tHit < minT){
+                    minT = tHit;
+                    hitColor = lights[i].color.xyz;
+                    hitSomething = true;
+                    hitLight = true;
+                }
+            }
+            if(!hitSomething)
+                break;
+
+            if(hitLight){
+                radiance += throughput * hitColor;
+                break;
+            }
+
+            vec3 hitPoint = ray.origin + ray.direction * minT;
+            vec3 normal   = normalize(hitPoint - spheres[closestSphereIndex].center.xyz);
+
+            throughput *= hitColor;
+
+            vec2 seed = screenPos + vec2(bounce * 1.2);
+            float r = rand(seed);
+
+            vec3 newDir;
+
+            
+        if (r < 0.05) 
+        {
+            int lightIndex = int(floor(rand(seed+vec2(1.0)) * float(numLights)));
+            Light light = lights[lightIndex];
+
+            vec3 lightPoint = light.position.xyz + light.position.w * randomSphere(seed);
+
+            vec3 toLight = lightPoint - hitPoint;
+            float lightDist = length(toLight);
+            newDir = toLight / lightDist;
+
+            if (dot(normal, newDir) <= 0.0)
+                return;
+        }
+        else 
+        {
+            newDir = randomHemisphereDirection(normal, screenPos + vec2(bounce));
+        }
+
+            ray.origin = hitPoint + normal * 0.0001;
+            ray.direction = newDir;
+        }
+
+        
+        pixelColor += radiance;
+        
+    }
+    
+    pixelColor /= RAYS_PER_PIXEL;
+    vec4 oldColor = imageLoad(accumImage, screenPos);
+    vec3 accumulated = oldColor.rgb * camera.utils.y + pixelColor;
+
+    imageStore(accumImage, screenPos, vec4(accumulated, 1.0));
+    imageStore(outImage, screenPos, vec4(accumulated, 1.0));
 }
 
 bool hit(Ray ray, Sphere sphere, out float tHit){
@@ -86,4 +190,72 @@ bool hit(Ray ray, Sphere sphere, out float tHit){
 
     tHit = min(t0, t1);
     return tHit > 0.0;
+}
+
+float hash(vec2 p)
+{
+    uint x = floatBitsToUint(p.x);
+    uint y = floatBitsToUint(p.y);
+    uint n = x * 374761393u + y * 668265263u;
+    n = (n ^ (n >> 13u)) * 1274126177u;
+    return float(n & 0x00ffffffu) / float(0x01000000u);
+}
+
+float rand(vec2 p)
+{
+    vec2 i = floor(p);
+    vec2 f = fract(p);
+
+    float a = hash(i + vec2(0.0, 0.0) + camera.utils.x);
+    float b = hash(i + vec2(2.0, 0.0) + camera.utils.x);
+    float c = hash(i + vec2(0.0, 1.0) + camera.utils.x);
+    float d = hash(i + vec2(1.0, 2.0) + camera.utils.x);
+
+    vec2 u = f*0.5 + 0.01;
+
+    return mix(a, b, u.x) + (c - a)*u.y*(1.0 - u.x) + (d - b)*u.x*u.y;
+}
+
+vec3 randomHemisphereDirection(vec3 normal, vec2 seed)
+{
+    vec2 seed1 = seed + vec2(camera.utils.x, camera.utils.x*1.3);
+    vec2 seed2 = seed + vec2(camera.utils.x*2.1, camera.utils.x*3.7);
+
+    float r1 = rand(seed1);
+    float r2 = rand(seed2);
+
+    float r = sqrt(r1);
+    float theta = 2.0 * 3.14159265 * r2;
+
+    float x = r * cos(theta);
+    float y = r * sin(theta);
+    float z = sqrt(1.0 - r*r);
+
+vec3 localDir = vec3(x, y, z);
+
+    vec3 up = abs(normal.z) < 0.999 ? vec3(0,0,1) : vec3(1,0,0);
+    vec3 tangent = normalize(cross(up, normal));
+    vec3 bitangent = cross(normal, tangent);
+
+    return normalize(
+        tangent * localDir.x +
+        bitangent * localDir.y +
+        normal * localDir.z
+    );
+}
+
+vec3 randomSphere(vec2 seed)
+{
+    float u1 = rand(seed);
+    float u2 = rand(seed + vec2(1.2345, 6.789));
+
+    float z = 1.0 - 2.0 * u1;
+    float phi = 2.0 * 3.14159265 * u2;
+
+    float r = sqrt(max(0.0, 1.0 - z*z));
+
+    float x = r * cos(phi);
+    float y = r * sin(phi);
+
+    return vec3(x, y, z);
 }
