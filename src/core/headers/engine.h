@@ -176,8 +176,13 @@ public:
 	//WINDOW
 	static GLFWwindow* window;
 	static GLFWcursor* cursor;
-	static const int WIDTH;
-	static const int HEIGHT;
+	#ifndef RAY_TRACING
+		static const int WIDTH;
+		static const int HEIGHT;
+	#else
+		static int WIDTH;
+		static int HEIGHT;
+	#endif
 
 	static std::pair<double, double> lastKnownMousePos;
 	static bool rightMouseFirstPress;
@@ -247,9 +252,11 @@ public:
 	//LIGHTING
 	static void updateLightData();
 
+	#ifdef RAY_TRACING
 	//RAY TRACING
 	static void rayTrace();
-
+	static void startAtWindowSize(int width, int height);
+	#endif	
 	//COMPUTE
 	static void updateParticleEffects();
 	static void prepareComputeData();

@@ -217,7 +217,6 @@ void SwapChainManager::recreateSwapChain() {
 
     vkQueueWaitIdle(Engine::queues.present);
 
-
     SwapChainManager::cleanupSwapChainDependents();
 
     SwapChainManager::createSwapChain(oldSwapChain);

@@ -5,6 +5,7 @@
 
 //#define RELEASE
 #define RAY_TRACING
+#define FULLSCREEN_START
 
 #include <iostream>
 #define GLFW_INCLUDE_VULKAN

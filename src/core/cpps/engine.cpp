@@ -123,8 +123,13 @@ Image* Engine::dummyImage;
 //WINDOW
 GLFWwindow* Engine::window = nullptr;
 GLFWcursor* Engine::cursor = nullptr;
+#ifndef RAY_TRACING
 const int Engine::WIDTH = 1280;
 const int Engine::HEIGHT = 720;
+#else
+int Engine::WIDTH = 1280;
+int Engine::HEIGHT = 720;
+#endif
 
 std::pair<double, double> Engine::lastKnownMousePos;
 bool Engine::rightMouseFirstPress;
@@ -176,7 +181,18 @@ void Engine::initWindow(Engine* engine) {
 
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 
+    #ifdef FULLSCREEN_START
+    GLFWmonitor* monitor = glfwGetPrimaryMonitor();
     Engine::window = glfwCreateWindow(WIDTH, HEIGHT, "Prometheus", nullptr, nullptr);
+    glfwMaximizeWindow(Engine::window);
+    int fbWidth, fbHeight;
+    glfwGetFramebufferSize(Engine::window, &fbWidth, &fbHeight);
+    Engine::WIDTH = fbWidth;
+    Engine::HEIGHT = fbHeight;
+    #else
+        Engine::window = glfwCreateWindow(WIDTH, HEIGHT, "Prometheus", nullptr, nullptr);
+    #endif
+
     glfwSetWindowUserPointer(Engine::window, engine);
     glfwSetFramebufferSizeCallback(Engine::window, frameBufferResizeCallback);
 
@@ -1197,5 +1213,10 @@ void Engine::rayTrace() {
     } 
     
     Engine::currentFrame = (Engine::currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
+}
+
+void Engine::startAtWindowSize(int width, int height) {
+    Engine::WIDTH = width;
+    Engine::HEIGHT = height;
 }
 #endif
