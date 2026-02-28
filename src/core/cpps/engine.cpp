@@ -86,14 +86,16 @@ Descriptor Engine::rayTracingSpheresDescriptor;
 Descriptor Engine::rayTracingLightsDescriptor;
 
 Buffer Engine::rayTracingSpheres;
-
 Buffer Engine::lightSources;
+Buffer Engine::rayVertices;
+Buffer Engine::rayIndices;
 
 ImageVector* Engine::accumulationImages;
 
 std::vector<VkDescriptorSetLayout> Engine::layoutsUsed;
 
 float Engine::notMoving = 1.0f;
+uint32_t Engine::tracingFrames = 0;
 #endif
 
 //LIGHTING
@@ -280,8 +282,15 @@ void Engine::mainLoop() {
         Engine::camera.updateCameraVectors();
 
         #ifdef RAY_TRACING
-
-        Engine::rayTrace();
+        if (Engine::notMoving) {
+            
+            Engine::rayTrace();
+            Engine::tracingFrames++;
+        }
+        else {
+            Engine::rayTrace();
+            Engine::tracingFrames = 0;
+        }
         #else
         if (Engine::gameObjects.size != 0) {
             nextFrameTime += std::chrono::duration_cast<std::chrono::steady_clock::duration>(std::chrono::duration<double>(1.0 / Engine::targetFPS));
@@ -1022,8 +1031,9 @@ void Engine::loadDemoScene() {
     };
 
     LightSource lightSource{
-        .position = glm::vec4(-50.0, 40.0, -120.0, 10.0),
-        .color = glm::vec4(1.0,1.0,1.0,1.0)
+        //.position = glm::vec4(-50.0, 40.0, -120.0, 10.0),
+        .position = glm::vec4(-5.0, -5.0, -50.0, 10.0),
+        .color = glm::vec4(1.0,1.0,1.0,10.0)
     };
 
     std::vector<Sphere> spheres;
@@ -1033,34 +1043,14 @@ void Engine::loadDemoScene() {
     spheres.push_back(sphere4);
     spheres.push_back(sphere5);
 
-    BufferManager::createParticleSSBO(Engine::rayTracingSpheres, spheres);
-
-    if (Engine::rayTracingSpheres.size > Engine::stagingBuffer.size) {
-        BufferManager::createStagingBuffer(Engine::rayTracingSpheres.size, Engine::stagingBuffer);
-    }
-
-    void* data;
-    vkMapMemory(Engine::deviceInfo.logicalDevice, Engine::stagingBuffer.memory, 0, Engine::rayTracingSpheres.size, 0, &data);
-    memcpy(data, spheres.data(), Engine::rayTracingSpheres.size);
-    vkUnmapMemory(Engine::deviceInfo.logicalDevice, Engine::stagingBuffer.memory);
-
-    BufferManager::copyBuffer(Engine::stagingBuffer, Engine::rayTracingSpheres, Engine::rayTracingSpheres.size);
-
     std::vector<LightSource> lights;
     lights.push_back(lightSource);
 
-    BufferManager::createParticleSSBO(Engine::lightSources, lights);
+    std::vector<RayVertex> vertices;
+    std::vector<uint32_t> indices;
+    Mesh::loadForRayTrace(vertices, indices, "cube.obj", glm::vec3(80.0f));
 
-    if (Engine::lightSources.size > Engine::stagingBuffer.size) {
-        BufferManager::createStagingBuffer(Engine::lightSources.size, Engine::stagingBuffer);
-    }
-
-    void* lightData;
-    vkMapMemory(Engine::deviceInfo.logicalDevice, Engine::stagingBuffer.memory, 0, Engine::lightSources.size, 0, &lightData);
-    memcpy(lightData, lights.data(), Engine::lightSources.size);
-    vkUnmapMemory(Engine::deviceInfo.logicalDevice, Engine::stagingBuffer.memory);
-
-    BufferManager::copyBuffer(Engine::stagingBuffer, Engine::lightSources, Engine::lightSources.size);
+    BufferManager::prepareRayTracingData(spheres, lights, vertices, indices);
 
     DescriptorManager::createRaySpheresSetLayout();
     DescriptorManager::createRaySpheresPool();

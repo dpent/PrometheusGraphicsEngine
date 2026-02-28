@@ -200,3 +200,129 @@ void Mesh::computeNormals(Vertex& v0, Vertex& v1, Vertex& v2) {
     v2.normal += faceNormal;
 
 }
+
+void Mesh::loadForRayTrace(std::vector<RayVertex>& vertices, std::vector<uint32_t>& indices, std::string meshPath, glm::vec3 scale) {
+
+    tinyobj::attrib_t attrib;
+    std::vector<tinyobj::shape_t> shapes;
+    std::vector<tinyobj::material_t> materials;
+    std::string warn;
+    std::string err;
+
+    if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err,
+        ((std::filesystem::path(MODEL_DIR) / meshPath).lexically_normal().string().c_str()))) {
+        throw std::runtime_error(err);
+    }
+
+    std::unordered_map<RayVertex, uint32_t> uniqueVertices{};
+
+    glm::vec3 minCoords = glm::vec3(
+        attrib.vertices[shapes[0].mesh.indices[0].vertex_index],
+        attrib.vertices[shapes[0].mesh.indices[0].vertex_index + 1],
+        attrib.vertices[shapes[0].mesh.indices[0].vertex_index + 2]);
+
+    glm::vec3 maxCoords = glm::vec3(
+        attrib.vertices[shapes[0].mesh.indices[0].vertex_index],
+        attrib.vertices[shapes[0].mesh.indices[0].vertex_index + 1],
+        attrib.vertices[shapes[0].mesh.indices[0].vertex_index + 2]);
+
+    for (const auto& shape : shapes) {
+        for (size_t i = 0; i < shape.mesh.indices.size(); i += 3) {
+
+            tinyobj::index_t idx0 = shape.mesh.indices[i];
+            tinyobj::index_t idx1 = shape.mesh.indices[i + 1];
+            tinyobj::index_t idx2 = shape.mesh.indices[i + 2];
+
+            RayVertex v0 = {};
+            RayVertex v1 = {};
+            RayVertex v2 = {};
+
+            Mesh::loadRayVertex(attrib, idx0, minCoords, maxCoords, v0, scale);
+            Mesh::loadRayVertex(attrib, idx1, minCoords, maxCoords, v1, scale);
+            Mesh::loadRayVertex(attrib, idx2, minCoords, maxCoords, v2, scale);
+
+            if (attrib.normals.empty()) {
+                Mesh::computeRayNormals(v0, v1, v2);
+            }
+
+            if (uniqueVertices.count(v0) == 0) {
+                uniqueVertices[v0] = static_cast<uint32_t>(vertices.size());
+                vertices.push_back(v0);
+            }
+            indices.push_back(uniqueVertices[v0]);
+            uint32_t ind0 = uniqueVertices[v0];
+
+            if (uniqueVertices.count(v1) == 0) {
+                uniqueVertices[v1] = static_cast<uint32_t>(vertices.size());
+                vertices.push_back(v1);
+            }
+            indices.push_back(uniqueVertices[v1]);
+            uint32_t ind1 = uniqueVertices[v1];
+
+            if (uniqueVertices.count(v2) == 0) {
+                uniqueVertices[v2] = static_cast<uint32_t>(vertices.size());
+                vertices.push_back(v2);
+            }
+            indices.push_back(uniqueVertices[v2]);
+            uint32_t ind2 = uniqueVertices[v2];
+
+        }
+    }
+}
+
+void Mesh::loadRayVertex(tinyobj::attrib_t& attrib, tinyobj::index_t& index, glm::vec3& minCoords, glm::vec3& maxCoords, RayVertex& vertex, glm::vec3& scale) {
+
+    vertex.position = {
+        attrib.vertices[3 * index.vertex_index + 0] * scale.x ,
+        attrib.vertices[3 * index.vertex_index + 1] * scale.y,
+        attrib.vertices[3 * index.vertex_index + 2] * scale.z,
+        1.0f
+    };
+
+    if (!attrib.normals.empty()) {
+
+        vertex.normal = {
+            attrib.normals[3 * index.normal_index + 0],
+            attrib.normals[3 * index.normal_index + 1],
+            attrib.normals[3 * index.normal_index + 2],
+            0.0f
+        };
+    }
+    else {
+
+        vertex.normal = glm::vec4(0.0f);
+    }
+
+    if (vertex.position.x < minCoords.x) minCoords.x = vertex.position.x;
+    if (vertex.position.y < minCoords.y) minCoords.y = vertex.position.y;
+    if (vertex.position.z < minCoords.z) minCoords.z = vertex.position.z;
+
+    if (vertex.position.x > maxCoords.x) maxCoords.x = vertex.position.x;
+    if (vertex.position.y > maxCoords.y) maxCoords.y = vertex.position.y;
+    if (vertex.position.z > maxCoords.z) maxCoords.z = vertex.position.z;
+
+    if (attrib.colors.empty()) {
+
+        vertex.color = { 1.0f, 1.0f, 1.0f, 1.0f };
+        return;
+
+    }
+
+    vertex.color = {
+        attrib.colors[3 * index.vertex_index + 0],
+        attrib.colors[3 * index.vertex_index + 1],
+        attrib.colors[3 * index.vertex_index + 2],
+        1.0f
+    };
+}
+
+void Mesh::computeRayNormals(RayVertex& v0, RayVertex& v1, RayVertex& v2) {
+
+    glm::vec3 edge1 = glm::vec3(v1.position) - glm::vec3(v0.position);
+    glm::vec3 edge2 = glm::vec3(v2.position) - glm::vec3(v0.position);
+    glm::vec3 faceNormal = glm::normalize(glm::cross(edge1, edge2));
+
+    v0.normal += glm::vec4(faceNormal, 0.0f);
+    v1.normal += glm::vec4(faceNormal, 0.0f);
+    v2.normal += glm::vec4(faceNormal, 0.0f);
+}

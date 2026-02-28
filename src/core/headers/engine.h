@@ -139,14 +139,16 @@ public:
 	static Descriptor rayTracingLightsDescriptor;
 
 	static Buffer rayTracingSpheres;
-
 	static Buffer lightSources;
+	static Buffer rayVertices;
+	static Buffer rayIndices;
 
 	static ImageVector* accumulationImages;
 
 	static std::vector<VkDescriptorSetLayout> layoutsUsed;
 
 	static float notMoving;
+	static uint32_t tracingFrames;
 	#endif
 
 	//LIGHTING

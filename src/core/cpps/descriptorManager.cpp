@@ -717,12 +717,28 @@ void DescriptorManager::createRaySpheresSetLayout() {
     SSBO.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
     SSBO.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
 
-    std::array<VkDescriptorSetLayoutBinding, 1> bindings = {
+    VkDescriptorSetLayoutBinding vertexSSBO{};
+    vertexSSBO.binding = 1;
+    vertexSSBO.descriptorCount = 1;
+    vertexSSBO.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    vertexSSBO.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+
+    VkDescriptorSetLayoutBinding indexSSBO{};
+    indexSSBO.binding = 2;
+    indexSSBO.descriptorCount = 1;
+    indexSSBO.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    indexSSBO.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+
+    std::array<VkDescriptorSetLayoutBinding, 3> bindings = {
     SSBO,
+    vertexSSBO,
+    indexSSBO
     };
 
-    std::array<VkDescriptorBindingFlags, 1> bindingFlags = {
+    std::array<VkDescriptorBindingFlags, 3> bindingFlags = {
     0, // SSBO (binding 0) no flags
+    0, // vertexSSBO (binding 1) no flags
+    0 // indexSSBO (binding 2) no flags
     };
 
     VkDescriptorSetLayoutBindingFlagsCreateInfo flagsInfo{};
@@ -753,9 +769,15 @@ void DescriptorManager::createRaySpheresPool() {
         Engine::garbage.unlock();
     }
 
-    std::array<VkDescriptorPoolSize, 1> poolSizes{};
+    std::array<VkDescriptorPoolSize, 3> poolSizes{};
     poolSizes[0].type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
     poolSizes[0].descriptorCount = 1;
+
+    poolSizes[1].type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    poolSizes[1].descriptorCount = 1;
+
+    poolSizes[2].type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    poolSizes[2].descriptorCount = 1;
 
     VkDescriptorPoolCreateInfo poolInfo{};
     poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
@@ -784,7 +806,7 @@ void DescriptorManager::createRaySpheresSets() {
         throw std::runtime_error("failed to allocate descriptor set!");
     }
 
-    std::array<VkWriteDescriptorSet, 1> writes{};
+    std::array<VkWriteDescriptorSet, 3> writes{};
     VkDescriptorBufferInfo ssbo{};
     ssbo.buffer = Engine::rayTracingSpheres.buffer;
     ssbo.offset = 0;
@@ -797,6 +819,32 @@ void DescriptorManager::createRaySpheresSets() {
     writes[0].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
     writes[0].descriptorCount = 1;
     writes[0].pBufferInfo = &ssbo;
+
+    VkDescriptorBufferInfo vertexSsbo{};
+    vertexSsbo.buffer = Engine::rayVertices.buffer;
+    vertexSsbo.offset = 0;
+    vertexSsbo.range = Engine::rayVertices.size;
+
+    writes[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    writes[1].dstSet = Engine::rayTracingSpheresDescriptor.sets[0];
+    writes[1].dstBinding = 1;
+    writes[1].dstArrayElement = 0;
+    writes[1].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    writes[1].descriptorCount = 1;
+    writes[1].pBufferInfo = &vertexSsbo;
+
+    VkDescriptorBufferInfo indexSsbo{};
+    indexSsbo.buffer = Engine::rayIndices.buffer;
+    indexSsbo.offset = 0;
+    indexSsbo.range = Engine::rayIndices.size;
+
+    writes[2].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    writes[2].dstSet = Engine::rayTracingSpheresDescriptor.sets[0];
+    writes[2].dstBinding = 2;
+    writes[2].dstArrayElement = 0;
+    writes[2].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    writes[2].descriptorCount = 1;
+    writes[2].pBufferInfo = &indexSsbo;
 
     vkUpdateDescriptorSets(Engine::deviceInfo.logicalDevice, static_cast<uint32_t>(writes.size()), writes.data(), 0, nullptr);
 }

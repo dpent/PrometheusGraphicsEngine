@@ -3,6 +3,8 @@
 #include "../../core/headers/Prometheus.h"
 #include "../../core/headers/vertex.h"
 
+struct RayVertex;
+
 class Mesh {
 public:
     uint32_t vertexOffset;
@@ -24,4 +26,8 @@ public:
     void load();
     static void loadVertex(tinyobj::attrib_t& attrib, tinyobj::index_t& index, glm::vec3& minCoords, glm::vec3& maxCoords, Vertex& vertex);
     static void computeNormals(Vertex& v0, Vertex& v1, Vertex& v2);
+
+    static void loadForRayTrace(std::vector<RayVertex>& vertices, std::vector<uint32_t>& indices, std::string meshPath, glm::vec3 scale);
+    static void loadRayVertex(tinyobj::attrib_t& attrib, tinyobj::index_t& index, glm::vec3& minCoords, glm::vec3& maxCoords, RayVertex& vertex, glm::vec3& scale);
+    static void computeRayNormals(RayVertex& v0, RayVertex& v1, RayVertex& v2);
 };

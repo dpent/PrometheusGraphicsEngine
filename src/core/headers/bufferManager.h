@@ -5,6 +5,9 @@
 #include "../../physics/headers/light.h"
 
 class Engine;
+struct Sphere;
+struct LightSource;
+struct RayVertex;
 
 struct Buffer {
 public:
@@ -65,6 +68,8 @@ public:
 	#ifdef RAY_TRACING
 	static void recordRayTracingCommandBuffer(VkCommandBuffer& commandBuffer, uint32_t imageIndex);
 	static void recordRayTracingComputeCommands(VkCommandBuffer& commandBuffer, uint32_t imageIndex);
+
+	static void prepareRayTracingData(std::vector<Sphere>& spheres, std::vector<LightSource>& lights, std::vector<RayVertex>& vertices, std::vector<uint32_t>& indices);
 	#endif
 
 	static void createUniformBuffer(Buffer& buffer, VkDeviceSize size);
