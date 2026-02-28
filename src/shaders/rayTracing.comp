@@ -54,53 +54,31 @@ layout (local_size_x = 8, local_size_y = 8) in;
 struct Ray{
     vec3 origin;
     vec3 direction;
-    vec3 accumulatedColor;
-    uint numBounces;
 };
 
-#define MAX_BOUNCES 20
-#define RAYS_PER_PIXEL 64
+struct HitRecord {
+    vec3 p;
+    vec3 normal;
+    vec3 albedo;
+    bool hitLight;
+};
+
+#define MAX_BOUNCES 10
+#define RAYS_PER_PIXEL 32
 #define SAMPLE_COUNT 100
 #define PI 3.14159265
 
-bool hit(Ray ray, Sphere sphere, out float tHit);
-float hash(vec2 p);
-float rand(vec2 p);
-vec3 randomHemisphereDirection(vec3 normal, vec2 seed);
-vec3 randomSphere(vec2 seed);
-bool hitTriangle(Ray ray, Triangle triangle, out float tHit, out float u, out float v);
-vec3 rayTraceColor(float horizontalCoefficient, float verticalCoefficient, vec2 screenPos);
-vec3 testTrace(float horizontalCoefficient, float verticalCoefficient, vec2 screenPos);
-vec3 calculateLambertLighting(vec3 hitPoint, vec3 hitColor, vec3 normal);
+int numSpheres = spheres.length();
+int numLights = lights.length();
+int numTriangles = indices.length() / 3;
 
-void main() {
+uint rngState =
+    uint(gl_GlobalInvocationID.x) * 1973u +
+    uint(gl_GlobalInvocationID.y) * 9277u +
+    uint(camera.utils.z) * 26699u +
+    911u;
 
-    ivec2 screenPos = ivec2(gl_GlobalInvocationID.xy);
-    ivec2 screenSize = imageSize(outImage);
-
-    float aspect = float(screenSize.x) / float(screenSize.y);
-
-    float horizontalCoefficient = (float(screenPos.x) + 0.5) / float(screenSize.x) * 2.0 - 1.0; 
-    horizontalCoefficient *= aspect;
-
-    float verticalCoefficient   = 1.0 - (float(screenPos.y) + 0.5) / float(screenSize.y) * 2.0;
-
-    vec3 pixelColor = rayTraceColor(horizontalCoefficient, verticalCoefficient, screenPos);//testTrace(horizontalCoefficient, verticalCoefficient, screenPos);
-
-    vec4 oldColor = imageLoad(accumImagePrev, screenPos);
-    vec3 accumulated;
-    
-    if(camera.utils.y != 0.0){
-        accumulated = (oldColor.rgb * (camera.utils.z - 1) + pixelColor) / camera.utils.z;
-    }else{
-        accumulated = pixelColor * 5.0;
-    }
-
-    imageStore(accumImage, screenPos, vec4(accumulated, 1.0));
-    imageStore(outImage, screenPos, vec4(accumulated, 1.0));
-}
-
-bool hit(Ray ray, Sphere sphere, out float tHit){
+bool hitSphere(Ray ray, Sphere sphere, out float tHit){
     vec3 oc = ray.origin - sphere.center.xyz;
     float a = dot(ray.direction, ray.direction);
     float b = 2.0 * dot(oc, ray.direction);
@@ -118,15 +96,6 @@ bool hit(Ray ray, Sphere sphere, out float tHit){
 
     tHit = min(t0, t1);
     return tHit > 0.0;
-}
-
-float hash(vec2 p)
-{
-    uint x = floatBitsToUint(p.x);
-    uint y = floatBitsToUint(p.y);
-    uint n = x * 374761393u + y * 668265263u;
-    n = (n ^ (n >> 13u)) * 1274126177u;
-    return float(n & 0x00ffffffu) / float(0x01000000u);
 }
 
 float rand(vec2 p)
@@ -211,7 +180,114 @@ bool hitTriangle(Ray ray, Triangle triangle, out float tHit, out float u, out fl
 
 }
 
-vec3 rayTraceColor(float horizontalCoefficient, float verticalCoefficient, vec2 screenPos){
+vec3 lambertBRDF(vec3 albedo){
+    return albedo / PI;
+}
+
+vec3 lambertThroughput(vec3 brdf, float cosTheta){
+    
+    float pdf = cosTheta / PI; //PDF for new dir
+
+    return (brdf * cosTheta) / pdf;
+}
+
+bool hitScene(inout HitRecord hitRec, Ray ray){
+
+    float minT = 1e30;
+    bool hitSomething = false;
+
+    for(int i=0; i<numTriangles; i++){
+                
+        float tHit;
+        vec2 uv = vec2(0.0);
+
+        Triangle tri;
+        tri.vertices[0] = vertices[indices[i * 3]];
+        tri.vertices[1] = vertices[indices[i * 3 + 1]];
+        tri.vertices[2] = vertices[indices[i * 3 + 2]];
+
+        if(hitTriangle(ray, tri, tHit, uv.x, uv.y) && tHit < minT){
+            minT = tHit;
+            hitRec.p = ray.origin + ray.direction * tHit;
+            hitRec.albedo = vec3(0.2,0.2,0.2);
+            hitSomething = true;
+            hitRec.normal = normalize(
+                (1.0 - uv.x - uv.y) * tri.vertices[0].normal.xyz +
+                uv.x * tri.vertices[1].normal.xyz +
+                uv.y * tri.vertices[2].normal.xyz
+            );
+        }
+    }
+
+    for(int i=0; i<numSpheres; i++){
+        float tHit;
+        if(hitSphere(ray, spheres[i], tHit) && tHit < minT){
+            minT = tHit;
+            hitRec.albedo = spheres[i].color.xyz;
+            hitSomething = true;
+                    
+            hitRec.p = ray.origin + ray.direction * minT;
+            hitRec.normal   = normalize(hitRec.p - spheres[i].center.xyz);
+        }
+    }
+
+    for(int i=0; i<numLights; i++){
+        Sphere lightSphere;
+        lightSphere.center = lights[i].position;
+        lightSphere.color = lights[i].color;
+
+        float tHit;
+        if(hitSphere(ray, lightSphere, tHit) && tHit < minT){
+            minT = tHit;
+            hitRec.p = ray.origin + ray.direction * tHit;
+            hitRec.albedo = lights[i].color.xyz * lights[i].color.w;
+            hitSomething = true;
+            hitRec.hitLight = true;
+            hitRec.normal = normalize(hitRec.p - lightSphere.center.xyz);
+        }
+    }
+
+    return hitSomething;
+}
+
+void buildONB(vec3 n, out vec3 u, out vec3 v, out vec3 w)
+{
+    w = normalize(n);
+    vec3 a = abs(w.x) > 0.9 ? vec3(0,1,0) : vec3(1,0,0);
+    v = normalize(cross(w, a));
+    u = cross(w, v);
+}
+
+vec3 toWorld(vec3 localDir, vec3 normal)
+{
+    vec3 u, v, w;
+    buildONB(normal, u, v, w);
+    return normalize(localDir.x * u + localDir.y * v + localDir.z * w);
+}
+
+float random(inout uint state)
+{
+    state = state * 747796405u + 1u;
+    uint word = ((state >> ((state >> 28) + 4)) ^ state) * 277803737u;
+    word = (word >> 22) ^ word;
+    return float(word) / 4294967295.0;
+}
+
+vec3 randomCosineDirection(inout uint rng)
+{
+    float r1 = random(rng);
+    float r2 = random(rng);
+
+    float phi = 2.0 * PI * r1;
+
+    float x = cos(phi) * sqrt(r2);
+    float y = sin(phi) * sqrt(r2);
+    float z = sqrt(1.0 - r2);
+
+    return vec3(x, y, z);
+}
+
+vec3 rayTraceColor(float horizontalCoefficient, float verticalCoefficient, vec2 screenPos, uint raysPerPixel){
 
     vec3 pixelColor = vec3(0.0,0.0,0.0);
 
@@ -222,11 +298,7 @@ vec3 rayTraceColor(float horizontalCoefficient, float verticalCoefficient, vec2 
     float fov = radians(75.0);
     float fovScale = tan(fov * 0.5);
 
-    int numSpheres = spheres.length();
-    int numLights = lights.length();
-    int numTriangles = indices.length() / 3;
-
-    for(int rayNum=0; rayNum<RAYS_PER_PIXEL; rayNum++){
+    for(int rayNum=0; rayNum<raysPerPixel; rayNum++){
 
         Ray ray;
         ray.origin = camera.position.xyz;
@@ -236,111 +308,36 @@ vec3 rayTraceColor(float horizontalCoefficient, float verticalCoefficient, vec2 
         vec2 jitter = vec2(rand(screenPos + vec2(camera.utils.x)), rand(screenPos + vec2(camera.utils.x * 0.3 + 1.0))) * 0.01;
 
         ray.direction = normalize(rayDir + vec3(jitter, 0.0));
-        ray.accumulatedColor = vec3(0.0);
-        ray.numBounces = 0;
 
-        vec3 throughput = vec3(1.0);
         vec3 radiance = vec3(0.0);
+        vec3 throughput = vec3(1.0);
+
     
         for(int bounce = 0; bounce < MAX_BOUNCES; bounce++){
 
-            bool hitSomething = false;
-            bool hitLight = false;
+            HitRecord rec;
+            rec.hitLight = false;
 
-            float minT = 1e30;
-            vec3 hitColor;
-            uint closestSphereIndex;
-
-            vec3 hitPoint;
-            vec3 normal;
-
-            for(int i=0; i<numTriangles; i++){
-                
-                float tHit;
-                vec2 uv = vec2(0.0);
-
-                Triangle tri;
-                tri.vertices[0] = vertices[indices[i * 3]];
-                tri.vertices[1] = vertices[indices[i * 3 + 1]];
-                tri.vertices[2] = vertices[indices[i * 3 + 2]];
-
-                if(hitTriangle(ray, tri, tHit, uv.x, uv.y) && tHit < minT){
-                    minT = tHit;
-                    hitColor = vec3(0.2,0.2,0.2);
-                    hitSomething = true;
-                    normal = normalize(
-                        (1.0 - uv.x - uv.y) * tri.vertices[0].normal.xyz +
-                        uv.x * tri.vertices[1].normal.xyz +
-                        uv.y * tri.vertices[2].normal.xyz
-                    );
-                }
-            }
-
-            for(int i=0; i<numSpheres; i++){
-                float tHit;
-                if(hit(ray, spheres[i], tHit) && tHit < minT){
-                    minT = tHit;
-                    hitColor = spheres[i].color.xyz;
-                    hitSomething = true;
-                    hitLight = false;
-                    
-                    hitPoint = ray.origin + ray.direction * minT;
-                    normal   = normalize(hitPoint - spheres[i].center.xyz);
-                }
-            }
-
-            for(int i=0; i<numLights; i++){
-                Sphere lightSphere;
-                lightSphere.center = lights[i].position;
-                lightSphere.color = lights[i].color;
-
-                float tHit;
-                if(hit(ray, lightSphere, tHit) && tHit < minT){
-                    minT = tHit;
-                    hitColor = lights[i].color.xyz * lights[i].color.w;
-                    hitSomething = true;
-                    hitLight = true;
-                }
-            }
-
-            if(!hitSomething)
+            if(!hitScene(rec, ray))
                 break;
 
-            if(hitLight){
-                radiance += throughput * hitColor;
+            if(rec.hitLight) //Add the emission since only lights emit
+            {
+                radiance += throughput * rec.albedo;
                 break;
             }
 
-            radiance += throughput * calculateLambertLighting(hitPoint, hitColor, normal);
-            throughput *= hitColor;
+            vec3 localDir = randomCosineDirection(rngState); //Choose random direction in the normal's hemisphere (closer to normal)
+            vec3 newDir = toWorld(localDir, rec.normal);
 
-            vec2 seed = screenPos + vec2(bounce * 1.2);
-            float r = rand(seed);
+            float cosTheta = max(dot(rec.normal, newDir), 0.0); //Light new direction angle cosine
+            vec3 brdf = lambertBRDF(rec.albedo);
 
-            vec3 newDir;
+            throughput *= lambertThroughput(brdf, cosTheta);
 
-            
-            if (r < 0.08) 
-            {
-                int lightIndex = int(floor(rand(seed+vec2(1.0)) * float(numLights)));
-                Light light = lights[lightIndex];
-
-                vec3 lightPoint = light.position.xyz + light.position.w * randomSphere(seed);
-
-                vec3 toLight = lightPoint - hitPoint;
-                float lightDist = length(toLight);
-                newDir = toLight / lightDist;
-
-                if (dot(normal, newDir) <= 0.0)
-                    return vec3(0.0);
-            }
-            else 
-            {
-                newDir = randomHemisphereDirection(normal, screenPos + vec2(bounce, camera.utils.x));
-            }
-
-            ray.origin = hitPoint + normal * 0.0001;
+            ray.origin = rec.p + rec.normal * 0.0001;
             ray.direction = newDir;
+            
         }
 
         
@@ -348,31 +345,35 @@ vec3 rayTraceColor(float horizontalCoefficient, float verticalCoefficient, vec2 
         
     }
 
-    return pixelColor / RAYS_PER_PIXEL;
+    return pixelColor / raysPerPixel;
 }
 
-vec3 calculateLambertLighting(vec3 hitPoint, vec3 hitColor, vec3 normal){
+void main() {
+
+    ivec2 screenPos = ivec2(gl_GlobalInvocationID.xy);
+    ivec2 screenSize = imageSize(outImage);
+
+    float aspect = float(screenSize.x) / float(screenSize.y);
+
+    float horizontalCoefficient = (float(screenPos.x) + 0.5) / float(screenSize.x) * 2.0 - 1.0; 
+    horizontalCoefficient *= aspect;
+
+    float verticalCoefficient   = 1.0 - (float(screenPos.y) + 0.5) / float(screenSize.y) * 2.0;
     
-    int numLights = lights.length();
+    vec3 accumulated;
+    vec3 pixelColor;
 
-    vec3 totalRadiance = vec3(0.0);
+    if(camera.utils.y != 0.0){
 
-    for(int i = 0; i < numLights; i++)
-    {
-        vec3 toLight = lights[i].position.xyz - hitPoint;
-        float dist = length(toLight);
-        vec3 lightDir = normalize(toLight);
-
-        float attenuation = 1.0 / (dist * dist + 0.1);
-        float NdotL = max(dot(normal, lightDir), 0.0);
-
-        totalRadiance += lights[i].color.xyz * lights[i].color.w *
-                    attenuation *
-                    NdotL;
+        pixelColor = rayTraceColor(horizontalCoefficient, verticalCoefficient, screenPos, RAYS_PER_PIXEL);
+        vec4 oldColor = imageLoad(accumImagePrev, screenPos);
+        accumulated = (oldColor.rgb * (camera.utils.z - 1) + pixelColor) / camera.utils.z;
+    }else{
+        
+        pixelColor = rayTraceColor(horizontalCoefficient, verticalCoefficient, screenPos, 1);
+        accumulated = pixelColor * 5.0;
     }
 
-    vec3 finalColor = hitColor * totalRadiance / 3.14159265;
-
-    return finalColor;
-
+    imageStore(accumImage, screenPos, vec4(accumulated, 1.0));
+    imageStore(outImage, screenPos, vec4(accumulated, 1.0));
 }

@@ -1033,7 +1033,7 @@ void Engine::loadDemoScene() {
     LightSource lightSource{
         //.position = glm::vec4(-50.0, 40.0, -120.0, 10.0),
         .position = glm::vec4(-5.0, -5.0, -50.0, 10.0),
-        .color = glm::vec4(1.0,1.0,1.0,10.0)
+        .color = glm::vec4(1.0,1.0,1.0,1000.0)
     };
 
     std::vector<Sphere> spheres;
