@@ -201,7 +201,7 @@ void Mesh::computeNormals(Vertex& v0, Vertex& v1, Vertex& v2) {
 
 }
 
-void Mesh::loadForRayTrace(std::vector<RayVertex>& vertices, std::vector<uint32_t>& indices, std::string meshPath, glm::vec3 scale) {
+void Mesh::loadForRayTrace(std::vector<RayVertex>& vertices, std::vector<uint32_t>& indices, std::string meshPath, glm::vec3 scale, glm::vec3 translation, glm::vec3 rotation) {
 
     tinyobj::attrib_t attrib;
     std::vector<tinyobj::shape_t> shapes;
@@ -215,6 +215,9 @@ void Mesh::loadForRayTrace(std::vector<RayVertex>& vertices, std::vector<uint32_
     }
 
     std::unordered_map<RayVertex, uint32_t> uniqueVertices{};
+
+    glm::vec3 rotationRadians = glm::radians(rotation);
+    glm::quat q = glm::quat(rotationRadians);
 
     glm::vec3 minCoords = glm::vec3(
         attrib.vertices[shapes[0].mesh.indices[0].vertex_index],
@@ -237,13 +240,9 @@ void Mesh::loadForRayTrace(std::vector<RayVertex>& vertices, std::vector<uint32_
             RayVertex v1 = {};
             RayVertex v2 = {};
 
-            Mesh::loadRayVertex(attrib, idx0, minCoords, maxCoords, v0, scale);
-            Mesh::loadRayVertex(attrib, idx1, minCoords, maxCoords, v1, scale);
-            Mesh::loadRayVertex(attrib, idx2, minCoords, maxCoords, v2, scale);
-
-            if (attrib.normals.empty()) {
-                Mesh::computeRayNormals(v0, v1, v2);
-            }
+            Mesh::loadRayVertex(attrib, idx0, minCoords, maxCoords, v0, scale, translation, q);
+            Mesh::loadRayVertex(attrib, idx1, minCoords, maxCoords, v1, scale, translation, q);
+            Mesh::loadRayVertex(attrib, idx2, minCoords, maxCoords, v2, scale, translation, q);
 
             if (uniqueVertices.count(v0) == 0) {
                 uniqueVertices[v0] = static_cast<uint32_t>(vertices.size());
@@ -266,27 +265,42 @@ void Mesh::loadForRayTrace(std::vector<RayVertex>& vertices, std::vector<uint32_
             indices.push_back(uniqueVertices[v2]);
             uint32_t ind2 = uniqueVertices[v2];
 
+            if (attrib.normals.empty()) {
+                Mesh::computeRayNormals(v0, v1, v2);
+            }
         }
+    }
+
+    for (size_t i = 0; i < vertices.size(); i++) {
+        vertices[i].normal = glm::normalize(vertices[i].normal);
     }
 }
 
-void Mesh::loadRayVertex(tinyobj::attrib_t& attrib, tinyobj::index_t& index, glm::vec3& minCoords, glm::vec3& maxCoords, RayVertex& vertex, glm::vec3& scale) {
+void Mesh::loadRayVertex(tinyobj::attrib_t& attrib, tinyobj::index_t& index, glm::vec3& minCoords, glm::vec3& maxCoords, RayVertex& vertex, glm::vec3& scale, glm::vec3& translation, glm::quat& rotationQ) {
+
+    glm::vec3 pos = {
+    attrib.vertices[3 * index.vertex_index + 0],
+    attrib.vertices[3 * index.vertex_index + 1],
+    attrib.vertices[3 * index.vertex_index + 2]
+    };
+
+    pos *= scale;
+    pos = rotationQ * pos;
+    pos += translation;
 
     vertex.position = {
-        attrib.vertices[3 * index.vertex_index + 0] * scale.x ,
-        attrib.vertices[3 * index.vertex_index + 1] * scale.y,
-        attrib.vertices[3 * index.vertex_index + 2] * scale.z,
+        pos,
         1.0f
     };
 
     if (!attrib.normals.empty()) {
 
-        vertex.normal = {
-            attrib.normals[3 * index.normal_index + 0],
-            attrib.normals[3 * index.normal_index + 1],
-            attrib.normals[3 * index.normal_index + 2],
-            0.0f
+        glm::vec3 n = {
+        attrib.normals[3 * index.normal_index + 0],
+        attrib.normals[3 * index.normal_index + 1],
+        attrib.normals[3 * index.normal_index + 2]
         };
+        vertex.normal = glm::vec4(rotationQ * n, 0.0f);
     }
     else {
 

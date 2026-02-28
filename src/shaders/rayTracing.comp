@@ -209,7 +209,11 @@ bool hitScene(inout HitRecord hitRec, Ray ray){
         if(hitTriangle(ray, tri, tHit, uv.x, uv.y) && tHit < minT){
             minT = tHit;
             hitRec.p = ray.origin + ray.direction * tHit;
-            hitRec.albedo = vec3(0.2,0.2,0.2);
+            hitRec.albedo = normalize(
+                (1.0 - uv.x - uv.y) * tri.vertices[0].color.xyz +
+                uv.x * tri.vertices[1].color.xyz +
+                uv.y * tri.vertices[2].color.xyz
+            );
             hitSomething = true;
             hitRec.normal = normalize(
                 (1.0 - uv.x - uv.y) * tri.vertices[0].normal.xyz +
@@ -370,7 +374,7 @@ void main() {
         accumulated = (oldColor.rgb * (camera.utils.z - 1) + pixelColor) / camera.utils.z;
     }else{
         
-        pixelColor = rayTraceColor(horizontalCoefficient, verticalCoefficient, screenPos, 1);
+        pixelColor = rayTraceColor(horizontalCoefficient, verticalCoefficient, screenPos, 4);
         accumulated = pixelColor * 5.0;
     }
 
