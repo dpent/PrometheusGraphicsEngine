@@ -57,6 +57,7 @@ Check the feature list below to see what is currently implemented and what is pl
 - The demo after running the program you will be able to move around the scene with the normal camera controls.
 - When the camera stops moving, the rendering starts. This is what you should see after some rendering and moving around by running `Engine::loadDemoScene();` at the top of `mainLoop()`:
 ![Demo scene ray trace example](screenshots/rayTracingDemoExample.png)
+
 # USAGE
 
 1. Clone the repo
