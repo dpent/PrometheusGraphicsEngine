@@ -34,9 +34,29 @@ Check the feature list below to see what is currently implemented and what is pl
 ### 3. Platforms
 
 - Windows ✅ (I recommend Visual Studio Community edition 2026)
-- Linux ⚠️ (Probably, not tested though)
+- Linux ⚠️ (Probably not)
 - Mac ⚠️ (No idea I can't test it since i don't have a device)
 
+# RAY TRACING
+- You can enable ray tracing in the `src/core/headers/Prometheus.h` file by uncommenting this line at the top:
+	```cpp
+	//#define RAY_TRACING
+	```
+- Window size is static once the application starts, so if you which to start at a certain size call:
+	```cpp
+	static void startAtWindowSize(int width, int height)
+	```
+- Inside `void Engine::initWindow(Engine* engine)` like so:
+	```cpp
+     #else
+        Engine::startAtWindowSize(1920, 1080);
+        Engine::window = glfwCreateWindow(WIDTH, HEIGHT, "Prometheus", nullptr, nullptr);
+    #endif
+	```
+- To start with a maximised window, uncomment `//#define FULLSCREEN_START` in `Prometheus.h`
+- The demo after running the program you will be able to move around the scene with the normal camera controls.
+- When the camera stops moving, the rendering starts. This is what you should see after some rendering and moving around by running `Engine::loadDemoScene();` at the top of `mainLoop()`:
+![Demo scene ray trace example](screenshots/rayTracingDemo.png)
 # USAGE
 
 1. Clone the repo
@@ -86,6 +106,7 @@ Check the feature list below to see what is currently implemented and what is pl
 - Dockable GUI
 - Debug line drawing
 - Particle effects
+- Ray-tracing (Path tracing)
 
 ## In progress
 
@@ -97,7 +118,6 @@ Check the feature list below to see what is currently implemented and what is pl
 # FUTURE CHANGES
 
 - More than just .obj model formats
-- Ray-tracing (Path tracing)
 - Emission maps etc.
 - Reflections
 - Animations

@@ -52,7 +52,7 @@ glm::mat4 Camera::getProjectionMatrix() {
 
     return proj;
 }
-
+#ifdef RAY_TRACING
 RayTracingCameraObject* Camera::getRayTracingDetails() {
 
     RayTracingCameraObject* cam = new RayTracingCameraObject();
@@ -64,6 +64,7 @@ RayTracingCameraObject* Camera::getRayTracingDetails() {
 
     return cam;
 }
+#endif
 
 // --- Getters ---
 const glm::vec3& Camera::getPosition() const { return position; }

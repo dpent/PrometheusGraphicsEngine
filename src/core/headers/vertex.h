@@ -24,6 +24,7 @@ struct CameraVPObject {
     glm::mat4 proj;
 };
 
+#ifdef RAY_TRACING
 struct RayTracingCameraObject {
     glm::vec4 up;
     glm::vec4 forward;
@@ -31,6 +32,7 @@ struct RayTracingCameraObject {
     glm::vec4 position;
     glm::vec4 utils;
 };
+#endif
 
 struct CameraObject
 {

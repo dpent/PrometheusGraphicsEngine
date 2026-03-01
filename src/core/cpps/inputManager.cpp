@@ -103,7 +103,9 @@ void InputManager::cursorPosCallBack(GLFWwindow* window, double xpos, double ypo
 
         Engine::camera.pitch = glm::clamp(Engine::camera.pitch, -89.0f, 89.0f);
 
+        #ifdef RAY_TRACING
         Engine::notMoving = 0.0f;
+        #endif  
     }
     else {
         Engine::lastKnownMousePos.first = xpos;

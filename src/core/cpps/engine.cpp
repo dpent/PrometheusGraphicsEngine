@@ -1048,7 +1048,7 @@ void Engine::loadDemoScene() {
 
     LightSource lightSource{
         .position = glm::vec4(-5.0, 50.0, -50.0, 10.0),
-        .color = glm::vec4(1.0,1.0,1.0,100.0)
+        .color = glm::vec4(1.0,1.0,1.0,50.0)
     };
 
     std::vector<Sphere> spheres;
@@ -1063,7 +1063,9 @@ void Engine::loadDemoScene() {
 
     std::vector<RayVertex> vertices;
     std::vector<uint32_t> indices;
-    Mesh::loadForRayTrace(vertices, indices, "square.obj", glm::vec3(80.0f, 80.0f, 1.0f), glm::vec3(0.0f,-20.0f, 0.0f), glm::vec3(-90.0f,0.0f,0.0f));
+    Mesh::loadForRayTrace(vertices, indices, "square.obj", glm::vec3(80.0f, 80.0f, 1.0f), glm::vec3(0.0f,-30.0f, 0.0f), glm::vec3(-90.0f,0.0f,0.0f));
+    Mesh::loadForRayTrace(vertices, indices, "square.obj", glm::vec3(80.0f, 80.0f, 1.0f), glm::vec3(0.0f,80.0f, 0.0f), glm::vec3(90.0f,0.0f,0.0f));
+    Mesh::loadForRayTrace(vertices, indices, "square.obj", glm::vec3(80.0f, 80.0f, 1.0f), glm::vec3(0.0f,0.0f, 70.0f), glm::vec3(-180.0f,0.0f,0.0f));
 
     BufferManager::prepareRayTracingData(spheres, lights, vertices, indices);
 

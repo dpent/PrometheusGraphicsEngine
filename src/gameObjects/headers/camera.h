@@ -20,7 +20,7 @@ public:
     float fov;
     float far;
     float acceleration;
-    float maxSpeed; 
+    float maxSpeed;
 
     Camera(glm::vec3 position = glm::vec3(15.0f, 15.0f, 15.0f),
         glm::vec3 front = glm::vec3(-0.577382f, -0.577288f, -0.577382f),
@@ -40,7 +40,9 @@ public:
 
     void updateCameraVectors();
 
+#ifdef RAY_TRACING
     RayTracingCameraObject* getRayTracingDetails();
+#endif
 
     glm::mat4 getViewMatrix();
     glm::mat4 getProjectionMatrix();
@@ -72,6 +74,6 @@ public:
     void setSensitivity(float s);
     void setFOV(float fov);
     void setFar(float far);
-	void setAcceleration(float a);
-	void setMaxSpeed(float ms);
+    void setAcceleration(float a);
+    void setMaxSpeed(float ms);
 };
