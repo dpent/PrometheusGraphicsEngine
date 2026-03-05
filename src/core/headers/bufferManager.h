@@ -8,6 +8,8 @@ class Engine;
 struct Sphere;
 struct LightSource;
 struct RayVertex;
+struct RTTriangle;
+struct RTMaterial;
 
 struct Buffer {
 public:
@@ -69,7 +71,7 @@ public:
 	static void recordRayTracingCommandBuffer(VkCommandBuffer& commandBuffer, uint32_t imageIndex);
 	static void recordRayTracingComputeCommands(VkCommandBuffer& commandBuffer, uint32_t imageIndex);
 
-	static void prepareRayTracingData(std::vector<Sphere>& spheres, std::vector<LightSource>& lights, std::vector<RayVertex>& vertices, std::vector<uint32_t>& indices);
+	static void prepareRayTracingData(std::vector<RayVertex>& vertices, std::vector<RTTriangle>& triangles, std::vector<RTMaterial>& materials);
 	#endif
 
 	static void createUniformBuffer(Buffer& buffer, VkDeviceSize size);

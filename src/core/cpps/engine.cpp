@@ -82,17 +82,13 @@ bool Engine::remakeComputeDescriptors = false;
 Pipeline Engine::rayTracingPipeline;
 
 Descriptor Engine::rayTracingDescriptor;
-Descriptor Engine::rayTracingSpheresDescriptor;
-Descriptor Engine::rayTracingLightsDescriptor;
+Descriptor Engine::rayDataDescriptor;
 
-Buffer Engine::rayTracingSpheres;
-Buffer Engine::lightSources;
 Buffer Engine::rayVertices;
-Buffer Engine::rayIndices;
+Buffer Engine::rayTriangles;
+Buffer Engine::rayMaterials;
 
 ImageVector* Engine::accumulationImages;
-
-std::vector<VkDescriptorSetLayout> Engine::layoutsUsed;
 
 float Engine::notMoving = 1.0f;
 uint32_t Engine::tracingFrames = 0;
@@ -1021,61 +1017,55 @@ void Engine::loadDemoScene() {
     sEffectHigherChimney->addParticles(1000);
 
     #else
-    Sphere sphere{
-        .center = glm::vec4(-10.0,5.0,0.0, 5.0),
-        .color = glm::vec4(1.0,0.0,1.0,1.0)
-    };
-
-    Sphere sphere2{
-        .center = glm::vec4(11.0,6.0,6.0, 10.0),
-        .color = glm::vec4(1.0,0.0,0.0,1.0)
-    };
-
-    Sphere sphere3{
-        .center = glm::vec4(-15.0,15.0,15.0, 12.0),
-        .color = glm::vec4(0.0,0.0,1.0,1.0)
-    };
-
-    Sphere sphere4{
-        .center = glm::vec4(25.0,25.0,25.0, 18.0),
-        .color = glm::vec4(1.0,1.0,0.0,1.0)
-    };
-
-    Sphere sphere5{
-        .center = glm::vec4(25.0, -20.0, 60.0, 50.0),
-        .color = glm::vec4(0.2,0.2,0.2,0.2)
-    };
-
-    LightSource lightSource{
-        .position = glm::vec4(-5.0, 50.0, -50.0, 10.0),
-        .color = glm::vec4(1.0,1.0,1.0,50.0)
-    };
-
-    std::vector<Sphere> spheres;
-    spheres.push_back(sphere);
-    spheres.push_back(sphere2);
-    spheres.push_back(sphere3);
-    spheres.push_back(sphere4);
-    spheres.push_back(sphere5);
-
-    std::vector<LightSource> lights;
-    lights.push_back(lightSource);
 
     std::vector<RayVertex> vertices;
-    std::vector<uint32_t> indices;
-    Mesh::loadForRayTrace(vertices, indices, "square.obj", glm::vec3(80.0f, 80.0f, 1.0f), glm::vec3(0.0f,-30.0f, 0.0f), glm::vec3(-90.0f,0.0f,0.0f));
-    Mesh::loadForRayTrace(vertices, indices, "square.obj", glm::vec3(80.0f, 80.0f, 1.0f), glm::vec3(0.0f,80.0f, 0.0f), glm::vec3(90.0f,0.0f,0.0f));
-    Mesh::loadForRayTrace(vertices, indices, "square.obj", glm::vec3(80.0f, 80.0f, 1.0f), glm::vec3(0.0f,0.0f, 70.0f), glm::vec3(-180.0f,0.0f,0.0f));
+    std::vector<RTTriangle> triangles;
+    std::vector<RTMaterial> materials;
 
-    BufferManager::prepareRayTracingData(spheres, lights, vertices, indices);
+    RTMaterial greyMat{
+        .color = glm::vec4(0.5, 0.5, 0.5, 0.5),
+        .properties = glm::vec4(0.0f, 1.0f, 1.0f, 1.0f)
+    };
 
-    DescriptorManager::createRaySpheresSetLayout();
-    DescriptorManager::createRaySpheresPool();
-    DescriptorManager::createRaySpheresSets();
+    RTMaterial lightMat{
+        .color = glm::vec4(1.0f, 1.0f, 1.0f, 20.0f),
+        .properties = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f)
+    };
 
-    DescriptorManager::createRayLightsSetLayout();
-    DescriptorManager::createRayLightsPool();
-    DescriptorManager::createRayLightsSets();
+    RTMaterial redMat{
+        .color = glm::vec4(1.0, 0.0, 0.0, 1.0),
+        .properties = glm::vec4(0.0f, 1.0f, 1.0f, 1.0f)
+    };
+
+    RTMaterial greenMat{
+        .color = glm::vec4(0.0, 1.0, 0.0, 1.0),
+        .properties = glm::vec4(0.0f, 1.0f, 1.0f, 1.0f)
+    };
+
+    RTMaterial blueMat{
+        .color = glm::vec4(0.0, 0.0, 1.0, 1.0),
+        .properties = glm::vec4(0.0f, 1.0f, 1.0f, 1.0f)
+    };
+
+    materials.push_back(greyMat);
+    materials.push_back(lightMat);
+    materials.push_back(redMat);
+    materials.push_back(greenMat);
+    materials.push_back(blueMat);
+
+    Mesh::loadForRayTrace(vertices, triangles, "square.obj", glm::vec3(80.0f, 80.0f, 1.0f), glm::vec3(0.0f,-80.0f, -10.0f), glm::vec3(-90.0f,0.0f,0.0f), 0);
+    Mesh::loadForRayTrace(vertices, triangles, "square.obj", glm::vec3(80.0f, 80.0f, 1.0f), glm::vec3(0.0f, 80.0f, -10.0f), glm::vec3(90.0f, 0.0f, 0.0f), 2);
+    Mesh::loadForRayTrace(vertices, triangles, "square.obj", glm::vec3(20.0f, 20.0f, 1.0f), glm::vec3(0.0f,0.0f, 69.0f), glm::vec3(-180.0f,0.0f,0.0f), 1);
+    Mesh::loadForRayTrace(vertices, triangles, "square.obj", glm::vec3(80.0f, 80.0f, 1.0f), glm::vec3(0.0f,0.0f, 70.0f), glm::vec3(-180.0f,0.0f,0.0f), 0);
+    Mesh::loadForRayTrace(vertices, triangles, "square.obj", glm::vec3(80.0f, 80.0f, 1.0f), glm::vec3(80.0f,0.0f, -10.0f), glm::vec3(-180.0f,90.0f,0.0f), 3);
+    Mesh::loadForRayTrace(vertices, triangles, "square.obj", glm::vec3(80.0f, 80.0f, 1.0f), glm::vec3(-80.0f,0.0f, -10.0f), glm::vec3(-180.0f,-90.0f,0.0f), 4);
+
+    BufferManager::prepareRayTracingData(vertices, triangles, materials);
+
+    DescriptorManager::createRayDataSetLayout();
+    DescriptorManager::createRayDataPool();
+    DescriptorManager::createRayDataSets();
+;
     #endif
 }
 

@@ -4,7 +4,7 @@
 #pragma once
 
 //#define RELEASE
-//#define RAY_TRACING
+#define RAY_TRACING
 //#define FULLSCREEN_START
 
 #include <iostream>

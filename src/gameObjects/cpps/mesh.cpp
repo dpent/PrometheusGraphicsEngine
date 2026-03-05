@@ -201,7 +201,7 @@ void Mesh::computeNormals(Vertex& v0, Vertex& v1, Vertex& v2) {
 
 }
 
-void Mesh::loadForRayTrace(std::vector<RayVertex>& vertices, std::vector<uint32_t>& indices, std::string meshPath, glm::vec3 scale, glm::vec3 translation, glm::vec3 rotation) {
+void Mesh::loadForRayTrace(std::vector<RayVertex>& vertices, std::vector<RTTriangle>& triangles, std::string meshPath, glm::vec3 scale, glm::vec3 translation, glm::vec3 rotation, uint32_t materialIndex) {
 
     tinyobj::attrib_t attrib;
     std::vector<tinyobj::shape_t> shapes;
@@ -248,26 +248,26 @@ void Mesh::loadForRayTrace(std::vector<RayVertex>& vertices, std::vector<uint32_
                 uniqueVertices[v0] = static_cast<uint32_t>(vertices.size());
                 vertices.push_back(v0);
             }
-            indices.push_back(uniqueVertices[v0]);
-            uint32_t ind0 = uniqueVertices[v0];
 
             if (uniqueVertices.count(v1) == 0) {
                 uniqueVertices[v1] = static_cast<uint32_t>(vertices.size());
                 vertices.push_back(v1);
             }
-            indices.push_back(uniqueVertices[v1]);
-            uint32_t ind1 = uniqueVertices[v1];
 
             if (uniqueVertices.count(v2) == 0) {
                 uniqueVertices[v2] = static_cast<uint32_t>(vertices.size());
                 vertices.push_back(v2);
             }
-            indices.push_back(uniqueVertices[v2]);
-            uint32_t ind2 = uniqueVertices[v2];
 
             if (attrib.normals.empty()) {
                 Mesh::computeRayNormals(v0, v1, v2);
             }
+
+            RTTriangle triangle = {
+                .vertexIndices = glm::ivec4(uniqueVertices[v0], uniqueVertices[v1], uniqueVertices[v2], materialIndex)
+            };
+
+			triangles.push_back(triangle);
         }
     }
 

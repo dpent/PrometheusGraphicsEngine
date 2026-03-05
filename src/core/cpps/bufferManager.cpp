@@ -667,8 +667,7 @@ void BufferManager::recordRayTracingComputeCommands(VkCommandBuffer& commandBuff
 
     std::vector<VkDescriptorSet> sets{
         Engine::rayTracingDescriptor.sets[Engine::currentFrame],
-        Engine::rayTracingSpheresDescriptor.sets[0],
-        Engine::rayTracingLightsDescriptor.sets[0]
+        Engine::rayDataDescriptor.sets[0]
     };
     
     vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE,
@@ -707,36 +706,8 @@ void BufferManager::recordRayTracingComputeCommands(VkCommandBuffer& commandBuff
     delete cam;
 }
 
-void BufferManager::prepareRayTracingData(std::vector<Sphere>& spheres, std::vector<LightSource>& lights, std::vector<RayVertex>& vertices, std::vector<uint32_t>& indices) {
+void BufferManager::prepareRayTracingData(std::vector<RayVertex>& vertices, std::vector<RTTriangle>& triangles, std::vector<RTMaterial>& materials) {
     
-    //SPHERES
-    BufferManager::createParticleSSBO(Engine::rayTracingSpheres, spheres);
-
-    if (Engine::rayTracingSpheres.size > Engine::stagingBuffer.size) {
-        BufferManager::createStagingBuffer(Engine::rayTracingSpheres.size, Engine::stagingBuffer);
-    }
-
-    void* data;
-    vkMapMemory(Engine::deviceInfo.logicalDevice, Engine::stagingBuffer.memory, 0, Engine::rayTracingSpheres.size, 0, &data);
-    memcpy(data, spheres.data(), Engine::rayTracingSpheres.size);
-    vkUnmapMemory(Engine::deviceInfo.logicalDevice, Engine::stagingBuffer.memory);
-
-    BufferManager::copyBuffer(Engine::stagingBuffer, Engine::rayTracingSpheres, Engine::rayTracingSpheres.size);
-
-    BufferManager::createParticleSSBO(Engine::lightSources, lights);
-
-    //LIGHTS
-    if (Engine::lightSources.size > Engine::stagingBuffer.size) {
-        BufferManager::createStagingBuffer(Engine::lightSources.size, Engine::stagingBuffer);
-    }
-
-    void* lightData;
-    vkMapMemory(Engine::deviceInfo.logicalDevice, Engine::stagingBuffer.memory, 0, Engine::lightSources.size, 0, &lightData);
-    memcpy(lightData, lights.data(), Engine::lightSources.size);
-    vkUnmapMemory(Engine::deviceInfo.logicalDevice, Engine::stagingBuffer.memory);
-
-    BufferManager::copyBuffer(Engine::stagingBuffer, Engine::lightSources, Engine::lightSources.size);
-
     //VERTICES
     BufferManager::createParticleSSBO(Engine::rayVertices, vertices);
 
@@ -751,19 +722,33 @@ void BufferManager::prepareRayTracingData(std::vector<Sphere>& spheres, std::vec
 
     BufferManager::copyBuffer(Engine::stagingBuffer, Engine::rayVertices, Engine::rayVertices.size);
 
-    //INDICES
-    BufferManager::createParticleSSBO(Engine::rayIndices, indices);
+    //TRIANGLES
+    BufferManager::createParticleSSBO(Engine::rayTriangles, triangles);
 
-    if (Engine::rayIndices.size > Engine::stagingBuffer.size) {
-        BufferManager::createStagingBuffer(Engine::rayIndices.size, Engine::stagingBuffer);
+    if (Engine::rayTriangles.size > Engine::stagingBuffer.size) {
+        BufferManager::createStagingBuffer(Engine::rayTriangles.size, Engine::stagingBuffer);
     }
 
-    void* indexData;
-    vkMapMemory(Engine::deviceInfo.logicalDevice, Engine::stagingBuffer.memory, 0, Engine::rayIndices.size, 0, &indexData);
-    memcpy(indexData, indices.data(), Engine::rayIndices.size);
+    void* triangleData;
+    vkMapMemory(Engine::deviceInfo.logicalDevice, Engine::stagingBuffer.memory, 0, Engine::rayTriangles.size, 0, &triangleData);
+    memcpy(triangleData, triangles.data(), Engine::rayTriangles.size);
     vkUnmapMemory(Engine::deviceInfo.logicalDevice, Engine::stagingBuffer.memory);
 
-    BufferManager::copyBuffer(Engine::stagingBuffer, Engine::rayIndices, Engine::rayIndices.size);
+    BufferManager::copyBuffer(Engine::stagingBuffer, Engine::rayTriangles, Engine::rayTriangles.size);
+
+    //MATERIALS
+    BufferManager::createParticleSSBO(Engine::rayMaterials, materials);
+
+    if (Engine::rayMaterials.size > Engine::stagingBuffer.size) {
+        BufferManager::createStagingBuffer(Engine::rayMaterials.size, Engine::stagingBuffer);
+    }
+
+    void* materialData;
+    vkMapMemory(Engine::deviceInfo.logicalDevice, Engine::stagingBuffer.memory, 0, Engine::rayMaterials.size, 0, &materialData);
+    memcpy(materialData, materials.data(), Engine::rayMaterials.size);
+    vkUnmapMemory(Engine::deviceInfo.logicalDevice, Engine::stagingBuffer.memory);
+
+    BufferManager::copyBuffer(Engine::stagingBuffer, Engine::rayMaterials, Engine::rayMaterials.size);
 }
 #endif
 

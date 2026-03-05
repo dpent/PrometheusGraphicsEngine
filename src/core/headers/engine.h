@@ -135,17 +135,13 @@ public:
 	static Pipeline rayTracingPipeline;
 
 	static Descriptor rayTracingDescriptor;
-	static Descriptor rayTracingSpheresDescriptor;
-	static Descriptor rayTracingLightsDescriptor;
+	static Descriptor rayDataDescriptor;
 
-	static Buffer rayTracingSpheres;
-	static Buffer lightSources;
 	static Buffer rayVertices;
-	static Buffer rayIndices;
+	static Buffer rayTriangles;
+	static Buffer rayMaterials;
 
 	static ImageVector* accumulationImages;
-
-	static std::vector<VkDescriptorSetLayout> layoutsUsed;
 
 	static float notMoving;
 	static uint32_t tracingFrames;

@@ -1,19 +1,5 @@
 #include "../../core/headers/Prometheus.h"
 
-struct Sphere {
-	glm::vec4 center;
-	glm::vec4 color;
-};
-
-static_assert(sizeof(Sphere) == 32, "Sphere size mismatch");
-
-struct LightSource {
-	glm::vec4 position;
-	glm::vec4 color;
-};
-
-static_assert(sizeof(Sphere) == 32, "Sphere light source size mismatch");
-
 struct RayVertex {
 	glm::vec4 position;
 	glm::vec4 color;
@@ -34,3 +20,12 @@ namespace std {
 		}
 	};
 }
+
+struct RTMaterial {
+	glm::vec4 color;
+	glm::vec4 properties; // x: type
+};
+
+struct RTTriangle {
+	glm::ivec4 vertexIndices; // w: material index
+};

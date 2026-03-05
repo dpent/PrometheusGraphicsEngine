@@ -482,10 +482,12 @@ void PipelineManager::createRayTracingPipeline() {
     pushConstantRange.offset = 0;
     pushConstantRange.size = sizeof(glm::vec4) * 5;
 
+    std::vector<VkDescriptorSetLayout> layouts{ Engine::rayTracingDescriptor.layout, Engine::rayDataDescriptor.layout};
+
     VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
     pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-    pipelineLayoutInfo.setLayoutCount = static_cast<uint32_t>(Engine::layoutsUsed.size());
-    pipelineLayoutInfo.pSetLayouts = Engine::layoutsUsed.data();
+    pipelineLayoutInfo.setLayoutCount = static_cast<uint32_t>(layouts.size());
+    pipelineLayoutInfo.pSetLayouts = layouts.data();
     pipelineLayoutInfo.pushConstantRangeCount = 1;
     pipelineLayoutInfo.pPushConstantRanges = &pushConstantRange;
 

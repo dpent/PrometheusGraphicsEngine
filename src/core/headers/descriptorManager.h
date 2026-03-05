@@ -26,13 +26,9 @@ public:
 	static void createRayTracingDescriptorPool();
 	static void createRayTracingDescriptorSets();
 
-	static void createRaySpheresSetLayout();
-	static void createRaySpheresPool();
-	static void createRaySpheresSets();
-
-	static void createRayLightsSetLayout();
-	static void createRayLightsPool();
-	static void createRayLightsSets();
+	static void createRayDataSetLayout();
+	static void createRayDataPool();
+	static void createRayDataSets();
 	#endif
 };
 
