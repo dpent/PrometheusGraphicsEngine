@@ -201,7 +201,10 @@ void Mesh::computeNormals(Vertex& v0, Vertex& v1, Vertex& v2) {
 
 }
 
-void Mesh::loadForRayTrace(std::vector<RayVertex>& vertices, std::vector<RTTriangle>& triangles, std::string meshPath, glm::vec3 scale, glm::vec3 translation, glm::vec3 rotation, uint32_t materialIndex) {
+void Mesh::loadForRayTrace(std::vector<RayVertex>& vertices, std::vector<RTTriangle>& triangles, 
+    std::string meshPath, glm::vec3 scale, glm::vec3 translation, glm::vec3 rotation, 
+    uint32_t materialIndex, glm::vec3& maxCoords, glm::vec3& minCoords
+) {
 
     tinyobj::attrib_t attrib;
     std::vector<tinyobj::shape_t> shapes;
@@ -218,16 +221,6 @@ void Mesh::loadForRayTrace(std::vector<RayVertex>& vertices, std::vector<RTTrian
 
     glm::vec3 rotationRadians = glm::radians(rotation);
     glm::quat q = glm::quat(rotationRadians);
-
-    glm::vec3 minCoords = glm::vec3(
-        attrib.vertices[shapes[0].mesh.indices[0].vertex_index],
-        attrib.vertices[shapes[0].mesh.indices[0].vertex_index + 1],
-        attrib.vertices[shapes[0].mesh.indices[0].vertex_index + 2]);
-
-    glm::vec3 maxCoords = glm::vec3(
-        attrib.vertices[shapes[0].mesh.indices[0].vertex_index],
-        attrib.vertices[shapes[0].mesh.indices[0].vertex_index + 1],
-        attrib.vertices[shapes[0].mesh.indices[0].vertex_index + 2]);
 
     for (const auto& shape : shapes) {
         for (size_t i = 0; i < shape.mesh.indices.size(); i += 3) {

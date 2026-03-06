@@ -35,7 +35,9 @@ public:
         glm::vec3 scale,
         glm::vec3 translation, 
         glm::vec3 rotation,
-		uint32_t materialIndex
+		uint32_t materialIndex, 
+        glm::vec3& maxCoords, 
+        glm::vec3& minCoords
     );
 
     static void loadRayVertex(

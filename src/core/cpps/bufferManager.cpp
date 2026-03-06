@@ -646,6 +646,8 @@ void BufferManager::recordRayTracingCommandBuffer(VkCommandBuffer& commandBuffer
 
     BufferManager::recordRayTracingComputeCommands(commandBuffer, imageIndex);
 
+    //BufferManager::recordGUICommands(commandBuffer, imageIndex);
+
     if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS) {
         throw std::runtime_error("failed to record command buffer!");
     }
@@ -749,6 +751,75 @@ void BufferManager::prepareRayTracingData(std::vector<RayVertex>& vertices, std:
     vkUnmapMemory(Engine::deviceInfo.logicalDevice, Engine::stagingBuffer.memory);
 
     BufferManager::copyBuffer(Engine::stagingBuffer, Engine::rayMaterials, Engine::rayMaterials.size);
+
+    //BVH
+    BufferManager::createParticleSSBO(Engine::rayBVH, Engine::nodes);
+
+    if (Engine::rayBVH.size > Engine::stagingBuffer.size) {
+        BufferManager::createStagingBuffer(Engine::rayBVH.size, Engine::stagingBuffer);
+    }
+
+    void* bvhData;
+    vkMapMemory(Engine::deviceInfo.logicalDevice, Engine::stagingBuffer.memory, 0, Engine::rayBVH.size, 0, &bvhData);
+    memcpy(bvhData, Engine::nodes.data(), Engine::rayBVH.size);
+    vkUnmapMemory(Engine::deviceInfo.logicalDevice, Engine::stagingBuffer.memory);
+
+    BufferManager::copyBuffer(Engine::stagingBuffer, Engine::rayBVH, Engine::rayBVH.size);
+}
+
+void BufferManager::recordGUICommands(VkCommandBuffer& commandBuffer, uint32_t imageIndex) {
+
+    VkRenderPassBeginInfo renderPassInfo{};
+    renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+    renderPassInfo.renderPass = Engine::graphicsRenderPass;
+    renderPassInfo.framebuffer = Engine::swapChainInfo.frameBuffers[imageIndex];
+    renderPassInfo.renderArea.offset = { 0, 0 };
+    renderPassInfo.renderArea.extent = Engine::swapChainInfo.extent;
+
+    std::array<VkClearValue, 2> clearValues{};
+    clearValues[0].color = { {0.2f, 0.2f, 0.2f, 1.0f} };
+    clearValues[1].depthStencil = { 1.0f, 0 };
+
+    renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
+    renderPassInfo.pClearValues = clearValues.data();
+
+    vkCmdBeginRenderPass(commandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+
+    VkViewport viewport{};
+    viewport.x = 0.0f;
+    viewport.y = 0.0f;
+
+    viewport.width =
+        static_cast<float>(Engine::swapChainInfo.extent.width);
+    viewport.height =
+        static_cast<float>(Engine::swapChainInfo.extent.height);
+    viewport.minDepth = 0.0f;
+    viewport.maxDepth = 1.0f;
+    vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
+
+    VkRect2D scissor{};
+    scissor.offset = {
+        (int32_t)viewport.x,
+        (int32_t)viewport.y
+    };
+    scissor.extent = {
+        (uint32_t)viewport.width,
+        (uint32_t)viewport.height
+    };
+
+    vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
+
+    CameraObject* cameraPushConstants = new CameraObject();
+    cameraPushConstants->view = Engine::camera.getViewMatrix();
+    cameraPushConstants->proj = Engine::camera.getProjectionMatrix();
+
+    vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, Engine::graphicsPipeLine.pipeline);
+
+    if (Engine::displayGUI) {
+        GUIManager::renderGUI(imageIndex);
+    }
+
+    vkCmdEndRenderPass(commandBuffer);
 }
 #endif
 

@@ -87,11 +87,14 @@ Descriptor Engine::rayDataDescriptor;
 Buffer Engine::rayVertices;
 Buffer Engine::rayTriangles;
 Buffer Engine::rayMaterials;
+Buffer Engine::rayBVH;
 
 ImageVector* Engine::accumulationImages;
 
 float Engine::notMoving = 1.0f;
 uint32_t Engine::tracingFrames = 0;
+
+std::vector<BVHNode> Engine::nodes;
 #endif
 
 //LIGHTING
@@ -303,6 +306,13 @@ void Engine::mainLoop() {
             Engine::rayTrace();
             Engine::tracingFrames = 0;
         }
+
+        std::ostringstream title;
+        title.precision(2);
+        title << std::fixed << "Prometheus - FPS: " << Engine::FPS;
+
+        glfwSetWindowTitle(window, title.str().c_str());
+
         #else
         if (Engine::gameObjects.size != 0) {
             nextFrameTime += std::chrono::duration_cast<std::chrono::steady_clock::duration>(std::chrono::duration<double>(1.0 / Engine::targetFPS));
@@ -311,6 +321,7 @@ void Engine::mainLoop() {
             Engine::drawFrame();
             std::this_thread::sleep_until(nextFrameTime);
         }
+        #endif
 
         framesThisSecond++;
         auto now = std::chrono::steady_clock::now();
@@ -320,7 +331,6 @@ void Engine::mainLoop() {
             framesThisSecond = 0;
         }
 
-        #endif
         #ifndef RELEASE
         if (Engine::frameCount % 60 == 0)
         {
@@ -1022,9 +1032,9 @@ void Engine::loadDemoScene() {
     std::vector<RTTriangle> triangles;
     std::vector<RTMaterial> materials;
 
-    RTMaterial greyMat{
-        .color = glm::vec4(0.5, 0.5, 0.5, 0.5),
-        .properties = glm::vec4(0.0f, 1.0f, 1.0f, 1.0f)
+    RTMaterial mirrorMat{
+        .color = glm::vec4(0.8, 0.8, 0.8, 1.0),
+        .properties = glm::vec4(2.0f, 0.0f, 1.0f, 1.0f)
     };
 
     RTMaterial lightMat{
@@ -1034,38 +1044,80 @@ void Engine::loadDemoScene() {
 
     RTMaterial redMat{
         .color = glm::vec4(1.0, 0.0, 0.0, 1.0),
-        .properties = glm::vec4(0.0f, 1.0f, 1.0f, 1.0f)
+        .properties = glm::vec4(0.0f, 0.0f, 1.0f, 1.0f)
     };
 
     RTMaterial greenMat{
         .color = glm::vec4(0.0, 1.0, 0.0, 1.0),
-        .properties = glm::vec4(0.0f, 1.0f, 1.0f, 1.0f)
+        .properties = glm::vec4(0.0f, 0.2f, 1.0f, 1.0f)
     };
 
     RTMaterial blueMat{
         .color = glm::vec4(0.0, 0.0, 1.0, 1.0),
-        .properties = glm::vec4(0.0f, 1.0f, 1.0f, 1.0f)
+        .properties = glm::vec4(0.0f, 0.2f, 1.0f, 1.0f)
     };
 
-    materials.push_back(greyMat);
+    RTMaterial whiteMat{
+        .color = glm::vec4(1.0, 1.0, 1.0, 1.0),
+        .properties = glm::vec4(0.0f, 0.2f, 1.0f, 1.0f)
+    };
+
+    materials.push_back(mirrorMat);
     materials.push_back(lightMat);
     materials.push_back(redMat);
     materials.push_back(greenMat);
     materials.push_back(blueMat);
+    materials.push_back(whiteMat);
 
-    Mesh::loadForRayTrace(vertices, triangles, "square.obj", glm::vec3(80.0f, 80.0f, 1.0f), glm::vec3(0.0f,-80.0f, -10.0f), glm::vec3(-90.0f,0.0f,0.0f), 0);
-    Mesh::loadForRayTrace(vertices, triangles, "square.obj", glm::vec3(80.0f, 80.0f, 1.0f), glm::vec3(0.0f, 80.0f, -10.0f), glm::vec3(90.0f, 0.0f, 0.0f), 2);
-    Mesh::loadForRayTrace(vertices, triangles, "square.obj", glm::vec3(20.0f, 20.0f, 1.0f), glm::vec3(0.0f,0.0f, 69.0f), glm::vec3(-180.0f,0.0f,0.0f), 1);
-    Mesh::loadForRayTrace(vertices, triangles, "square.obj", glm::vec3(80.0f, 80.0f, 1.0f), glm::vec3(0.0f,0.0f, 70.0f), glm::vec3(-180.0f,0.0f,0.0f), 0);
-    Mesh::loadForRayTrace(vertices, triangles, "square.obj", glm::vec3(80.0f, 80.0f, 1.0f), glm::vec3(80.0f,0.0f, -10.0f), glm::vec3(-180.0f,90.0f,0.0f), 3);
-    Mesh::loadForRayTrace(vertices, triangles, "square.obj", glm::vec3(80.0f, 80.0f, 1.0f), glm::vec3(-80.0f,0.0f, -10.0f), glm::vec3(-180.0f,-90.0f,0.0f), 4);
+    glm::vec3 minCoords(FLT_MAX);
+    glm::vec3 maxCoords(FLT_MIN);
+
+    Mesh::loadForRayTrace(
+        vertices, triangles, "square.obj", glm::vec3(80.0f, 80.0f, 1.0f),
+        glm::vec3(0.0f, -80.0f, -10.0f), glm::vec3(-90.0f, 0.0f, 0.0f), 5, maxCoords, minCoords
+    );
+    Mesh::loadForRayTrace(
+        vertices, triangles, "square.obj", glm::vec3(80.0f, 80.0f, 1.0f), 
+        glm::vec3(0.0f, 80.0f, -10.0f), glm::vec3(90.0f, 0.0f, 0.0f), 2, maxCoords, minCoords
+    );
+    Mesh::loadForRayTrace( // Light
+        vertices, triangles, "cube.obj", glm::vec3(20.0f, 0.5f, 20.0f),
+        glm::vec3(0.0f, 79.0f, -10.0f), glm::vec3(-180.0f,0.0f,0.0f), 1, maxCoords, minCoords
+    );
+    Mesh::loadForRayTrace(  // Mirror
+        vertices, triangles, "square.obj", glm::vec3(80.0f, 80.0f, 1.0f), 
+        glm::vec3(0.0f,0.0f, 70.0f), glm::vec3(-180.0f,0.0f,0.0f), 0, maxCoords, minCoords
+    );
+    Mesh::loadForRayTrace(
+        vertices, triangles, "square.obj", glm::vec3(80.0f, 80.0f, 1.0f), 
+        glm::vec3(80.0f,0.0f, -10.0f), glm::vec3(-180.0f,90.0f,0.0f), 3, maxCoords, minCoords
+    );
+    Mesh::loadForRayTrace(
+        vertices, triangles, "square.obj", glm::vec3(80.0f, 80.0f, 1.0f), 
+        glm::vec3(-80.0f,0.0f, -10.0f), glm::vec3(-180.0f,-90.0f,0.0f), 4, maxCoords, minCoords
+    );
+    /*Mesh::loadForRayTrace(
+        vertices, triangles, "Medieval_Barrels.obj", glm::vec3(0.5f, 0.5f, 0.5f),
+        glm::vec3(0.0f, -70.0f, -10.0f), glm::vec3(0.0f, 0.0f, 0.0f), 0, maxCoords, minCoords
+    );*/
+    
+    auto start = std::chrono::high_resolution_clock::now();
+
+    BVH::createBVH(triangles, Engine::nodes, maxCoords, minCoords, BVH::caclulateCentroids(triangles, vertices), vertices);
+
+    auto end = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+
+    std::cout << "BVH build time with "<<BVH::MAX_DEPTH<<" max depth and "<<BVH::MAX_TRIANGLES_PER_NODE << " max triangles per node: " << duration.count() << " ms\n";
+    std::cout << "For " << triangles.size() << " triangles with " << vertices.size() << " vertices we got " << Engine::nodes.size() << " BVH nodes" << std::endl;
+
+    BVH::printBVH(Engine::nodes);
 
     BufferManager::prepareRayTracingData(vertices, triangles, materials);
 
     DescriptorManager::createRayDataSetLayout();
     DescriptorManager::createRayDataPool();
     DescriptorManager::createRayDataSets();
-;
     #endif
 }
 
@@ -1103,6 +1155,11 @@ void Engine::handleComputeJobs() {
 
 #ifdef RAY_TRACING
 void Engine::rayTrace() {
+
+    /*if (Engine::displayGUI) {
+        GUIManager::startNewFrame();
+    }*/
+
     vkWaitForFences(Engine::deviceInfo.logicalDevice, 1, &Engine::inFlightFences[Engine::currentFrame], VK_TRUE, UINT64_MAX); 
     uint32_t imageIndex; 
     VkResult result = vkAcquireNextImageKHR(

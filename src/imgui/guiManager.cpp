@@ -107,22 +107,32 @@ void GUIManager::startNewFrame() {
 
 void GUIManager::renderGUI(uint32_t& imageIndex) {
 
-	GUIManager::createMainDockspace();
-	GUIManager::createDockSpaceWindow();
-	GUIManager::createInfoWindow();
-	GUIManager::createCameraInfoWindow();
-	GUIManager::createBufferInfoWindow();
+	#ifndef RAY_TRACING
+		GUIManager::createMainDockspace();
+		GUIManager::createDockSpaceWindow();
+		GUIManager::createInfoWindow();
+		GUIManager::createCameraInfoWindow();
+		GUIManager::createBufferInfoWindow();
 
-	if (GUIManager::textureDisplayIds.size() != 0) {
-		GUIManager::createImageWindow();
-	}
+		if (GUIManager::textureDisplayIds.size() != 0) {
+			GUIManager::createImageWindow();
+		}
 
-	GUIManager::calculateViewportLimitations();
+		GUIManager::calculateViewportLimitations();
 
-	ImGui::Render();
-	ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), Engine::command.buffers[Engine::currentFrame]);
-	ImGui::UpdatePlatformWindows();
-	ImGui::RenderPlatformWindowsDefault();
+		ImGui::Render();
+		ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), Engine::command.buffers[Engine::currentFrame]);
+		ImGui::UpdatePlatformWindows();
+		ImGui::RenderPlatformWindowsDefault();
+	#else
+		GUIManager::createInfoWindow();
+
+		ImGui::Render();
+		ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), Engine::command.buffers[Engine::currentFrame]);
+		ImGui::UpdatePlatformWindows();
+		ImGui::RenderPlatformWindowsDefault();
+	#endif
+
 }
 
 void GUIManager::createInfoWindow() {

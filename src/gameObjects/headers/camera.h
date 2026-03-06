@@ -22,6 +22,7 @@ public:
     float acceleration;
     float maxSpeed;
 
+    #ifndef RAY_TRACING
     Camera(glm::vec3 position = glm::vec3(15.0f, 15.0f, 15.0f),
         glm::vec3 front = glm::vec3(-0.577382f, -0.577288f, -0.577382f),
         glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f),
@@ -37,7 +38,23 @@ public:
         float acceleration = 0.01f,
         float maxSpeed = 10.0f
     );
-
+    #else
+    Camera(glm::vec3 position = glm::vec3(0.143916, 15.2668, - 148.244),
+        glm::vec3 front = glm::vec3(0.00860331, - 0.167457, 0.985842),
+        glm::vec3 up = glm::vec3(-0.000325, 0.998070, 0.062099),
+        glm::vec3 right = glm::vec3(0.999985, 0.0, 0.005238),
+        glm::quat orientation = glm::quat(1.0, 0.0, 0.0, 0.0),
+        float yaw = 88.3f,
+        float pitch = -8.44f,
+        float roll = 0.0f,
+        glm::vec3 velocity = glm::vec3(0.0f),
+        float sensitivity = 0.1f,
+        float fov = 45.0f,
+        float far = 200.0f,
+        float acceleration = 0.01f,
+        float maxSpeed = 10.0f
+    );
+    #endif
     void updateCameraVectors();
 
 #ifdef RAY_TRACING

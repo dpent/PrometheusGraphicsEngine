@@ -70,6 +70,7 @@ public:
 	#ifdef RAY_TRACING
 	static void recordRayTracingCommandBuffer(VkCommandBuffer& commandBuffer, uint32_t imageIndex);
 	static void recordRayTracingComputeCommands(VkCommandBuffer& commandBuffer, uint32_t imageIndex);
+	static void recordGUICommands(VkCommandBuffer& commandBuffer, uint32_t imageIndex);
 
 	static void prepareRayTracingData(std::vector<RayVertex>& vertices, std::vector<RTTriangle>& triangles, std::vector<RTMaterial>& materials);
 	#endif

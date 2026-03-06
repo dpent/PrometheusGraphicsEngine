@@ -140,11 +140,14 @@ public:
 	static Buffer rayVertices;
 	static Buffer rayTriangles;
 	static Buffer rayMaterials;
+	static Buffer rayBVH;
 
 	static ImageVector* accumulationImages;
 
 	static float notMoving;
 	static uint32_t tracingFrames;
+
+	static std::vector<BVHNode> nodes;
 	#endif
 
 	//LIGHTING
