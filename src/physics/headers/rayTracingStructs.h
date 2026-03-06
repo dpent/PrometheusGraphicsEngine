@@ -35,13 +35,14 @@ struct BVHNode {
 class BVH {
 public:
 
-	static constexpr uint32_t MAX_TRIANGLES_PER_NODE = 6;
+	static constexpr uint32_t MAX_TRIANGLES_PER_NODE = 12;
 	static constexpr uint32_t MAX_DEPTH = 32;
 
 	static void createBVH(std::vector<RTTriangle>& triangles, std::vector<BVHNode>& nodes, glm::vec3& maxCoords, glm::vec3& minCoords, std::vector<glm::vec3> centroids, std::vector<RayVertex>& vertices);
-	static void splitNode(BVHNode& node, std::vector<RTTriangle>& triangles, std::vector<BVHNode>& nodes, std::vector<glm::vec3>& centroids, uint32_t depth, std::vector<RayVertex>& vertices);
+	static void splitNode(uint32_t nodeIndex, std::vector<RTTriangle>& triangles, std::vector<BVHNode>& nodes, std::vector<glm::vec3>& centroids, uint32_t depth, std::vector<RayVertex>& vertices);
 	static std::vector<glm::vec3> caclulateCentroids(std::vector<RTTriangle>&triangles, std::vector<RayVertex>& vertices);
 	static void extendBoundaries(BVHNode& node, std::vector<RTTriangle>& triangles, std::vector<RayVertex>& vertices);
+	static float getCentroidMidPoint(BVHNode& node, int axis, std::vector<glm::vec3>& centroids);
 
 	static void printBVH(std::vector<BVHNode>& nodes);
 };

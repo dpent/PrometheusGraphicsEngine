@@ -1096,10 +1096,10 @@ void Engine::loadDemoScene() {
         vertices, triangles, "square.obj", glm::vec3(80.0f, 80.0f, 1.0f), 
         glm::vec3(-80.0f,0.0f, -10.0f), glm::vec3(-180.0f,-90.0f,0.0f), 4, maxCoords, minCoords
     );
-    /*Mesh::loadForRayTrace(
+    Mesh::loadForRayTrace(
         vertices, triangles, "Medieval_Barrels.obj", glm::vec3(0.5f, 0.5f, 0.5f),
-        glm::vec3(0.0f, -70.0f, -10.0f), glm::vec3(0.0f, 0.0f, 0.0f), 0, maxCoords, minCoords
-    );*/
+        glm::vec3(-10.0f, -80.0f, -10.0f), glm::vec3(0.0f, 0.0f, 0.0f), 0, maxCoords, minCoords
+    );
     
     auto start = std::chrono::high_resolution_clock::now();
 
@@ -1110,8 +1110,6 @@ void Engine::loadDemoScene() {
 
     std::cout << "BVH build time with "<<BVH::MAX_DEPTH<<" max depth and "<<BVH::MAX_TRIANGLES_PER_NODE << " max triangles per node: " << duration.count() << " ms\n";
     std::cout << "For " << triangles.size() << " triangles with " << vertices.size() << " vertices we got " << Engine::nodes.size() << " BVH nodes" << std::endl;
-
-    BVH::printBVH(Engine::nodes);
 
     BufferManager::prepareRayTracingData(vertices, triangles, materials);
 
