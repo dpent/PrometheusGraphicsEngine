@@ -288,6 +288,7 @@ void Engine::mainLoop() {
     auto secondStart = std::chrono::steady_clock::now();
 
     #ifdef RAY_TRACING
+	auto startTime = std::chrono::steady_clock::now();
     PipelineManager::createRayTracingPipeline();
     #endif
 
@@ -335,6 +336,14 @@ void Engine::mainLoop() {
         if (Engine::frameCount % 60 == 0)
         {
             Engine::updateSampleVectors();
+            #ifdef RAY_TRACING
+            auto now = std::chrono::steady_clock::now();
+            auto elapsed = now - startTime;
+
+            double seconds = std::chrono::duration<double>(elapsed).count();
+
+            std::cout << "It took " << seconds << " seconds for "<<Engine::frameCount<< " frames." << std::endl;
+            #endif
         }
         #endif
 

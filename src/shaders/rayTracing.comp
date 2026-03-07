@@ -65,7 +65,7 @@ struct HitRecord {
 };
 
 #define MAX_BOUNCES 4
-#define RAYS_PER_PIXEL 8
+#define RAYS_PER_PIXEL 2
 #define SAMPLE_COUNT 100
 #define PI 3.14159265
 #define STACK_DEPTH 2048
@@ -134,7 +134,42 @@ vec3 randomSphere(vec2 seed)
     return vec3(x, y, z);
 }
 
-bool hitTriangle(Ray ray, Triangle triangle, out float tHit, out float u, out float v){
+bool hitTriangle(Ray ray, Triangle triangle, out float tHit, out float u, out float v)
+{
+    vec3 v0 = vertices[triangle.vertices.x].position.xyz;
+    vec3 v1 = vertices[triangle.vertices.y].position.xyz;
+    vec3 v2 = vertices[triangle.vertices.z].position.xyz;
+
+    vec3 edge1 = v1 - v0;
+    vec3 edge2 = v2 - v0;
+
+    vec3 h = cross(ray.direction, edge2);
+    float a = dot(edge1, h);
+
+    // avoid division by very small numbers
+    float maskA = step(1e-6, abs(a));   // 0 if |a| < 1e-6
+
+    float f = 1.0 / a;
+    vec3 s = ray.origin - v0;
+
+    u = f * dot(s, h);
+    float maskU = step(0.0, u) * step(u, 1.0);
+
+    vec3 q = cross(s, edge1);
+    v = f * dot(ray.direction, q);
+    float maskV = step(0.0, v) * step(v, 1.0 - u);
+
+    tHit = f * dot(edge2, q);
+
+    float maskT = step(0.0, tHit);  // tHit > 0
+
+    // multiply all masks to get final hit
+    return (maskA * maskU * maskV * maskT) > 0.0;
+}
+
+void handleTriangleCheck(Ray ray, uint triangleIndex, inout float minT, inout HitRecord hitRec, inout bool hitSomething){
+    
+    Triangle triangle = triangles[triangleIndex];
 
     vec3 v0 = vertices[triangle.vertices.x].position.xyz;
     vec3 v1 = vertices[triangle.vertices.y].position.xyz;
@@ -146,25 +181,41 @@ bool hitTriangle(Ray ray, Triangle triangle, out float tHit, out float u, out fl
     vec3 h = cross(ray.direction, edge2);
     float a = dot(edge1, h);
 
-    if (abs(a) < 1e-6)
-        return false;
+    // avoid division by very small numbers
+    float maskA = step(1e-6, abs(a));   // 0 if |a| < 1e-6
 
     float f = 1.0 / a;
     vec3 s = ray.origin - v0;
 
-    u = f * dot(s, h);
-    if (u < 0.0 || u > 1.0)
-        return false;
+    vec2 uv;
+
+    uv.x = f * dot(s, h);
+    float maskU = step(0.0, uv.x) * step(uv.x, 1.0);
 
     vec3 q = cross(s, edge1);
-    v = f * dot(ray.direction, q);
-    if (v < 0.0 || u + v > 1.0)
-        return false;
+    uv.y = f * dot(ray.direction, q);
+    float maskV = step(0.0, uv.y) * step(uv.y, 1.0 - uv.x);
 
-    tHit = f * dot(edge2, q);
+    float tHit = f * dot(edge2, q);
 
-    return tHit > 0.0;
+    float maskT = step(0.0, tHit);  // tHit > 0
 
+    // multiply all masks to get final hit
+    if(!((maskA * maskU * maskV * maskT) > 0.0 && tHit < minT)){
+        
+        return;
+    }
+
+    minT = tHit;
+    hitRec.p = ray.origin + ray.direction * tHit;
+    hitRec.albedo = materials[triangle.vertices.w].color.xyz;
+    hitSomething = true;
+    hitRec.normal = normalize(
+        (1.0 - uv.x - uv.y) * vertices[triangle.vertices.x].normal.xyz +
+        uv.x * vertices[triangle.vertices.y].normal.xyz +
+        uv.y * vertices[triangle.vertices.z].normal.xyz
+    );
+    hitRec.matIndex = triangle.vertices.w;
 }
 
 vec3 orenNayarBRDF(vec3 albedo, vec3 normal, vec3 wi, vec3 wo, float sigma){ // wi is incoming dir, wo is outgoing, sigma is roughness
@@ -192,16 +243,10 @@ vec3 lambertThroughput(vec3 brdf, float cosTheta){
     return (brdf * cosTheta) / pdf;
 }
 
-float maxV3(vec3 v) {
-    return max(max(v.x, v.y),v.z); 
-}
-
-float minV3(vec3 v) {
-    return min(min(v.x, v.y),v.z); 
-}
-
 // Returns true if ray intersects the AABB node, sets distance to entry point
-bool intersectBVHNodeSlab(BVHNode node, Ray ray, vec3 invDir, out float dist) {
+bool intersectBVHNodeSlab(uint nodeIndex, Ray ray, vec3 invDir, out float dist) {
+
+    BVHNode node = nodes[nodeIndex];
 
     // Slab intersections
     vec3 t0 = (node.minBounds.xyz - ray.origin) * invDir;
@@ -211,8 +256,8 @@ bool intersectBVHNodeSlab(BVHNode node, Ray ray, vec3 invDir, out float dist) {
     vec3 tmax = max(t0, t1);
 
     // Entry and exit times along the ray
-    float tEnter = maxV3(tmin);
-    float tExit  = minV3(tmax);
+    float tEnter = max(max(tmin.x, tmin.y),tmin.z); ;
+    float tExit  = min(min(tmax.x, tmax.y),tmax.z); 
 
     dist = tEnter;
 
@@ -236,8 +281,8 @@ uint traverseBVH(inout Ray ray){
         float leftDist;
         float rightDist;
 
-        bool hitLeft = intersectBVHNodeSlab(nodes[nodes[index].childIndices.x], ray, invDir, leftDist);
-        bool hitRight = intersectBVHNodeSlab(nodes[nodes[index].childIndices.y], ray, invDir, rightDist);
+        bool hitLeft = intersectBVHNodeSlab(nodes[index].childIndices.x, ray, invDir, leftDist);
+        bool hitRight = intersectBVHNodeSlab(nodes[index].childIndices.y, ray, invDir, rightDist);
 
         if(!hitLeft && !hitRight){
             return - 1;
@@ -278,7 +323,7 @@ bool hitScene(inout HitRecord hitRec, Ray ray) {
         stackPtr--;
 
         float tEnter;
-        if(!intersectBVHNodeSlab(node, ray, invDir, tEnter)){
+        if(!intersectBVHNodeSlab(index, ray, invDir, tEnter)){
             continue;
         }
 
@@ -289,53 +334,17 @@ bool hitScene(inout HitRecord hitRec, Ray ray) {
 
             for(uint i=firstTriangle; i<firstTriangle + numTrianglesToTest; i++){
                 
-                float tHit;
-                vec2 uv = vec2(0.0);
-
-                Triangle tri = triangles[i];
-
-                if(hitTriangle(ray, tri, tHit, uv.x, uv.y) && tHit < minT){
-                    minT = tHit;
-                    hitRec.p = ray.origin + ray.direction * tHit;
-                    hitRec.albedo = materials[tri.vertices.w].color.xyz;
-                    hitSomething = true;
-                    hitRec.normal = normalize(
-                        (1.0 - uv.x - uv.y) * vertices[tri.vertices.x].normal.xyz +
-                        uv.x * vertices[tri.vertices.y].normal.xyz +
-                        uv.y * vertices[tri.vertices.z].normal.xyz
-                    );
-                    hitRec.matIndex = tri.vertices.w;
-                }
+               handleTriangleCheck(ray, i, minT, hitRec, hitSomething);
             }
         }else{ //internal node
 
             uint left  = node.childIndices.x;
             uint right = node.childIndices.y;
 
-            float leftDist, rightDist;
-            bool hitLeft  = intersectBVHNodeSlab(nodes[left], ray, invDir, leftDist);
-            bool hitRight = intersectBVHNodeSlab(nodes[right], ray, invDir, rightDist);
-
-            if(hitLeft && hitRight){
-                // Push farther child first, closer child will be processed next
-                if(leftDist < rightDist){
-                    stackPtr++;
-                    stack[stackPtr] = right;
-                    stackPtr++;
-                    stack[stackPtr] = left;
-                } else {
-                    stackPtr++;
-                    stack[stackPtr] = left;
-                    stackPtr++;
-                    stack[stackPtr] = right;
-                }
-            } else if(hitLeft){
-                stackPtr++;
-                stack[stackPtr] = left;
-            }else if(hitRight){
-                stackPtr++;
-                stack[stackPtr] = right;
-            }
+            stackPtr++;
+            stack[stackPtr] = right;
+            stackPtr++;
+            stack[stackPtr] = left;
 
         }
     }
@@ -389,7 +398,7 @@ vec3 randomCosineDirection(inout uint rng)
     return vec3(x, y, z);
 }
 
-vec3 scatterAndCalculateThroughput(inout HitRecord rec, inout Ray ray){
+vec3 scatterAndCalculateThroughput(HitRecord rec, inout Ray ray){
 
     Material mat = materials[rec.matIndex];
     
@@ -445,7 +454,7 @@ vec3 rayTraceColor(float horizontalCoefficient, float verticalCoefficient, vec2 
         vec3 throughput = vec3(1.0);
 
     
-        for(int bounce = 0; bounce < MAX_BOUNCES; bounce++){
+        for(int bounce = -1; bounce < MAX_BOUNCES; bounce++){
 
             HitRecord rec;
 
