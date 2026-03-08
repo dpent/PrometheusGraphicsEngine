@@ -219,8 +219,14 @@ void Mesh::loadForRayTrace(std::vector<RayVertex>& vertices, std::vector<RTTrian
 
     std::unordered_map<RayVertex, uint32_t> uniqueVertices{};
 
+    glm::vec3 localMax(-FLT_MAX);
+    glm::vec3 localMin(FLT_MAX);
+
     glm::vec3 rotationRadians = glm::radians(rotation);
     glm::quat q = glm::quat(rotationRadians);
+    
+	uint32_t triangleOffset = static_cast<uint32_t>(triangles.size());
+    uint32_t nodeOffset = static_cast<uint32_t>(Engine::nodes.size());
 
     for (const auto& shape : shapes) {
         for (size_t i = 0; i < shape.mesh.indices.size(); i += 3) {
@@ -233,9 +239,9 @@ void Mesh::loadForRayTrace(std::vector<RayVertex>& vertices, std::vector<RTTrian
             RayVertex v1 = {};
             RayVertex v2 = {};
 
-            Mesh::loadRayVertex(attrib, idx0, minCoords, maxCoords, v0, scale, translation, q);
-            Mesh::loadRayVertex(attrib, idx1, minCoords, maxCoords, v1, scale, translation, q);
-            Mesh::loadRayVertex(attrib, idx2, minCoords, maxCoords, v2, scale, translation, q);
+            Mesh::loadRayVertex(attrib, idx0, localMin, localMax, v0, scale, translation, q);
+            Mesh::loadRayVertex(attrib, idx1, localMin, localMax, v1, scale, translation, q);
+            Mesh::loadRayVertex(attrib, idx2, localMin, localMax, v2, scale, translation, q);
 
             if (uniqueVertices.count(v0) == 0) {
                 uniqueVertices[v0] = static_cast<uint32_t>(vertices.size());
@@ -267,6 +273,13 @@ void Mesh::loadForRayTrace(std::vector<RayVertex>& vertices, std::vector<RTTrian
     for (size_t i = 0; i < vertices.size(); i++) {
         vertices[i].normal = glm::normalize(vertices[i].normal);
     }
+
+    BVH::buildBVH(triangles, triangleOffset, Engine::nodes, localMax, localMin, BVH::caclulateCentroids(triangles, vertices), vertices);
+
+    TLAS::addToTLAS(Engine::tlasNodes, nodeOffset, static_cast<uint32_t>(Engine::nodes.size() - nodeOffset), localMax, localMin);
+
+    maxCoords = glm::max(maxCoords, localMax);
+    minCoords = glm::min(minCoords, localMin);
 }
 
 void Mesh::loadRayVertex(tinyobj::attrib_t& attrib, tinyobj::index_t& index, glm::vec3& minCoords, glm::vec3& maxCoords, RayVertex& vertex, glm::vec3& scale, glm::vec3& translation, glm::quat& rotationQ) {

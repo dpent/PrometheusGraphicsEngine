@@ -1,35 +1,43 @@
 #include "../headers/rayTracingStructs.h"
 #include "../../core/headers/engine.h"
 
-void BVH::createBVH(std::vector<RTTriangle>& triangles, std::vector<BVHNode>& nodes, glm::vec3& maxCoords, glm::vec3& minCoords, std::vector<glm::vec3> centroids, std::vector<RayVertex>& vertices)
-{
-	if (triangles.empty()) {
-		return;
-	}
-
-	BVHNode rootNode{
-		.childIndices = glm::ivec4(-1, -1, 0, static_cast<uint32_t>(triangles.size())),
+void BVH::buildBVH(
+	std::vector<RTTriangle>& triangles,
+	uint32_t triangleOffset,
+	std::vector<BVHNode>& nodes,
+	glm::vec3 maxCoords,
+	glm::vec3 minCoords,
+	std::vector<glm::vec3> centroids,
+	std::vector<RayVertex>& vertices
+) {
+	BVHNode root{
+		.childIndices = glm::ivec4(-1, -1, triangleOffset, static_cast<uint32_t>(triangles.size()) - triangleOffset),
 		.minBounds = glm::vec4(minCoords, 0.0f),
 		.maxBounds = glm::vec4(maxCoords, 0.0f)
 	};
 
-	nodes.push_back(rootNode);
+	nodes.push_back(root);
 
-	if (static_cast<uint32_t>(triangles.size()) > BVH::MAX_TRIANGLES_PER_NODE && BVH::MAX_DEPTH > 0) {
-		BVH::splitNode(0, triangles, nodes, centroids, 1, vertices);
+	if (root.childIndices.w > BVH::MAX_TRIANGLES_PER_NODE && BVH::MAX_DEPTH > 0) {
+
+		BVH::splitBVHNode(static_cast<uint32_t>(nodes.size() - 1), triangles, triangleOffset, nodes, centroids, vertices, 1);
 	}
-
-	return;
 
 }
 
-void BVH::splitNode(uint32_t nodeIndex, std::vector<RTTriangle>& triangles, std::vector<BVHNode>& nodes, std::vector<glm::vec3>& centroids, uint32_t depth, std::vector<RayVertex>& vertices) {
+void BVH::splitBVHNode(
+	uint32_t nodeIndex,
+	std::vector<RTTriangle>& triangles,
+	uint32_t triangleOffset,
+	std::vector<BVHNode>& nodes,
+	std::vector<glm::vec3>& centroids,
+	std::vector<RayVertex>& vertices,
+	uint32_t depth
+) {
 
-	BVHNode& node = nodes[nodeIndex];
-
-	float deltaX = node.maxBounds.x - node.minBounds.x;
-	float deltaY = node.maxBounds.y - node.minBounds.y;
-	float deltaZ = node.maxBounds.z - node.minBounds.z;
+	float deltaX = nodes[nodeIndex].maxBounds.x - nodes[nodeIndex].minBounds.x;
+	float deltaY = nodes[nodeIndex].maxBounds.y - nodes[nodeIndex].minBounds.y;
+	float deltaZ = nodes[nodeIndex].maxBounds.z - nodes[nodeIndex].minBounds.z;
 
 	float deltas[3] = { deltaX, deltaY, deltaZ };
 
@@ -37,27 +45,24 @@ void BVH::splitNode(uint32_t nodeIndex, std::vector<RTTriangle>& triangles, std:
 	if (deltas[1] > deltas[axis]) axis = 1;
 	if (deltas[2] > deltas[axis]) axis = 2;
 
-	float split = getCentroidMidPoint(node, axis, centroids);
+	float split = getCentroidMidPoint(nodes[nodeIndex], axis, centroids, glm::vec3(nodes[nodeIndex].maxBounds));
 
-	glm::vec4 leftMax = node.maxBounds;
+	glm::vec4 leftMax = nodes[nodeIndex].maxBounds;
 	leftMax[axis] = split;
 
-	glm::vec4 rightMin = node.minBounds;
+	glm::vec4 rightMin = nodes[nodeIndex].minBounds;
 	rightMin[axis] = split;
 
-
 	BVHNode leftChild{
-		.childIndices = glm::ivec4(-1, -1, node.childIndices.z, 0),
-		.minBounds = node.minBounds,
+		.childIndices = glm::ivec4(-1, -1, triangleOffset, 0),
+		.minBounds = nodes[nodeIndex].minBounds,
 		.maxBounds = leftMax,
 	};
 
-	size_t i = node.childIndices.z;
-	size_t j = i + node.childIndices.w - 1;
-	//std::cout << "Depth is " << depth << " and there are "<<centroids.size()<<" centroids with i being "<< i << " and j being "<<j << std::endl;
+	size_t i = triangleOffset;
+	size_t j = i + nodes[nodeIndex].childIndices.w - 1;
 
 	while (i <= j) {
-		//std::cout << i << " " << j << std::endl;
 		if (centroids[i][axis] < leftMax[axis]) {
 			i++;
 		}
@@ -68,38 +73,39 @@ void BVH::splitNode(uint32_t nodeIndex, std::vector<RTTriangle>& triangles, std:
 		}
 	}
 
-	uint32_t leftCount = static_cast<uint32_t>(i - node.childIndices.z);
+	uint32_t leftCount = static_cast<uint32_t>(i - triangleOffset);
 	leftChild.childIndices.w = leftCount;
 
-	if (leftCount == 0 || leftCount == node.childIndices.w)
+	if (leftCount == 0 || leftCount == nodes[nodeIndex].childIndices.w)
 		return;
 
 	BVH::extendBoundaries(leftChild, triangles, vertices);
 
 	BVHNode rightChild{
-		.childIndices = glm::ivec4(-1, -1, node.childIndices.z + leftChild.childIndices.w, node.childIndices.w - leftCount),
+		.childIndices = glm::ivec4(-1, -1, triangleOffset + leftChild.childIndices.w, nodes[nodeIndex].childIndices.w - leftCount),
 		.minBounds = rightMin,
-		.maxBounds = node.maxBounds,
+		.maxBounds = nodes[nodeIndex].maxBounds,
 	};
 
 	BVH::extendBoundaries(rightChild, triangles, vertices);
-	node.childIndices.w = 0; //Mark as internal
-	node.childIndices.z = -1;
 
-	node.childIndices.x = static_cast<uint32_t>(nodes.size());
-	node.childIndices.y = static_cast<uint32_t>(nodes.size() + 1);
+	nodes[nodeIndex].childIndices.w = 0; //Mark as internal
+	nodes[nodeIndex].childIndices.z = -1;
 
+	nodes[nodeIndex].childIndices.x = static_cast<uint32_t>(nodes.size());
+	nodes[nodeIndex].childIndices.y = static_cast<uint32_t>(nodes.size() + 1);
 	nodes.push_back(leftChild);
 	nodes.push_back(rightChild);
 
-	if (nodes[node.childIndices.x].childIndices.w > BVH::MAX_TRIANGLES_PER_NODE && depth < BVH::MAX_DEPTH){
+
+	if (nodes[nodes[nodeIndex].childIndices.x].childIndices.w > BVH::MAX_TRIANGLES_PER_NODE && depth < BVH::MAX_DEPTH) {
 		
-		splitNode(node.childIndices.x, triangles, nodes, centroids, depth + 1, vertices);
+		splitBVHNode(nodes[nodeIndex].childIndices.x, triangles, leftChild.childIndices.z, nodes, centroids, vertices, depth + 1);
 	}
 
-	if (nodes[node.childIndices.y].childIndices.w > BVH::MAX_TRIANGLES_PER_NODE && depth < BVH::MAX_DEPTH){
+	if (nodes[nodes[nodeIndex].childIndices.y].childIndices.w > BVH::MAX_TRIANGLES_PER_NODE && depth < BVH::MAX_DEPTH) {
 
-		splitNode(node.childIndices.y, triangles, nodes, centroids, depth + 1, vertices);
+		splitBVHNode(nodes[nodeIndex].childIndices.y, triangles, rightChild.childIndices.z, nodes, centroids, vertices, depth + 1);
 	}
 }
 
@@ -123,8 +129,8 @@ void BVH::extendBoundaries(BVHNode& node, std::vector<RTTriangle>& triangles, st
 	uint32_t start = node.childIndices.z;
 	uint32_t numTriangles = node.childIndices.w;
 
-	glm::vec4 max;
-	glm::vec4 min;
+	glm::vec4 max = glm::vec4(-FLT_MAX);
+	glm::vec4 min = glm::vec4(FLT_MAX);
 
 	for(uint32_t i = start; i < start + numTriangles; i++){
 		
@@ -140,7 +146,7 @@ void BVH::extendBoundaries(BVHNode& node, std::vector<RTTriangle>& triangles, st
 	node.minBounds = glm::min(node.minBounds, min);
 }
 
-float BVH::getCentroidMidPoint(BVHNode& node, int axis, std::vector<glm::vec3>& centroids) {
+float BVH::getCentroidMidPoint(BVHNode& node, int axis, std::vector<glm::vec3>& centroids, glm::vec3 maxBounds) {
 
 	size_t start = node.childIndices.z;
 	size_t count = node.childIndices.w;
@@ -154,9 +160,36 @@ float BVH::getCentroidMidPoint(BVHNode& node, int axis, std::vector<glm::vec3>& 
 		[axis](const glm::vec3& a, const glm::vec3& b) {
 			return a[axis] < b[axis];
 		});
-
+		
 	float split = centroids[mid][axis];
+	int leftCount = 0;
+	int rightCount = 0;
 
+	for (size_t i = start; i < start + count; i++) {
+	
+		if (centroids[i][axis] < split) {
+			leftCount++;
+		}
+		else if (centroids[i][axis] > split) {
+			rightCount++;
+		}
+
+		if (leftCount != 0 && rightCount != 0){
+			break;
+		}
+	}
+
+	if (leftCount == 0 || rightCount == 0){
+
+		float minC = centroids[start][axis];
+		float maxC = centroids[start][axis];
+		for (size_t i = start; i < start + count; i++) {
+			minC = std::min(minC, centroids[i][axis]);
+			maxC = std::max(maxC, centroids[i][axis]);
+		}
+		split = 0.5f * (minC + maxC);
+
+	}
 	return split;
 }
 
@@ -202,5 +235,17 @@ void BVH::printBVH(std::vector<BVHNode>& nodes) {
 	}
 
 	std::cout << "===============================\n";
+
+}
+
+void TLAS::addToTLAS(std::vector<TLASNode>& tlasNodes, uint32_t firstNode, uint32_t nodeCount, glm::vec3& maxCoords, glm::vec3& minCoords) {
+
+	TLASNode node{
+		.nodeIndices = glm::ivec4(firstNode, nodeCount, 0, 0),
+		.minBounds = glm::vec4(minCoords, 0.0f),
+		.maxBounds = glm::vec4(maxCoords, 0.0f)
+	};
+
+	tlasNodes.push_back(node);
 
 }

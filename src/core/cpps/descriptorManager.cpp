@@ -732,18 +732,26 @@ void DescriptorManager::createRayDataSetLayout() {
     bvhSSBO.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
     bvhSSBO.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
 
-    std::array<VkDescriptorSetLayoutBinding, 4> bindings = {
+    VkDescriptorSetLayoutBinding tlasSSBO{};
+    tlasSSBO.binding = 4;
+    tlasSSBO.descriptorCount = 1;
+    tlasSSBO.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    tlasSSBO.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+
+    std::array<VkDescriptorSetLayoutBinding, 5> bindings = {
     materialSSBO,
     vertexSSBO,
     triangleSSBO,
-    bvhSSBO
+    bvhSSBO,
+    tlasSSBO
     };
 
-    std::array<VkDescriptorBindingFlags, 4> bindingFlags = {
+    std::array<VkDescriptorBindingFlags, 5> bindingFlags = {
     0, // materialSSBO (binding 0) no flags
     0, // vertexSSBO (binding 1) no flags
     0, // triangleSSBO (binding 2) no flags
-    0 // triangleSSBO (binding 2) no flags
+    0, // triangleSSBO (binding 3) no flags
+    0  // triangleSSBO (binding 4) no flags
     };
 
     VkDescriptorSetLayoutBindingFlagsCreateInfo flagsInfo{};
@@ -772,7 +780,7 @@ void DescriptorManager::createRayDataPool() {
         Engine::garbage.unlock();
     }
 
-    std::array<VkDescriptorPoolSize, 4> poolSizes{};
+    std::array<VkDescriptorPoolSize, 5> poolSizes{};
     poolSizes[0].type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
     poolSizes[0].descriptorCount = 1;
 
@@ -784,6 +792,9 @@ void DescriptorManager::createRayDataPool() {
 
     poolSizes[3].type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
     poolSizes[3].descriptorCount = 1;
+
+    poolSizes[4].type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    poolSizes[4].descriptorCount = 1;
 
     VkDescriptorPoolCreateInfo poolInfo{};
     poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
@@ -812,7 +823,7 @@ void DescriptorManager::createRayDataSets() {
         throw std::runtime_error("failed to allocate descriptor set!");
     }
 
-    std::array<VkWriteDescriptorSet, 4> writes{};
+    std::array<VkWriteDescriptorSet, 5> writes{};
     VkDescriptorBufferInfo ssbo{};
     ssbo.buffer = Engine::rayMaterials.buffer;
     ssbo.offset = 0;
@@ -864,6 +875,19 @@ void DescriptorManager::createRayDataSets() {
     writes[3].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
     writes[3].descriptorCount = 1;
     writes[3].pBufferInfo = &bvhSsbo;
+
+    VkDescriptorBufferInfo tlasSsbo{};
+    tlasSsbo.buffer = Engine::rayTLAS.buffer;
+    tlasSsbo.offset = 0;
+    tlasSsbo.range = Engine::rayTLAS.size;
+
+    writes[4].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    writes[4].dstSet = Engine::rayDataDescriptor.sets[0];
+    writes[4].dstBinding = 4;
+    writes[4].dstArrayElement = 0;
+    writes[4].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    writes[4].descriptorCount = 1;
+    writes[4].pBufferInfo = &tlasSsbo;
 
     vkUpdateDescriptorSets(Engine::deviceInfo.logicalDevice, static_cast<uint32_t>(writes.size()), writes.data(), 0, nullptr);
 }

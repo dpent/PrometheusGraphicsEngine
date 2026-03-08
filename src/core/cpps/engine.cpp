@@ -88,6 +88,7 @@ Buffer Engine::rayVertices;
 Buffer Engine::rayTriangles;
 Buffer Engine::rayMaterials;
 Buffer Engine::rayBVH;
+Buffer Engine::rayTLAS;
 
 ImageVector* Engine::accumulationImages;
 
@@ -95,6 +96,7 @@ float Engine::notMoving = 1.0f;
 uint32_t Engine::tracingFrames = 0;
 
 std::vector<BVHNode> Engine::nodes;
+std::vector<TLASNode> Engine::tlasNodes;
 #endif
 
 //LIGHTING
@@ -342,7 +344,7 @@ void Engine::mainLoop() {
 
             double seconds = std::chrono::duration<double>(elapsed).count();
 
-            std::cout << "It took " << seconds << " seconds for "<<Engine::frameCount<< " frames." << std::endl;
+            //std::cout << "It took " << seconds << " seconds for "<<Engine::frameCount<< " frames." << std::endl;
             #endif
         }
         #endif
@@ -1079,7 +1081,9 @@ void Engine::loadDemoScene() {
     materials.push_back(whiteMat);
 
     glm::vec3 minCoords(FLT_MAX);
-    glm::vec3 maxCoords(FLT_MIN);
+    glm::vec3 maxCoords(-FLT_MAX);
+
+    auto start = std::chrono::high_resolution_clock::now();
 
     Mesh::loadForRayTrace(
         vertices, triangles, "square.obj", glm::vec3(80.0f, 80.0f, 1.0f),
@@ -1109,16 +1113,12 @@ void Engine::loadDemoScene() {
         vertices, triangles, "Medieval_Barrels.obj", glm::vec3(0.5f, 0.5f, 0.5f),
         glm::vec3(-10.0f, -80.0f, -10.0f), glm::vec3(0.0f, 0.0f, 0.0f), 0, maxCoords, minCoords
     );
-    
-    auto start = std::chrono::high_resolution_clock::now();
-
-    BVH::createBVH(triangles, Engine::nodes, maxCoords, minCoords, BVH::caclulateCentroids(triangles, vertices), vertices);
 
     auto end = std::chrono::high_resolution_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
 
-    std::cout << "BVH build time with "<<BVH::MAX_DEPTH<<" max depth and "<<BVH::MAX_TRIANGLES_PER_NODE << " max triangles per node: " << duration.count() << " ms\n";
-    std::cout << "For " << triangles.size() << " triangles with " << vertices.size() << " vertices we got " << Engine::nodes.size() << " BVH nodes" << std::endl;
+    std::cout << "BVH + TLAS build time with "<<BVH::MAX_DEPTH<<" max depth and "<<BVH::MAX_TRIANGLES_PER_NODE << " max triangles per node: " << duration.count() << " ms\n";
+    std::cout << "For " << triangles.size() << " triangles with " << vertices.size() << " vertices we got " << Engine::nodes.size() << " BVH nodes and " << Engine::tlasNodes.size() << " TLAS nodes" << std::endl;
 
     BufferManager::prepareRayTracingData(vertices, triangles, materials);
 

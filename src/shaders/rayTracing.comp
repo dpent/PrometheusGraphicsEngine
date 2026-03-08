@@ -21,6 +21,12 @@ struct BVHNode{
     vec4 maxBounds;
 };
 
+struct TLASNode{
+    ivec4 nodeIndices;
+    vec4 minBounds;
+    vec4 maxBounds;
+};
+
 layout (set = 0, binding = 0, rgba8) uniform writeonly image2D outImage;
 
 layout (set = 0, binding = 1, rgba8) uniform image2D accumImagePrev;
@@ -40,6 +46,10 @@ layout (std430, set = 1, binding = 2) buffer triangleSSBO{
 
 layout (std430, set = 1, binding = 3) buffer bvhSSBO{
     BVHNode nodes [];
+};
+
+layout (std430, set = 1, binding = 4) buffer tlasSSBO{
+    TLASNode tlasNodes [];
 };
 
 layout(push_constant) uniform CameraObject {
@@ -75,9 +85,10 @@ struct HitRecord {
 #define MATERIAL_METAL 2
 #define MATERIAL_DIELECTRIC 3
 
-int numMaterials = materials.length();
-int numVertices = vertices.length();
-int numTriangles = triangles.length();
+uint numMaterials = materials.length();
+uint numVertices = vertices.length();
+uint numTriangles = triangles.length();
+uint numTLASNodes = tlasNodes.length();
 
 uint rngState =
     uint(gl_GlobalInvocationID.x) * 1973u +
@@ -265,45 +276,37 @@ bool intersectBVHNodeSlab(uint nodeIndex, Ray ray, vec3 invDir, out float dist) 
     return (tExit >= max(tEnter, 0.0));
 }
 
-uint traverseBVH(inout Ray ray){
-    
-    if(nodes[0].childIndices[0] == -1){
-        return 0;
-    }
+bool intersectTLASNodeSlab(uint nodeIndex, Ray ray, vec3 invDir, out float dist) {
 
-    uint index = 0; // Start at root
-    uint chosenChild = 0;
+    TLASNode node = tlasNodes[nodeIndex];
 
-    vec3 invDir = 1.0 / ray.direction;
+    vec3 t0 = (node.minBounds.xyz - ray.origin) * invDir;
+    vec3 t1 = (node.maxBounds.xyz - ray.origin) * invDir;
 
-    while(nodes[index].childIndices[0] != -1){
-        
-        float leftDist;
-        float rightDist;
+    vec3 tmin = min(t0, t1);
+    vec3 tmax = max(t0, t1);
 
-        bool hitLeft = intersectBVHNodeSlab(nodes[index].childIndices.x, ray, invDir, leftDist);
-        bool hitRight = intersectBVHNodeSlab(nodes[index].childIndices.y, ray, invDir, rightDist);
+    float tEnter = max(max(tmin.x, tmin.y),tmin.z); ;
+    float tExit  = min(min(tmax.x, tmax.y),tmax.z); 
 
-        if(!hitLeft && !hitRight){
-            return - 1;
-        }
+    dist = tEnter;
 
-        // Branchless selection of closest hit child
-        uint leftIndex  = nodes[index].childIndices.x;
-        uint rightIndex = nodes[index].childIndices.y;
+    return (tExit >= max(tEnter, 0.0));
+}
 
-        // Compute a mask: 1 if left is closer, 0 if right is closer
-        uint mask = uint(hitLeft && (!hitRight || leftDist <= rightDist));
+vec3 getBoxNormal(vec3 p, vec3 minB, vec3 maxB)
+{
+    const float eps = 0.0001;
 
-        // Use mask to pick first child
-        chosenChild = mask * leftIndex + (1 - mask) * rightIndex;
+    if(abs(p.x - minB.x) < eps) return vec3(-1,0,0);
+    if(abs(p.x - maxB.x) < eps) return vec3( 1,0,0);
 
-        index = chosenChild;
-    }
+    if(abs(p.y - minB.y) < eps) return vec3(0,-1,0);
+    if(abs(p.y - maxB.y) < eps) return vec3(0, 1,0);
 
-    // Output the triangle range for the chosen child
-    return chosenChild;
-    
+    if(abs(p.z - minB.z) < eps) return vec3(0,0,-1);
+
+    return vec3(0,0,1);
 }
 
 bool hitScene(inout HitRecord hitRec, Ray ray) {
@@ -312,42 +315,61 @@ bool hitScene(inout HitRecord hitRec, Ray ray) {
     uint stack[STACK_DEPTH];
     int stackPtr = 0; // Last node index in stack. If you have 2 nodes in, the value will be 2-1 = 1
 
-    stack[stackPtr] = 0; // root node
     float minT = 1e30;
     bool hitSomething = false;
 
-    while(stackPtr > -1){
+    for(uint i = 0; i < numTLASNodes; i++){
         
-        uint index = stack[stackPtr];
-        BVHNode node = nodes[index];
-        stackPtr--;
-
         float tEnter;
-        if(!intersectBVHNodeSlab(index, ray, invDir, tEnter)){
+        if(!intersectTLASNodeSlab(i, ray, invDir, tEnter)){
             continue;
         }
 
-        if(node.childIndices.x == -1){ //leaf node
-            
-            uint firstTriangle = node.childIndices.z;
-            uint numTrianglesToTest = node.childIndices.w;
+        if(minT < tEnter){
+            continue;
+        }
 
-            for(uint i=firstTriangle; i<firstTriangle + numTrianglesToTest; i++){
-                
-               handleTriangleCheck(ray, i, minT, hitRec, hitSomething);
+        stack[0] = tlasNodes[i].nodeIndices.x;
+        stackPtr = 0;
+
+        while(stackPtr > -1){
+        
+            uint index = stack[stackPtr];
+            stackPtr--;
+
+            if(!intersectBVHNodeSlab(index, ray, invDir, tEnter)){
+                continue;
             }
-        }else{ //internal node
 
-            uint left  = node.childIndices.x;
-            uint right = node.childIndices.y;
+            if(minT < tEnter){
+                continue;
+            }
 
-            stackPtr++;
-            stack[stackPtr] = right;
-            stackPtr++;
-            stack[stackPtr] = left;
+            BVHNode node = nodes[index];
 
+            if(node.childIndices.x == -1){ //leaf node
+            
+                uint firstTriangle = node.childIndices.z;
+                uint numTrianglesToTest = node.childIndices.w;
+
+                for(uint j=firstTriangle; j<firstTriangle + numTrianglesToTest; j++){
+                
+                   handleTriangleCheck(ray, j, minT, hitRec, hitSomething);
+                }
+            }else{ //internal node
+
+                uint left  = node.childIndices.x;
+                uint right = node.childIndices.y;
+
+                stackPtr++;
+                stack[stackPtr] = right;
+                stackPtr++;
+                stack[stackPtr] = left;
+
+            }
         }
     }
+
 
     return hitSomething;
 }
@@ -428,6 +450,13 @@ vec3 scatterAndCalculateThroughput(HitRecord rec, inout Ray ray){
     }
 }
 
+vec2 sampleDisk(vec2 r)
+{
+    float theta = 2.0 * 3.14159265 * r.x;
+    float radius = sqrt(r.y);
+    return radius * vec2(cos(theta), sin(theta));
+}
+
 vec3 rayTraceColor(float horizontalCoefficient, float verticalCoefficient, vec2 screenPos, uint raysPerPixel){
 
     vec3 pixelColor = vec3(0.0,0.0,0.0);
@@ -439,16 +468,37 @@ vec3 rayTraceColor(float horizontalCoefficient, float verticalCoefficient, vec2 
     float fov = radians(75.0);
     float fovScale = tan(fov * 0.5);
 
+    float focalDistance = 5.0;   // distance where things are sharp
+    float aperture = 0.01;       // lens radius (bigger = more blur)
+
     for(int rayNum=0; rayNum<raysPerPixel; rayNum++){
 
         Ray ray;
         ray.origin = camera.position.xyz;
 
-        vec3 rayDir = normalize(forward + horizontalCoefficient * fovScale * right + verticalCoefficient   * fovScale * up);
+        vec3 rayDir = normalize(
+            forward +
+            horizontalCoefficient * fovScale * right +
+            verticalCoefficient   * fovScale * up
+        );
 
-        vec2 jitter = vec2(rand(screenPos + vec2(camera.utils.x)), rand(screenPos + vec2(camera.utils.x * 0.3 + 1.0))) * 0.01;
+        vec3 focusPoint = camera.position.xyz + rayDir * focalDistance;
 
-        ray.direction = normalize(rayDir + vec3(jitter, 0.0));
+        // random numbers for lens sampling
+        vec2 r = vec2(
+            rand(screenPos + vec2(rayNum * 13.1)),
+            rand(screenPos + vec2(rayNum * 7.7))
+        );
+
+        vec2 lens = aperture * sampleDisk(r);
+
+        // move origin on lens
+        vec3 lensOffset = right * lens.x + up * lens.y;
+
+        ray.origin = camera.position.xyz + lensOffset;
+
+        // aim ray at focus plane
+        ray.direction = normalize(focusPoint - ray.origin);
 
         vec3 radiance = vec3(0.0);
         vec3 throughput = vec3(1.0);

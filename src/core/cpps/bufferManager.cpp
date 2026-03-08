@@ -765,6 +765,20 @@ void BufferManager::prepareRayTracingData(std::vector<RayVertex>& vertices, std:
     vkUnmapMemory(Engine::deviceInfo.logicalDevice, Engine::stagingBuffer.memory);
 
     BufferManager::copyBuffer(Engine::stagingBuffer, Engine::rayBVH, Engine::rayBVH.size);
+
+    //TLAS
+    BufferManager::createParticleSSBO(Engine::rayTLAS, Engine::tlasNodes);
+
+    if (Engine::rayTLAS.size > Engine::stagingBuffer.size) {
+        BufferManager::createStagingBuffer(Engine::rayTLAS.size, Engine::stagingBuffer);
+    }
+
+    void* tlasData;
+    vkMapMemory(Engine::deviceInfo.logicalDevice, Engine::stagingBuffer.memory, 0, Engine::rayTLAS.size, 0, &tlasData);
+    memcpy(tlasData, Engine::tlasNodes.data(), Engine::rayTLAS.size);
+    vkUnmapMemory(Engine::deviceInfo.logicalDevice, Engine::stagingBuffer.memory);
+
+    BufferManager::copyBuffer(Engine::stagingBuffer, Engine::rayTLAS, Engine::rayTLAS.size);
 }
 
 void BufferManager::recordGUICommands(VkCommandBuffer& commandBuffer, uint32_t imageIndex) {

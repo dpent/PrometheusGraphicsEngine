@@ -141,6 +141,7 @@ public:
 	static Buffer rayTriangles;
 	static Buffer rayMaterials;
 	static Buffer rayBVH;
+	static Buffer rayTLAS;
 
 	static ImageVector* accumulationImages;
 
@@ -148,6 +149,7 @@ public:
 	static uint32_t tracingFrames;
 
 	static std::vector<BVHNode> nodes;
+	static std::vector<TLASNode> tlasNodes;
 	#endif
 
 	//LIGHTING

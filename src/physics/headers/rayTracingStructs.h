@@ -35,16 +35,45 @@ struct BVHNode {
 class BVH {
 public:
 
-	static constexpr uint32_t MAX_TRIANGLES_PER_NODE = 12;
+	static constexpr uint32_t MAX_TRIANGLES_PER_NODE = 2;
 	static constexpr uint32_t MAX_DEPTH = 32;
 
-	static void createBVH(std::vector<RTTriangle>& triangles, std::vector<BVHNode>& nodes, glm::vec3& maxCoords, glm::vec3& minCoords, std::vector<glm::vec3> centroids, std::vector<RayVertex>& vertices);
-	static void splitNode(uint32_t nodeIndex, std::vector<RTTriangle>& triangles, std::vector<BVHNode>& nodes, std::vector<glm::vec3>& centroids, uint32_t depth, std::vector<RayVertex>& vertices);
+	static void buildBVH(
+		std::vector<RTTriangle>& triangles, 
+		uint32_t triangleOffset,
+		std::vector<BVHNode>& nodes,
+		glm::vec3 maxCoords,
+		glm::vec3 minCoords,
+		std::vector<glm::vec3> centroids,
+		std::vector<RayVertex>& vertices
+	);
+	static void splitBVHNode(
+		uint32_t nodeIndex,
+		std::vector<RTTriangle>& triangles,
+		uint32_t triangleOffset,
+		std::vector<BVHNode>& nodes,
+		std::vector<glm::vec3>& centroids,
+		std::vector<RayVertex>& vertices,
+		uint32_t depth
+	);
 	static std::vector<glm::vec3> caclulateCentroids(std::vector<RTTriangle>&triangles, std::vector<RayVertex>& vertices);
 	static void extendBoundaries(BVHNode& node, std::vector<RTTriangle>& triangles, std::vector<RayVertex>& vertices);
-	static float getCentroidMidPoint(BVHNode& node, int axis, std::vector<glm::vec3>& centroids);
+	static float getCentroidMidPoint(BVHNode& node, int axis, std::vector<glm::vec3>& centroids, glm::vec3 maxBounds);
 
 	static void printBVH(std::vector<BVHNode>& nodes);
+};
+
+struct TLASNode {
+	glm::ivec4 nodeIndices; // x: first node, y: node count
+	glm::vec4 minBounds;
+	glm::vec4 maxBounds;
+};
+
+class TLAS {
+public:
+
+	static void addToTLAS(std::vector<TLASNode>& tlasNodes, uint32_t firstNode, uint32_t nodeCount, glm::vec3& maxCoords, glm::vec3& minCoords);
+
 };
 
 struct RTMaterial {
