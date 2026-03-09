@@ -334,16 +334,7 @@ bool hitScene(inout HitRecord hitRec, Ray ray) {
 
         while(stackPtr > -1){
         
-            uint index = stack[stackPtr];
-            stackPtr--;
-
-            if(!intersectBVHNodeSlab(index, ray, invDir, tEnter)){
-                continue;
-            }
-
-            if(minT < tEnter){
-                continue;
-            }
+            uint index = stack[stackPtr--];
 
             BVHNode node = nodes[index];
 
@@ -361,10 +352,24 @@ bool hitScene(inout HitRecord hitRec, Ray ray) {
                 uint left  = node.childIndices.x;
                 uint right = node.childIndices.y;
 
-                stackPtr++;
-                stack[stackPtr] = right;
-                stackPtr++;
-                stack[stackPtr] = left;
+                float tLeft, tRight;
+                bool hitLeft  = intersectBVHNodeSlab(left,  ray, invDir, tLeft)  && tLeft  < minT;
+                bool hitRight = intersectBVHNodeSlab(right, ray, invDir, tRight) && tRight < minT;
+
+                bool swap = tRight < tLeft;
+
+                uint nearChild = swap ? right : left;
+                uint farChild  = swap ? left  : right;
+
+                if(hitLeft && hitRight)
+                {
+                    stack[++stackPtr] = farChild;
+                    stack[++stackPtr] = nearChild;
+                }
+                else if(hitLeft || hitRight)
+                {
+                    stack[++stackPtr] = hitLeft ? left : right;
+                }
 
             }
         }
@@ -430,7 +435,7 @@ vec3 scatterAndCalculateThroughput(HitRecord rec, inout Ray ray){
         vec3 newDir = toWorld(localDir, rec.normal);
 
         float cosTheta = max(dot(rec.normal, newDir), 0.0); //Light new direction angle cosine
-        vec3 brdf = orenNayarBRDF(rec.albedo, rec.normal, ray.direction, newDir, mat.properties.y);
+        vec3 brdf = orenNayarBRDF(rec.albedo, rec.normal, -ray.direction, newDir, mat.properties.y);
 
         ray.origin = rec.p + rec.normal * 0.0001;
         ray.direction = newDir;
@@ -439,7 +444,7 @@ vec3 scatterAndCalculateThroughput(HitRecord rec, inout Ray ray){
 
     }else if(mat.properties.x == MATERIAL_METAL)
     {
-        vec3 newDir = reflect(ray.direction, rec.normal) + mat.properties.y * randomSphere(vec2(camera.utils.x, camera.utils.z));
+        vec3 newDir = normalize(reflect(ray.direction, rec.normal) + mat.properties.y * randomSphere(vec2(camera.utils.x, camera.utils.z)));
 
         vec3 brdf = metalBRDF(rec.albedo);
 
@@ -484,7 +489,6 @@ vec3 rayTraceColor(float horizontalCoefficient, float verticalCoefficient, vec2 
 
         vec3 focusPoint = camera.position.xyz + rayDir * focalDistance;
 
-        // random numbers for lens sampling
         vec2 r = vec2(
             rand(screenPos + vec2(rayNum * 13.1)),
             rand(screenPos + vec2(rayNum * 7.7))
@@ -492,12 +496,9 @@ vec3 rayTraceColor(float horizontalCoefficient, float verticalCoefficient, vec2 
 
         vec2 lens = aperture * sampleDisk(r);
 
-        // move origin on lens
         vec3 lensOffset = right * lens.x + up * lens.y;
 
         ray.origin = camera.position.xyz + lensOffset;
-
-        // aim ray at focus plane
         ray.direction = normalize(focusPoint - ray.origin);
 
         vec3 radiance = vec3(0.0);

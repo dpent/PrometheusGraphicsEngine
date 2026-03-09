@@ -35,7 +35,7 @@ struct BVHNode {
 class BVH {
 public:
 
-	static constexpr uint32_t MAX_TRIANGLES_PER_NODE = 2;
+	static constexpr uint32_t MAX_TRIANGLES_PER_NODE = 12;
 	static constexpr uint32_t MAX_DEPTH = 32;
 
 	static void buildBVH(

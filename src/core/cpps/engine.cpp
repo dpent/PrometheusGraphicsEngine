@@ -344,7 +344,7 @@ void Engine::mainLoop() {
 
             double seconds = std::chrono::duration<double>(elapsed).count();
 
-            //std::cout << "It took " << seconds << " seconds for "<<Engine::frameCount<< " frames." << std::endl;
+            std::cout << "It took " << seconds << " seconds for "<<Engine::frameCount<< " frames." << std::endl;
             #endif
         }
         #endif
@@ -1045,11 +1045,11 @@ void Engine::loadDemoScene() {
 
     RTMaterial mirrorMat{
         .color = glm::vec4(0.8, 0.8, 0.8, 1.0),
-        .properties = glm::vec4(2.0f, 0.0f, 1.0f, 1.0f)
+        .properties = glm::vec4(2.0f, 0.2f, 1.0f, 1.0f)
     };
 
     RTMaterial lightMat{
-        .color = glm::vec4(1.0f, 1.0f, 1.0f, 20.0f),
+        .color = glm::vec4(1.0f, 1.0f, 1.0f, 15.0f),
         .properties = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f)
     };
 
@@ -1073,12 +1073,18 @@ void Engine::loadDemoScene() {
         .properties = glm::vec4(0.0f, 0.2f, 1.0f, 1.0f)
     };
 
+    RTMaterial orangeMat{
+    .color = glm::vec4(1.0, 0.64, 0.0, 1.0),
+    .properties = glm::vec4(0.0f, 0.2f, 1.0f, 1.0f)
+    };
+
     materials.push_back(mirrorMat);
     materials.push_back(lightMat);
     materials.push_back(redMat);
     materials.push_back(greenMat);
     materials.push_back(blueMat);
     materials.push_back(whiteMat);
+    materials.push_back(orangeMat);
 
     glm::vec3 minCoords(FLT_MAX);
     glm::vec3 maxCoords(-FLT_MAX);
@@ -1097,9 +1103,9 @@ void Engine::loadDemoScene() {
         vertices, triangles, "cube.obj", glm::vec3(20.0f, 0.5f, 20.0f),
         glm::vec3(0.0f, 79.0f, -10.0f), glm::vec3(-180.0f,0.0f,0.0f), 1, maxCoords, minCoords
     );
-    Mesh::loadForRayTrace(  // Mirror
+    Mesh::loadForRayTrace(
         vertices, triangles, "square.obj", glm::vec3(80.0f, 80.0f, 1.0f), 
-        glm::vec3(0.0f,0.0f, 70.0f), glm::vec3(-180.0f,0.0f,0.0f), 0, maxCoords, minCoords
+        glm::vec3(0.0f,0.0f, 70.0f), glm::vec3(-180.0f,0.0f,0.0f), 6, maxCoords, minCoords
     );
     Mesh::loadForRayTrace(
         vertices, triangles, "square.obj", glm::vec3(80.0f, 80.0f, 1.0f), 
