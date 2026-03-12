@@ -203,7 +203,7 @@ void Mesh::computeNormals(Vertex& v0, Vertex& v1, Vertex& v2) {
 
 void Mesh::loadForRayTrace(std::vector<RayVertex>& vertices, std::vector<RTTriangle>& triangles, 
     std::string meshPath, glm::vec3 scale, glm::vec3 translation, glm::vec3 rotation, 
-    uint32_t materialIndex, glm::vec3& maxCoords, glm::vec3& minCoords
+    uint32_t materialIndex
 ) {
 
     tinyobj::attrib_t attrib;
@@ -277,9 +277,6 @@ void Mesh::loadForRayTrace(std::vector<RayVertex>& vertices, std::vector<RTTrian
     BVH::buildBVH(triangles, triangleOffset, Engine::nodes, localMax, localMin, BVH::caclulateCentroids(triangles, vertices), vertices);
 
     TLAS::addToTLAS(Engine::tlasNodes, nodeOffset, static_cast<uint32_t>(Engine::nodes.size() - nodeOffset), localMax, localMin);
-
-    maxCoords = glm::max(maxCoords, localMax);
-    minCoords = glm::min(minCoords, localMin);
 }
 
 void Mesh::loadRayVertex(tinyobj::attrib_t& attrib, tinyobj::index_t& index, glm::vec3& minCoords, glm::vec3& maxCoords, RayVertex& vertex, glm::vec3& scale, glm::vec3& translation, glm::quat& rotationQ) {

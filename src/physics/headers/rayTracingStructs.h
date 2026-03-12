@@ -58,13 +58,13 @@ public:
 	);
 	static std::vector<glm::vec3> caclulateCentroids(std::vector<RTTriangle>&triangles, std::vector<RayVertex>& vertices);
 	static void extendBoundaries(BVHNode& node, std::vector<RTTriangle>& triangles, std::vector<RayVertex>& vertices);
-	static float getCentroidMidPoint(BVHNode& node, int axis, std::vector<glm::vec3>& centroids, glm::vec3 maxBounds);
+	static float getCentroidMidPoint(BVHNode& node, int axis, std::vector<glm::vec3>& centroids);
 
 	static void printBVH(std::vector<BVHNode>& nodes);
 };
 
 struct TLASNode {
-	glm::ivec4 nodeIndices; // x: first node, y: node count
+	glm::ivec4 nodeIndices; // x: first node, y: node count if internal it is z: left child, w: right child
 	glm::vec4 minBounds;
 	glm::vec4 maxBounds;
 };
@@ -74,6 +74,13 @@ public:
 
 	static void addToTLAS(std::vector<TLASNode>& tlasNodes, uint32_t firstNode, uint32_t nodeCount, glm::vec3& maxCoords, glm::vec3& minCoords);
 
+	static void buildTLAS();
+	static void splitTLASNode(uint32_t nodeIndex, std::vector<TLASNode>& tlasTree, uint32_t startIndex, uint32_t endIndex, std::vector<glm::vec4>& centroids);
+	static float findBestSplit(uint32_t startIndex, uint32_t endIndex, int axis, std::vector<glm::vec4>& centroids);
+	static void extendBoundaries(TLASNode& node, uint32_t startIndex, uint32_t endIndex);
+
+	static bool notAllCentroidsOnOnePoint(std::vector<glm::vec4>& centroids, int axis, uint32_t startIndex, uint32_t endIndex);
+	static void printTLAS(std::vector<TLASNode>& nodes);
 };
 
 struct RTMaterial {

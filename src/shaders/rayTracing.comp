@@ -318,63 +318,89 @@ bool hitScene(inout HitRecord hitRec, Ray ray) {
     float minT = 1e30;
     bool hitSomething = false;
 
-    for(uint i = 0; i < numTLASNodes; i++){
+    uint tlasStack[STACK_DEPTH];
+    int tlasStackPtr = 0;
+    tlasStack[0] = 0;
+
+    while(tlasStackPtr > -1){
         
+        uint tlasIndex = tlasStack[tlasStackPtr--];
+
         float tEnter;
-        if(!intersectTLASNodeSlab(i, ray, invDir, tEnter)){
-            continue;
-        }
 
-        if(minT < tEnter){
-            continue;
-        }
+        TLASNode tlasNode = tlasNodes[tlasIndex];
 
-        stack[0] = tlasNodes[i].nodeIndices.x;
-        stackPtr = 0;
-
-        while(stackPtr > -1){
-        
-            uint index = stack[stackPtr--];
-
-            BVHNode node = nodes[index];
-
-            if(node.childIndices.x == -1){ //leaf node
+        if(tlasNode.nodeIndices.z != 0){
             
-                uint firstTriangle = node.childIndices.z;
-                uint numTrianglesToTest = node.childIndices.w;
+            uint left  = tlasNode.nodeIndices.z;
+            uint right = tlasNode.nodeIndices.w;
 
-                for(uint j=firstTriangle; j<firstTriangle + numTrianglesToTest; j++){
+            float tLeft, tRight;
+            bool hitLeft  = intersectTLASNodeSlab(left,  ray, invDir, tLeft)  && tLeft  < minT;
+            bool hitRight = intersectTLASNodeSlab(right, ray, invDir, tRight) && tRight < minT;
+
+            bool swap = tRight < tLeft;
+
+            uint nearChild = swap ? right : left;
+            uint farChild  = swap ? left  : right;
+
+            if(hitLeft && hitRight)
+            {
+                tlasStack[++tlasStackPtr] = farChild;
+                tlasStack[++tlasStackPtr] = nearChild;
+            }
+            else if(hitLeft || hitRight)
+            {
+                tlasStack[++tlasStackPtr] = hitLeft ? left : right;
+            }
+        }else{
+            
+            stack[0] = tlasNode.nodeIndices.x;
+            stackPtr = 0;
+
+            while(stackPtr > -1){
+        
+                uint index = stack[stackPtr--];
+
+                BVHNode node = nodes[index];
+
+                if(node.childIndices.x == -1){ //leaf node
+            
+                    uint firstTriangle = node.childIndices.z;
+                    uint numTrianglesToTest = node.childIndices.w;
+
+                    for(uint j=firstTriangle; j<firstTriangle + numTrianglesToTest; j++){
                 
-                   handleTriangleCheck(ray, j, minT, hitRec, hitSomething);
+                       handleTriangleCheck(ray, j, minT, hitRec, hitSomething);
+                    }
+                }else{ //internal node
+
+                    uint left  = node.childIndices.x;
+                    uint right = node.childIndices.y;
+
+                    float tLeft, tRight;
+                    bool hitLeft  = intersectBVHNodeSlab(left,  ray, invDir, tLeft)  && tLeft  < minT;
+                    bool hitRight = intersectBVHNodeSlab(right, ray, invDir, tRight) && tRight < minT;
+
+                    bool swap = tRight < tLeft;
+
+                    uint nearChild = swap ? right : left;
+                    uint farChild  = swap ? left  : right;
+
+                    if(hitLeft && hitRight)
+                    {
+                        stack[++stackPtr] = farChild;
+                        stack[++stackPtr] = nearChild;
+                    }
+                    else if(hitLeft || hitRight)
+                    {
+                        stack[++stackPtr] = hitLeft ? left : right;
+                    }
+
                 }
-            }else{ //internal node
-
-                uint left  = node.childIndices.x;
-                uint right = node.childIndices.y;
-
-                float tLeft, tRight;
-                bool hitLeft  = intersectBVHNodeSlab(left,  ray, invDir, tLeft)  && tLeft  < minT;
-                bool hitRight = intersectBVHNodeSlab(right, ray, invDir, tRight) && tRight < minT;
-
-                bool swap = tRight < tLeft;
-
-                uint nearChild = swap ? right : left;
-                uint farChild  = swap ? left  : right;
-
-                if(hitLeft && hitRight)
-                {
-                    stack[++stackPtr] = farChild;
-                    stack[++stackPtr] = nearChild;
-                }
-                else if(hitLeft || hitRight)
-                {
-                    stack[++stackPtr] = hitLeft ? left : right;
-                }
-
             }
         }
     }
-
 
     return hitSomething;
 }

@@ -1093,35 +1093,37 @@ void Engine::loadDemoScene() {
 
     Mesh::loadForRayTrace(
         vertices, triangles, "square.obj", glm::vec3(80.0f, 80.0f, 1.0f),
-        glm::vec3(0.0f, -80.0f, -10.0f), glm::vec3(-90.0f, 0.0f, 0.0f), 5, maxCoords, minCoords
+        glm::vec3(0.0f, -80.0f, -10.0f), glm::vec3(-90.0f, 0.0f, 0.0f), 5
     );
     Mesh::loadForRayTrace(
         vertices, triangles, "square.obj", glm::vec3(80.0f, 80.0f, 1.0f), 
-        glm::vec3(0.0f, 80.0f, -10.0f), glm::vec3(90.0f, 0.0f, 0.0f), 2, maxCoords, minCoords
+        glm::vec3(0.0f, 80.0f, -10.0f), glm::vec3(90.0f, 0.0f, 0.0f), 2
     );
     Mesh::loadForRayTrace( // Light
         vertices, triangles, "cube.obj", glm::vec3(20.0f, 0.5f, 20.0f),
-        glm::vec3(0.0f, 79.0f, -10.0f), glm::vec3(-180.0f,0.0f,0.0f), 1, maxCoords, minCoords
+        glm::vec3(0.0f, 79.0f, -10.0f), glm::vec3(-180.0f,0.0f,0.0f), 1
     );
     Mesh::loadForRayTrace(
         vertices, triangles, "square.obj", glm::vec3(80.0f, 80.0f, 1.0f), 
-        glm::vec3(0.0f,0.0f, 70.0f), glm::vec3(-180.0f,0.0f,0.0f), 6, maxCoords, minCoords
+        glm::vec3(0.0f,0.0f, 70.0f), glm::vec3(-180.0f,0.0f,0.0f), 6
     );
     Mesh::loadForRayTrace(
         vertices, triangles, "square.obj", glm::vec3(80.0f, 80.0f, 1.0f), 
-        glm::vec3(80.0f,0.0f, -10.0f), glm::vec3(-180.0f,90.0f,0.0f), 3, maxCoords, minCoords
+        glm::vec3(80.0f,0.0f, -10.0f), glm::vec3(-180.0f,90.0f,0.0f), 3
     );
     Mesh::loadForRayTrace(
         vertices, triangles, "square.obj", glm::vec3(80.0f, 80.0f, 1.0f), 
-        glm::vec3(-80.0f,0.0f, -10.0f), glm::vec3(-180.0f,-90.0f,0.0f), 4, maxCoords, minCoords
+        glm::vec3(-80.0f,0.0f, -10.0f), glm::vec3(-180.0f,-90.0f,0.0f), 4
     );
     Mesh::loadForRayTrace(
         vertices, triangles, "Medieval_Barrels.obj", glm::vec3(0.5f, 0.5f, 0.5f),
-        glm::vec3(-10.0f, -80.0f, -10.0f), glm::vec3(0.0f, 0.0f, 0.0f), 0, maxCoords, minCoords
+        glm::vec3(-10.0f, -80.0f, -10.0f), glm::vec3(0.0f, 0.0f, 0.0f), 0
     );
 
     auto end = std::chrono::high_resolution_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+
+    TLAS::buildTLAS();
 
     std::cout << "BVH + TLAS build time with "<<BVH::MAX_DEPTH<<" max depth and "<<BVH::MAX_TRIANGLES_PER_NODE << " max triangles per node: " << duration.count() << " ms\n";
     std::cout << "For " << triangles.size() << " triangles with " << vertices.size() << " vertices we got " << Engine::nodes.size() << " BVH nodes and " << Engine::tlasNodes.size() << " TLAS nodes" << std::endl;
