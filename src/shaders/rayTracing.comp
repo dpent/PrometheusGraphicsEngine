@@ -2,7 +2,6 @@
 
 struct Vertex{
     vec4 position;
-    vec4 color;
     vec4 normal;
 };
 
@@ -75,7 +74,7 @@ struct HitRecord {
 };
 
 #define MAX_BOUNCES 4
-#define RAYS_PER_PIXEL 2
+#define RAYS_PER_PIXEL 8
 #define SAMPLE_COUNT 100
 #define PI 3.14159265
 #define STACK_DEPTH 2048
@@ -143,39 +142,6 @@ vec3 randomSphere(vec2 seed)
     float y = r * sin(phi);
 
     return vec3(x, y, z);
-}
-
-bool hitTriangle(Ray ray, Triangle triangle, out float tHit, out float u, out float v)
-{
-    vec3 v0 = vertices[triangle.vertices.x].position.xyz;
-    vec3 v1 = vertices[triangle.vertices.y].position.xyz;
-    vec3 v2 = vertices[triangle.vertices.z].position.xyz;
-
-    vec3 edge1 = v1 - v0;
-    vec3 edge2 = v2 - v0;
-
-    vec3 h = cross(ray.direction, edge2);
-    float a = dot(edge1, h);
-
-    // avoid division by very small numbers
-    float maskA = step(1e-6, abs(a));   // 0 if |a| < 1e-6
-
-    float f = 1.0 / a;
-    vec3 s = ray.origin - v0;
-
-    u = f * dot(s, h);
-    float maskU = step(0.0, u) * step(u, 1.0);
-
-    vec3 q = cross(s, edge1);
-    v = f * dot(ray.direction, q);
-    float maskV = step(0.0, v) * step(v, 1.0 - u);
-
-    tHit = f * dot(edge2, q);
-
-    float maskT = step(0.0, tHit);  // tHit > 0
-
-    // multiply all masks to get final hit
-    return (maskA * maskU * maskV * maskT) > 0.0;
 }
 
 void handleTriangleCheck(Ray ray, uint triangleIndex, inout float minT, inout HitRecord hitRec, inout bool hitSomething){
@@ -254,44 +220,26 @@ vec3 lambertThroughput(vec3 brdf, float cosTheta){
     return (brdf * cosTheta) / pdf;
 }
 
-// Returns true if ray intersects the AABB node, sets distance to entry point
-bool intersectBVHNodeSlab(uint nodeIndex, Ray ray, vec3 invDir, out float dist) {
+bool intersectAABB(vec3 minBounds, vec3 maxBounds, vec3 rayOrigin, vec3 invDir, bvec3 dirNeg, out float dist){
+    
+    float txmin = ((dirNeg.x ? maxBounds.x : minBounds.x) - rayOrigin.x) * invDir.x;
+    float txmax = ((dirNeg.x ? minBounds.x : maxBounds.x) - rayOrigin.x) * invDir.x;
 
-    BVHNode node = nodes[nodeIndex];
+    float tymin = ((dirNeg.y ? maxBounds.y : minBounds.y) - rayOrigin.y) * invDir.y;
+    float tymax = ((dirNeg.y ? minBounds.y : maxBounds.y) - rayOrigin.y) * invDir.y;
 
-    // Slab intersections
-    vec3 t0 = (node.minBounds.xyz - ray.origin) * invDir;
-    vec3 t1 = (node.maxBounds.xyz - ray.origin) * invDir;
+    float tmin = max(txmin, tymin);
+    float tmax = min(txmax, tymax);
 
-    vec3 tmin = min(t0, t1);
-    vec3 tmax = max(t0, t1);
+    float tzmin = ((dirNeg.z ? maxBounds.z : minBounds.z) - rayOrigin.z) * invDir.z;
+    float tzmax = ((dirNeg.z ? minBounds.z : maxBounds.z) - rayOrigin.z) * invDir.z;
 
-    // Entry and exit times along the ray
-    float tEnter = max(max(tmin.x, tmin.y),tmin.z); ;
-    float tExit  = min(min(tmax.x, tmax.y),tmax.z); 
+    tmin = max(tmin, tzmin);
+    tmax = min(tmax, tzmax);
 
-    dist = tEnter;
+    dist = tmin;
 
-    // Intersects if exit is after entry and exit > 0
-    return (tExit >= max(tEnter, 0.0));
-}
-
-bool intersectTLASNodeSlab(uint nodeIndex, Ray ray, vec3 invDir, out float dist) {
-
-    TLASNode node = tlasNodes[nodeIndex];
-
-    vec3 t0 = (node.minBounds.xyz - ray.origin) * invDir;
-    vec3 t1 = (node.maxBounds.xyz - ray.origin) * invDir;
-
-    vec3 tmin = min(t0, t1);
-    vec3 tmax = max(t0, t1);
-
-    float tEnter = max(max(tmin.x, tmin.y),tmin.z); ;
-    float tExit  = min(min(tmax.x, tmax.y),tmax.z); 
-
-    dist = tEnter;
-
-    return (tExit >= max(tEnter, 0.0));
+    return tmax >= max(tmin, 0.0);
 }
 
 vec3 getBoxNormal(vec3 p, vec3 minB, vec3 maxB)
@@ -312,6 +260,7 @@ vec3 getBoxNormal(vec3 p, vec3 minB, vec3 maxB)
 bool hitScene(inout HitRecord hitRec, Ray ray) {
 
     vec3 invDir = 1.0 / ray.direction;
+    bvec3 dirNeg = lessThan(ray.direction, vec3(0.0));
     uint stack[STACK_DEPTH];
     int stackPtr = 0; // Last node index in stack. If you have 2 nodes in, the value will be 2-1 = 1
 
@@ -336,8 +285,8 @@ bool hitScene(inout HitRecord hitRec, Ray ray) {
             uint right = tlasNode.nodeIndices.w;
 
             float tLeft, tRight;
-            bool hitLeft  = intersectTLASNodeSlab(left,  ray, invDir, tLeft)  && tLeft  < minT;
-            bool hitRight = intersectTLASNodeSlab(right, ray, invDir, tRight) && tRight < minT;
+            bool hitLeft  = intersectAABB(tlasNode.minBounds.xyz, tlasNode.maxBounds.xyz, ray.origin, invDir, dirNeg, tLeft)  && tLeft  < minT;
+            bool hitRight = intersectAABB(tlasNode.minBounds.xyz, tlasNode.maxBounds.xyz, ray.origin, invDir, dirNeg, tRight) && tRight < minT;
 
             bool swap = tRight < tLeft;
 
@@ -379,8 +328,8 @@ bool hitScene(inout HitRecord hitRec, Ray ray) {
                     uint right = node.childIndices.y;
 
                     float tLeft, tRight;
-                    bool hitLeft  = intersectBVHNodeSlab(left,  ray, invDir, tLeft)  && tLeft  < minT;
-                    bool hitRight = intersectBVHNodeSlab(right, ray, invDir, tRight) && tRight < minT;
+                    bool hitLeft  = intersectAABB(node.minBounds.xyz, node.maxBounds.xyz, ray.origin, invDir, dirNeg, tLeft)  && tLeft  < minT;
+                    bool hitRight = intersectAABB(node.minBounds.xyz, node.maxBounds.xyz, ray.origin, invDir, dirNeg, tRight) && tRight < minT;
 
                     bool swap = tRight < tLeft;
 

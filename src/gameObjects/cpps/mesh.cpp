@@ -318,19 +318,6 @@ void Mesh::loadRayVertex(tinyobj::attrib_t& attrib, tinyobj::index_t& index, glm
     if (vertex.position.y > maxCoords.y) maxCoords.y = vertex.position.y;
     if (vertex.position.z > maxCoords.z) maxCoords.z = vertex.position.z;
 
-    if (attrib.colors.empty()) {
-
-        vertex.color = { 1.0f, 1.0f, 1.0f, 1.0f };
-        return;
-
-    }
-
-    vertex.color = {
-        attrib.colors[3 * index.vertex_index + 0],
-        attrib.colors[3 * index.vertex_index + 1],
-        attrib.colors[3 * index.vertex_index + 2],
-        1.0f
-    };
 }
 
 void Mesh::computeRayNormals(RayVertex& v0, RayVertex& v1, RayVertex& v2) {
