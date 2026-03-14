@@ -344,7 +344,7 @@ void Engine::mainLoop() {
 
             double seconds = std::chrono::duration<double>(elapsed).count();
 
-            std::cout << "It took " << seconds << " seconds for "<<Engine::frameCount<< " frames." << std::endl;
+            //std::cout << "It took " << seconds << " seconds for "<<Engine::frameCount<< " frames." << std::endl;
             #endif
         }
         #endif
@@ -1045,7 +1045,7 @@ void Engine::loadDemoScene() {
 
     RTMaterial mirrorMat{
         .color = glm::vec4(0.8, 0.8, 0.8, 1.0),
-        .properties = glm::vec4(2.0f, 0.2f, 1.0f, 1.0f)
+        .properties = glm::vec4(2.0f, 0.0f, 1.0f, 1.0f)
     };
 
     RTMaterial lightMat{

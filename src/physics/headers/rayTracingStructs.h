@@ -57,6 +57,8 @@ public:
 	static void extendBoundaries(BVHNode& node, std::vector<RTTriangle>& triangles, std::vector<RayVertex>& vertices);
 	static float getCentroidMidPoint(BVHNode& node, int axis, std::vector<glm::vec3>& centroids);
 
+	static float surfaceAreaHeuristic(BVHNode& node, int& axis, float& split, std::vector<glm::vec3> centroids, std::vector<std::uniform_real_distribution<float>>& floatRands);
+
 	static void printBVH(std::vector<BVHNode>& nodes);
 };
 
@@ -76,6 +78,7 @@ public:
 	static float findBestSplit(uint32_t startIndex, uint32_t endIndex, int axis, std::vector<glm::vec4>& centroids);
 	static void extendBoundaries(TLASNode& node, uint32_t startIndex, uint32_t endIndex);
 
+	static float surfaceAreaHeuristic(TLASNode& node, int& axis, float& split, std::vector<glm::vec4> centroids, std::vector<std::uniform_real_distribution<float>>& floatRands, uint32_t startIndex, uint32_t endIndex);
 	static bool notAllCentroidsOnOnePoint(std::vector<glm::vec4>& centroids, int axis, uint32_t startIndex, uint32_t endIndex);
 	static void printTLAS(std::vector<TLASNode>& nodes);
 };

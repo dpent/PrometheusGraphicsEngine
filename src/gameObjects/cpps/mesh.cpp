@@ -243,6 +243,10 @@ void Mesh::loadForRayTrace(std::vector<RayVertex>& vertices, std::vector<RTTrian
             Mesh::loadRayVertex(attrib, idx1, localMin, localMax, v1, scale, translation, q);
             Mesh::loadRayVertex(attrib, idx2, localMin, localMax, v2, scale, translation, q);
 
+            if (attrib.normals.empty()) {
+                Mesh::computeRayNormals(v0, v1, v2);
+            }
+
             if (uniqueVertices.count(v0) == 0) {
                 uniqueVertices[v0] = static_cast<uint32_t>(vertices.size());
                 vertices.push_back(v0);
@@ -256,10 +260,6 @@ void Mesh::loadForRayTrace(std::vector<RayVertex>& vertices, std::vector<RTTrian
             if (uniqueVertices.count(v2) == 0) {
                 uniqueVertices[v2] = static_cast<uint32_t>(vertices.size());
                 vertices.push_back(v2);
-            }
-
-            if (attrib.normals.empty()) {
-                Mesh::computeRayNormals(v0, v1, v2);
             }
 
             RTTriangle triangle = {
@@ -324,7 +324,7 @@ void Mesh::computeRayNormals(RayVertex& v0, RayVertex& v1, RayVertex& v2) {
 
     glm::vec3 edge1 = glm::vec3(v1.position) - glm::vec3(v0.position);
     glm::vec3 edge2 = glm::vec3(v2.position) - glm::vec3(v0.position);
-    glm::vec3 faceNormal = glm::normalize(glm::cross(edge1, edge2));
+    glm::vec3 faceNormal = glm::cross(edge1, edge2);
 
     v0.normal += glm::vec4(faceNormal, 0.0f);
     v1.normal += glm::vec4(faceNormal, 0.0f);

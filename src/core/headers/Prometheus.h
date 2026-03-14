@@ -41,6 +41,7 @@
 #include <list>
 #include <chrono>
 #include <cstdint>
+#include <random>
     
 // Common colors
 constexpr glm::vec3 COLOR_BLACK = glm::vec3(0.0f, 0.0f, 0.0f);

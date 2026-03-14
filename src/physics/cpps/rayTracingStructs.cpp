@@ -35,17 +35,31 @@ void BVH::splitBVHNode(
 	uint32_t depth
 ) {
 
-	float deltaX = nodes[nodeIndex].maxBounds.x - nodes[nodeIndex].minBounds.x;
-	float deltaY = nodes[nodeIndex].maxBounds.y - nodes[nodeIndex].minBounds.y;
-	float deltaZ = nodes[nodeIndex].maxBounds.z - nodes[nodeIndex].minBounds.z;
-
-	float deltas[3] = { deltaX, deltaY, deltaZ };
-
 	int axis = 0;
-	if (deltas[1] > deltas[axis]) axis = 1;
-	if (deltas[2] > deltas[axis]) axis = 2;
 
-	float split = getCentroidMidPoint(nodes[nodeIndex], axis, centroids);
+	float split = 0.0f;
+
+	float minScore = FLT_MAX;
+	int bestAxis = -1;
+	float bestSplit = FLT_MAX;
+
+	std::vector<std::uniform_real_distribution<float>> floatRands;
+	floatRands.push_back(std::uniform_real_distribution<float>(nodes[nodeIndex].minBounds.x, nodes[nodeIndex].maxBounds.x));
+	floatRands.push_back(std::uniform_real_distribution<float>(nodes[nodeIndex].minBounds.y, nodes[nodeIndex].maxBounds.y));
+	floatRands.push_back(std::uniform_real_distribution<float>(nodes[nodeIndex].minBounds.z, nodes[nodeIndex].maxBounds.z));
+
+	for (int z = 0; z < 5; z++) {
+
+		float score = BVH::surfaceAreaHeuristic(nodes[nodeIndex], axis, split, centroids, floatRands);
+		if (score < minScore) {
+			minScore = score;
+			bestAxis = axis;
+			bestSplit = split;
+		}
+	}
+
+	axis = bestAxis;
+	split = bestSplit;
 
 	glm::vec4 leftMax = nodes[nodeIndex].maxBounds;
 	leftMax[axis] = split;
@@ -70,6 +84,9 @@ void BVH::splitBVHNode(
 			std::swap(centroids[i], centroids[j]);
 			std::swap(triangles[i], triangles[j]);
 			j--;
+			if (j == triangleOffset) {
+				break;
+			}
 		}
 	}
 
@@ -191,6 +208,55 @@ float BVH::getCentroidMidPoint(BVHNode& node, int axis, std::vector<glm::vec3>& 
 
 	}
 	return split;
+}
+
+float BVH::surfaceAreaHeuristic(BVHNode& node, int& axis, float& split, std::vector<glm::vec3> centroids, std::vector<std::uniform_real_distribution<float>>& floatRands) {
+
+	size_t start = node.childIndices.z;
+	size_t count = node.childIndices.w;
+
+	std::random_device dev;
+	std::mt19937 rng(dev());
+	std::uniform_int_distribution<std::mt19937::result_type> dist(0, 2);
+
+	axis = dist(rng);
+
+	split = floatRands[axis](rng);
+
+	size_t i = start;
+	size_t j = i + count;
+	
+	glm::vec3 leftMax = node.maxBounds;
+	leftMax[axis] = split;
+
+	glm::vec3 rightMin = node.minBounds;
+	rightMin[axis] = split;
+
+	while (i <= j) {
+		if (centroids[i][axis] < leftMax[axis]) {
+			i++;
+		}
+		else {
+			std::swap(centroids[i], centroids[j]);
+			j--;
+		}
+	}
+
+	uint32_t leftCount = static_cast<uint32_t>(i - start);
+	uint32_t rightCount = static_cast<uint32_t>((start + count) - i);
+
+	auto surfaceArea = [](const glm::vec3& minB, const glm::vec3& maxB) {
+		glm::vec3 d = maxB - minB;
+		return 2.0f * (d.x * d.y + d.y * d.z + d.z * d.x);
+		};
+
+	float nodeSA = surfaceArea(node.minBounds, node.maxBounds);
+	float leftSA = surfaceArea(node.minBounds, leftMax);
+	float rightSA = surfaceArea(rightMin, node.maxBounds);
+
+	float res = (leftSA / nodeSA) * leftCount + (rightSA / nodeSA) * rightCount;
+
+	return res;
 }
 
 void BVH::printBVH(std::vector<BVHNode>& nodes) {
@@ -440,6 +506,52 @@ bool TLAS::notAllCentroidsOnOnePoint(std::vector<glm::vec4>& centroids, int axis
 	}
 
 	return false;
+}
+
+float TLAS::surfaceAreaHeuristic(TLASNode& node, int& axis, float& split, std::vector<glm::vec4> centroids, std::vector<std::uniform_real_distribution<float>>& floatRands, uint32_t startIndex, uint32_t endIndex) {
+	
+	std::random_device dev;
+	std::mt19937 rng(dev());
+	std::uniform_int_distribution<std::mt19937::result_type> dist(0, 2);
+
+	axis = dist(rng);
+
+	split = floatRands[axis](rng);
+
+	size_t i = startIndex;
+	size_t j = endIndex;
+
+	glm::vec3 leftMax = node.maxBounds;
+	leftMax[axis] = split;
+
+	glm::vec3 rightMin = node.minBounds;
+	rightMin[axis] = split;
+
+	while (i <= j) {
+		if (centroids[i][axis] < leftMax[axis]) {
+			i++;
+		}
+		else {
+			std::swap(centroids[i], centroids[j]);
+			j--;
+		}
+	}
+
+	uint32_t leftCount = static_cast<uint32_t>(i - startIndex);
+	uint32_t rightCount = static_cast<uint32_t>(endIndex - i);
+
+	auto surfaceArea = [](const glm::vec3& minB, const glm::vec3& maxB) {
+		glm::vec3 d = maxB - minB;
+		return 2.0f * (d.x * d.y + d.y * d.z + d.z * d.x);
+		};
+
+	float nodeSA = surfaceArea(node.minBounds, node.maxBounds);
+	float leftSA = surfaceArea(node.minBounds, leftMax);
+	float rightSA = surfaceArea(rightMin, node.maxBounds);
+
+	float res = (leftSA / nodeSA) * leftCount + (rightSA / nodeSA) * rightCount;
+
+	return res;
 }
 
 void TLAS::printTLAS(std::vector<TLASNode>& nodes) {

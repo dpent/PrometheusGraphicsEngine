@@ -285,8 +285,8 @@ bool hitScene(inout HitRecord hitRec, Ray ray) {
             uint right = tlasNode.nodeIndices.w;
 
             float tLeft, tRight;
-            bool hitLeft  = intersectAABB(tlasNode.minBounds.xyz, tlasNode.maxBounds.xyz, ray.origin, invDir, dirNeg, tLeft)  && tLeft  < minT;
-            bool hitRight = intersectAABB(tlasNode.minBounds.xyz, tlasNode.maxBounds.xyz, ray.origin, invDir, dirNeg, tRight) && tRight < minT;
+            bool hitLeft  = intersectAABB(tlasNodes[tlasNode.nodeIndices.z].minBounds.xyz, tlasNodes[tlasNode.nodeIndices.z].maxBounds.xyz, ray.origin, invDir, dirNeg, tLeft)  && tLeft  < minT;
+            bool hitRight = intersectAABB(tlasNodes[tlasNode.nodeIndices.w].minBounds.xyz, tlasNodes[tlasNode.nodeIndices.w].maxBounds.xyz, ray.origin, invDir, dirNeg, tRight) && tRight < minT;
 
             bool swap = tRight < tLeft;
 
@@ -328,8 +328,8 @@ bool hitScene(inout HitRecord hitRec, Ray ray) {
                     uint right = node.childIndices.y;
 
                     float tLeft, tRight;
-                    bool hitLeft  = intersectAABB(node.minBounds.xyz, node.maxBounds.xyz, ray.origin, invDir, dirNeg, tLeft)  && tLeft  < minT;
-                    bool hitRight = intersectAABB(node.minBounds.xyz, node.maxBounds.xyz, ray.origin, invDir, dirNeg, tRight) && tRight < minT;
+                    bool hitLeft  = intersectAABB(nodes[node.childIndices.x].minBounds.xyz, nodes[node.childIndices.x].maxBounds.xyz, ray.origin, invDir, dirNeg, tLeft)  && tLeft  < minT;
+                    bool hitRight = intersectAABB(nodes[node.childIndices.y].minBounds.xyz, nodes[node.childIndices.y].maxBounds.xyz, ray.origin, invDir, dirNeg, tRight) && tRight < minT;
 
                     bool swap = tRight < tLeft;
 
