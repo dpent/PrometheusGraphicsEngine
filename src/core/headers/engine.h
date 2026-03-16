@@ -150,6 +150,11 @@ public:
 
 	static std::vector<BVHNode> nodes;
 	static std::vector<TLASNode> tlasNodes;
+
+	static std::random_device dev;
+	static std::mt19937 rng;
+	static std::uniform_int_distribution<std::mt19937::result_type> dist;
+	static std::vector<std::uniform_real_distribution<float>> floatRands;
 	#endif
 
 	//LIGHTING

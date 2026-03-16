@@ -97,6 +97,11 @@ uint32_t Engine::tracingFrames = 0;
 
 std::vector<BVHNode> Engine::nodes;
 std::vector<TLASNode> Engine::tlasNodes;
+
+std::random_device Engine::dev;
+std::mt19937 Engine::rng(dev());
+std::uniform_int_distribution<std::mt19937::result_type> Engine::dist(0,2);
+std::vector<std::uniform_real_distribution<float>> Engine::floatRands(3);
 #endif
 
 //LIGHTING
@@ -344,7 +349,7 @@ void Engine::mainLoop() {
 
             double seconds = std::chrono::duration<double>(elapsed).count();
 
-            //std::cout << "It took " << seconds << " seconds for "<<Engine::frameCount<< " frames." << std::endl;
+            std::cout << "It took " << seconds << " seconds for "<<Engine::frameCount<< " frames." << std::endl;
             #endif
         }
         #endif
@@ -1045,7 +1050,7 @@ void Engine::loadDemoScene() {
 
     RTMaterial mirrorMat{
         .color = glm::vec4(0.8, 0.8, 0.8, 1.0),
-        .properties = glm::vec4(2.0f, 0.0f, 1.0f, 1.0f)
+        .properties = glm::vec4(2.0f, 0.2f, 1.0f, 1.0f)
     };
 
     RTMaterial lightMat{

@@ -32,7 +32,7 @@ struct BVHNode {
 class BVH {
 public:
 
-	static constexpr uint32_t MAX_TRIANGLES_PER_NODE = 12;
+	static constexpr uint32_t MAX_TRIANGLES_PER_NODE = 3;
 	static constexpr uint32_t MAX_DEPTH = 32;
 
 	static void buildBVH(
@@ -57,7 +57,7 @@ public:
 	static void extendBoundaries(BVHNode& node, std::vector<RTTriangle>& triangles, std::vector<RayVertex>& vertices);
 	static float getCentroidMidPoint(BVHNode& node, int axis, std::vector<glm::vec3>& centroids);
 
-	static float surfaceAreaHeuristic(BVHNode& node, int& axis, float& split, std::vector<glm::vec3> centroids, std::vector<std::uniform_real_distribution<float>>& floatRands);
+	static float surfaceAreaHeuristic(BVHNode& node, int& axis, float& split, std::vector<glm::vec3> centroids);
 
 	static void printBVH(std::vector<BVHNode>& nodes);
 };

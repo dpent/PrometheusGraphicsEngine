@@ -17,9 +17,7 @@ void BVH::buildBVH(
 	};
 
 	nodes.push_back(root);
-
 	if (root.childIndices.w > BVH::MAX_TRIANGLES_PER_NODE && BVH::MAX_DEPTH > 0) {
-
 		BVH::splitBVHNode(static_cast<uint32_t>(nodes.size() - 1), triangles, triangleOffset, nodes, centroids, vertices, 1);
 	}
 
@@ -43,14 +41,13 @@ void BVH::splitBVHNode(
 	int bestAxis = -1;
 	float bestSplit = FLT_MAX;
 
-	std::vector<std::uniform_real_distribution<float>> floatRands;
-	floatRands.push_back(std::uniform_real_distribution<float>(nodes[nodeIndex].minBounds.x, nodes[nodeIndex].maxBounds.x));
-	floatRands.push_back(std::uniform_real_distribution<float>(nodes[nodeIndex].minBounds.y, nodes[nodeIndex].maxBounds.y));
-	floatRands.push_back(std::uniform_real_distribution<float>(nodes[nodeIndex].minBounds.z, nodes[nodeIndex].maxBounds.z));
+	Engine::floatRands[0].param(std::uniform_real_distribution<float>::param_type(nodes[nodeIndex].minBounds.x, nodes[nodeIndex].maxBounds.x));
+	Engine::floatRands[1].param(std::uniform_real_distribution<float>::param_type(nodes[nodeIndex].minBounds.y, nodes[nodeIndex].maxBounds.y));
+	Engine::floatRands[2].param(std::uniform_real_distribution<float>::param_type(nodes[nodeIndex].minBounds.z, nodes[nodeIndex].maxBounds.z));
 
-	for (int z = 0; z < 5; z++) {
+	for (int z = 0; z < 100; z++) {
 
-		float score = BVH::surfaceAreaHeuristic(nodes[nodeIndex], axis, split, centroids, floatRands);
+		float score = BVH::surfaceAreaHeuristic(nodes[nodeIndex], axis, split, centroids);
 		if (score < minScore) {
 			minScore = score;
 			bestAxis = axis;
@@ -93,8 +90,9 @@ void BVH::splitBVHNode(
 	uint32_t leftCount = static_cast<uint32_t>(i - triangleOffset);
 	leftChild.childIndices.w = leftCount;
 
-	if (leftCount == 0 || leftCount == nodes[nodeIndex].childIndices.w)
+	if (leftCount == 0 || leftCount == nodes[nodeIndex].childIndices.w){
 		return;
+	}
 
 	BVH::extendBoundaries(leftChild, triangles, vertices);
 
@@ -113,7 +111,6 @@ void BVH::splitBVHNode(
 	nodes[nodeIndex].childIndices.y = static_cast<uint32_t>(nodes.size() + 1);
 	nodes.push_back(leftChild);
 	nodes.push_back(rightChild);
-
 
 	if (nodes[nodes[nodeIndex].childIndices.x].childIndices.w > BVH::MAX_TRIANGLES_PER_NODE && depth < BVH::MAX_DEPTH) {
 		
@@ -210,21 +207,17 @@ float BVH::getCentroidMidPoint(BVHNode& node, int axis, std::vector<glm::vec3>& 
 	return split;
 }
 
-float BVH::surfaceAreaHeuristic(BVHNode& node, int& axis, float& split, std::vector<glm::vec3> centroids, std::vector<std::uniform_real_distribution<float>>& floatRands) {
+float BVH::surfaceAreaHeuristic(BVHNode& node, int& axis, float& split, std::vector<glm::vec3> centroids) {
 
 	size_t start = node.childIndices.z;
 	size_t count = node.childIndices.w;
 
-	std::random_device dev;
-	std::mt19937 rng(dev());
-	std::uniform_int_distribution<std::mt19937::result_type> dist(0, 2);
+	axis = Engine::dist(Engine::rng);
 
-	axis = dist(rng);
-
-	split = floatRands[axis](rng);
+	split = Engine::floatRands[axis](Engine::rng);
 
 	size_t i = start;
-	size_t j = i + count;
+	size_t j = i + count - 1;
 	
 	glm::vec3 leftMax = node.maxBounds;
 	leftMax[axis] = split;
