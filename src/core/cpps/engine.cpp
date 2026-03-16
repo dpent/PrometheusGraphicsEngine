@@ -349,7 +349,7 @@ void Engine::mainLoop() {
 
             double seconds = std::chrono::duration<double>(elapsed).count();
 
-            std::cout << "It took " << seconds << " seconds for "<<Engine::frameCount<< " frames." << std::endl;
+            //std::cout << "It took " << seconds << " seconds for "<<Engine::frameCount<< " frames." << std::endl;
             #endif
         }
         #endif
@@ -1049,8 +1049,8 @@ void Engine::loadDemoScene() {
     std::vector<RTMaterial> materials;
 
     RTMaterial mirrorMat{
-        .color = glm::vec4(0.8, 0.8, 0.8, 1.0),
-        .properties = glm::vec4(2.0f, 0.2f, 1.0f, 1.0f)
+        .color = glm::vec4(1.0, 1.0, 1.0, 1.0),
+        .properties = glm::vec4(2.0f, 0.04f, 1.0f, 1.0f)
     };
 
     RTMaterial lightMat{
@@ -1079,8 +1079,23 @@ void Engine::loadDemoScene() {
     };
 
     RTMaterial orangeMat{
-    .color = glm::vec4(1.0, 0.64, 0.0, 1.0),
-    .properties = glm::vec4(0.0f, 0.2f, 1.0f, 1.0f)
+        .color = glm::vec4(1.0, 0.64, 0.0, 1.0),
+        .properties = glm::vec4(0.0f, 0.2f, 1.0f, 1.0f)
+    };
+
+    RTMaterial blurryMirrorMat{
+        .color = glm::vec4(1.0, 1.0, 1.0, 1.0),
+        .properties = glm::vec4(2.0f, 0.25f, 1.0f, 1.0f)
+    };
+
+    RTMaterial roughMetalMat{
+        .color = glm::vec4(1.0, 1.0, 1.0, 1.0),
+        .properties = glm::vec4(2.0f, 0.5f, 1.0f, 1.0f)
+    };
+
+    RTMaterial roughestMetalMat{
+        .color = glm::vec4(1.0, 1.0, 1.0, 1.0),
+        .properties = glm::vec4(2.0f, 0.75f, 1.0f, 1.0f)
     };
 
     materials.push_back(mirrorMat);
@@ -1090,6 +1105,9 @@ void Engine::loadDemoScene() {
     materials.push_back(blueMat);
     materials.push_back(whiteMat);
     materials.push_back(orangeMat);
+    materials.push_back(blurryMirrorMat);
+    materials.push_back(roughMetalMat);
+    materials.push_back(roughestMetalMat);
 
     glm::vec3 minCoords(FLT_MAX);
     glm::vec3 maxCoords(-FLT_MAX);
@@ -1121,8 +1139,20 @@ void Engine::loadDemoScene() {
         glm::vec3(-80.0f,0.0f, -10.0f), glm::vec3(-180.0f,-90.0f,0.0f), 4
     );
     Mesh::loadForRayTrace(
-        vertices, triangles, "Medieval_Barrels.obj", glm::vec3(0.5f, 0.5f, 0.5f),
-        glm::vec3(-10.0f, -80.0f, -10.0f), glm::vec3(0.0f, 0.0f, 0.0f), 0
+        vertices, triangles, "stanford_sphere.obj", glm::vec3(15.0f, 15.0f, 15.0f),
+        glm::vec3(50.0f, -20.0f, -10.0f), glm::vec3(0.0f, 0.0f, 0.0f), 0
+    );
+    Mesh::loadForRayTrace(
+        vertices, triangles, "stanford_sphere.obj", glm::vec3(15.0f, 15.0f, 15.0f),
+        glm::vec3(17.0f, -20.0f, -10.0f), glm::vec3(0.0f, 0.0f, 0.0f), 7
+    );
+    Mesh::loadForRayTrace(
+        vertices, triangles, "stanford_sphere.obj", glm::vec3(15.0f, 15.0f, 15.0f),
+        glm::vec3(-17.0f, -20.0f, -10.0f), glm::vec3(0.0f, 0.0f, 0.0f), 8
+    );
+    Mesh::loadForRayTrace(
+        vertices, triangles, "stanford_sphere.obj", glm::vec3(15.0f, 15.0f, 15.0f),
+        glm::vec3(-50.0f, -20.0f, -10.0f), glm::vec3(0.0f, 0.0f, 0.0f), 9
     );
 
     auto end = std::chrono::high_resolution_clock::now();

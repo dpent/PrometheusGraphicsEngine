@@ -89,3 +89,4 @@ struct RTMaterial {
 };
 
 // For metals & lambertians, the y value is the roughness
+// For dielectrics the y value is reflect prob
